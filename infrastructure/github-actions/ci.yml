@@ -78,6 +78,25 @@ jobs:
             retention-days: 14,
           }
 
+  visual:
+    name: Visual comparison (Linux baselines)
+    needs: quality
+    runs-on: ubuntu-latest
+    # Same image that created the baselines (docker compose ... run --rm snapshots), so rendering matches.
+    container: { image: 'mcr.microsoft.com/playwright:v1.65.0-noble', options: --ipc=host }
+    env: { PW_VISUAL: '1', HOME: /root }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright test tests/visual --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: visual-diff, path: packages/playwright-framework/test-results, retention-days: 7 }
+
   ui:
     name: UI specs (shard ${{ matrix.shard }}/3)
     needs: quality
@@ -93,7 +112,7 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${{ matrix.shard }}/3
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${{ matrix.shard }}/3 --grep-invert @audit
       - uses: actions/upload-artifact@v4
         if: always()
         with:

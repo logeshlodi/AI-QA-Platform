@@ -1,6 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { parseEnv } from '@aiqa/shared';
-import { analyzeFailure, createProvider, draftBugReport, type LlmProvider } from '../src';
+import { z } from 'zod';
+import {
+  analyzeFailure,
+  createProvider,
+  draftBugReport,
+  generateData,
+  generateLocator,
+  type LlmProvider,
+} from '../src';
 
 /**
  * Talks to the real local model. Not part of `pnpm test:unit`.
@@ -52,5 +60,44 @@ describe('local model (Ollama)', () => {
     expect(report).toMatch(/Steps to reproduce/i);
     expect(report).toContain('39.98');
     expect(report).toContain('29.99');
+  });
+
+  it('picks the described element when the words do not match its name', async (context) => {
+    if (!available) return context.skip();
+    const snapshot = [
+      '- textbox "Username"',
+      '- textbox "Password"',
+      '- button "Login"',
+      '- link "Forgot your password?"',
+    ].join('\n');
+    // No rule can link "sign in" to "Login"; the model has to.
+    const suggestion = await generateLocator(provider, snapshot, 'the control that signs the user in');
+    console.log('locator suggestion:', JSON.stringify(suggestion));
+    expect(suggestion).toMatchObject({ role: 'button', name: 'Login', source: 'model' });
+  });
+
+  it('writes a test record that fits the schema and the scenario', async (context) => {
+    if (!available) return context.skip();
+    const schema = z.object({
+      firstname: z.string().min(1),
+      lastname: z.string().min(1),
+      totalprice: z.number().int().min(1).max(5000),
+      depositpaid: z.boolean(),
+      additionalneeds: z.string().min(1),
+    });
+    const fallback = () => ({
+      firstname: 'F',
+      lastname: 'B',
+      totalprice: 1,
+      depositpaid: true,
+      additionalneeds: 'x',
+    });
+    const result = await generateData(provider, schema, {
+      hint: 'a guest from India who has not paid a deposit and needs an airport pickup',
+      fallback,
+    });
+    console.log('generated data:', JSON.stringify(result));
+    expect(result.source).toBe('model');
+    expect(result.data.depositpaid).toBe(false);
   });
 });

@@ -52,6 +52,12 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 | Accessibility (axe-core)                                                        | `features/accessibility.spec.ts`                                        | SauceDemo                         |
 | Responsive viewports, navigation timing                                         | `features/responsive-and-performance.spec.ts`                           | SauceDemo                         |
 | WebSocket mocking                                                               | `features/websocket.spec.ts`                                            | none                              |
+| Service workers (visible on the context, offline from cache, routing, blocking) | `features/service-workers.spec.ts`                                      | Local site started by the spec    |
+| Test locks (`lock`) and `--shuffle`                                             | `features/locks-and-shuffle.spec.ts`, `pnpm test:shuffle`               | None needed                       |
+| Legacy layout selectors (`:right-of`, `:below`, `:near`)                        | `locators/legacy-layout.spec.ts`                                        | Local page                        |
+| AI: locator generation from an aria snapshot                                    | `ai/locator-generation.spec.ts`                                         | SauceDemo                         |
+| AI: schema-driven test data                                                     | `api-framework/tests/restful-booker/generated-data.spec.ts`             | Restful-Booker                    |
+| Playwright test agents (planner, generator, healer)                             | `.claude/agents/`, `tests/seed.spec.ts`, `specs/`                       | SauceDemo                         |
 | Visual comparison                                                               | `visual/login.visual.spec.ts`                                           | SauceDemo                         |
 | Data-driven tests                                                               | `journeys/login.spec.ts`, `api-framework/tests/soap/calculator.spec.ts` | SauceDemo, SOAP                   |
 | Self-healing                                                                    | `healing/healer-local.spec.ts`, `healing/dynamic-id.spec.ts`            | Local page, UI Testing Playground |
@@ -61,6 +67,9 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 
 ## In the plan, not built yet
 
-Service-worker interception, test locks and `--shuffle` examples, legacy layout
-and framework selectors, component testing (deferred to the new stories model), OAuth and JWT,
-Pact, OpenAPI validation, Playwright test agents (`npx playwright init-agents`).
+Component testing (deferred to the new stories model), OAuth and JWT (needs a local identity
+provider), Pact (needs a provider we control), OpenAPI validation (no demo target publishes a file).
+
+Not possible in this Playwright version: the `_react=` and `_vue=` framework selectors. Playwright
+1.65 still parses the names but no longer ships the engines; a probe against a local React 18 and
+Vue 3 page failed inside Playwright itself. The legacy layout selectors still work and are covered.

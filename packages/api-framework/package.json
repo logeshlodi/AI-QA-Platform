@@ -8,6 +8,7 @@
     "test": "playwright test"
   },
   "dependencies": {
+    "@aiqa/ai-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "@faker-js/faker": "catalog:",
     "@playwright/test": "catalog:",

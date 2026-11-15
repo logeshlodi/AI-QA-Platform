@@ -9,6 +9,7 @@
     "test:chromium": "playwright test --project=chromium",
     "test:chrome": "cross-env PW_BRANDED_BROWSERS=chrome playwright test --project=chrome",
     "test:edge": "cross-env PW_BRANDED_BROWSERS=msedge playwright test --project=msedge",
+    "test:shuffle": "playwright test --project=chromium --shuffle",
     "test:lighthouse": "playwright test --project=lighthouse",
     "test:headed": "playwright test --project=chromium --headed",
     "test:ui-mode": "playwright test --ui",

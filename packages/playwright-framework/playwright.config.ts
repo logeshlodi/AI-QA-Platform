@@ -6,7 +6,14 @@ const env = loadEnv();
 
 // Locator and feature labs teach one thing each; running them once, on Chromium, is enough.
 // Journeys and smoke tests are the cross-browser suite.
-const LABS = ['**/locators/**', '**/features/**', '**/healing/**', '**/visual/**'];
+const LABS = [
+  '**/locators/**',
+  '**/features/**',
+  '**/healing/**',
+  '**/visual/**',
+  '**/ai/**',
+  '**/seed.spec.ts',
+];
 // Lighthouse audits launch their own browser with a debugging port, so they get a dedicated project.
 const AUDITS = '**/audits/**';
 const ready = ['setup', 'auth'];
@@ -25,8 +32,9 @@ export default defineConfig<Options>({
   retries: env.CI ? 2 : 0,
   workers: env.CI ? 4 : undefined,
   timeout: 30_000,
-  // Visual baselines are per operating system. CI skips the comparison until Linux baselines are committed.
-  ignoreSnapshots: env.CI,
+  // Visual baselines are per operating system. On CI only the `visual` job compares them (PW_VISUAL=1):
+  // it runs in the same Docker image that created the Linux baselines, so fonts and rendering match.
+  ignoreSnapshots: env.CI && !process.env.PW_VISUAL,
   expect: { timeout: 7_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   reporter: [
     ['list'],

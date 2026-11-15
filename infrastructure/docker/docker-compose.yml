@@ -10,6 +10,16 @@ services:
       - ../../packages/playwright-framework/playwright-report:/work/packages/playwright-framework/playwright-report
       - ../../packages/playwright-framework/allure-results:/work/packages/playwright-framework/allure-results
 
+  # Create or refresh the Linux visual baselines (the ones CI compares against):
+  #   docker compose -f infrastructure/docker/docker-compose.yml run --rm snapshots
+  snapshots:
+    build: { context: ../.., dockerfile: infrastructure/docker/Dockerfile }
+    ipc: host
+    environment: { PW_VISUAL: '1' } # the image sets CI=true, which otherwise switches snapshots off
+    command: pnpm --filter @aiqa/playwright-framework snapshots:update
+    volumes:
+      - ../../packages/playwright-framework/tests/visual:/work/packages/playwright-framework/tests/visual
+
   # Optional local model:  docker compose --profile ai up ollama
   ollama:
     image: ollama/ollama

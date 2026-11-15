@@ -7,3 +7,5 @@ export * from './providers/factory';
 export * from './tasks/failure-analysis';
 export * from './tasks/pick-element';
 export * from './tasks/bug-report';
+export * from './tasks/generate-locator';
+export * from './tasks/generate-data';

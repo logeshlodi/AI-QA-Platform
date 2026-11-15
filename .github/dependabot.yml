@@ -1,0 +1,28 @@
+# Dependabot keeps the pinned versions in pnpm-workspace.yaml (the catalog) and the Actions up to date.
+# Updates are grouped so a week brings two or three pull requests, not twenty.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: build }
+    groups:
+      playwright:
+        patterns: ['@playwright/*', 'playwright*', 'allure*', '@axe-core/playwright']
+      quality-tools:
+        patterns: ['eslint*', 'typescript*', 'prettier', 'vitest', 'husky', 'lint-staged', '@commitlint/*']
+      everything-else:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: ci }
+    groups:
+      actions:
+        patterns: ['*']
+
+# The Playwright Docker image is left out on purpose: its tag must equal the @playwright/test version,
+# so bump the Dockerfile and the `visual` job in ci.yml by hand together with the npm package.
