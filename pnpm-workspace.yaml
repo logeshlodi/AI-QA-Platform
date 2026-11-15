@@ -9,6 +9,7 @@ catalog:
   'allure-playwright': 3.14.0
   'allure': 3.33.0
   '@axe-core/playwright': 4.14.0
+  'lighthouse': 13.6.0
 
   # API testing and test data
   'zod': 4.6.7
@@ -18,6 +19,10 @@ catalog:
   # Runtime utilities
   'pino': 10.4.0
   'dotenv': 18.0.10
+  # Lighthouse's dependency intl-messageformat requires it but pnpm on Windows did not link it for it.
+  # A root copy lets Node's upward lookup find it.
+  'tslib': 2.9.1
+  'cross-env': 10.1.0
 
   # Language, unit tests, quality gates
   'typescript': 6.0.3

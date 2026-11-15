@@ -4,6 +4,7 @@ test-results/
 allure-results/
 allure-report/
 blob-report/
+lighthouse-report/
 .aiqa/
 .env
 *.log

@@ -38,6 +38,46 @@ jobs:
         if: always()
         with: { name: api-report, path: packages/api-framework/playwright-report, retention-days: 14 }
 
+  branded:
+    name: Smoke in real ${{ matrix.channel }}
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { channel: [chrome, msedge] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps ${{ matrix.channel }}
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright test --project=${{ matrix.channel }}
+        env: { PW_BRANDED_BROWSERS: '${{ matrix.channel }}' }
+
+  lighthouse:
+    name: Lighthouse audit
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright test --project=lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          {
+            name: lighthouse-report,
+            path: packages/playwright-framework/lighthouse-report,
+            retention-days: 14,
+          }
+
   ui:
     name: UI specs (shard ${{ matrix.shard }}/3)
     needs: quality

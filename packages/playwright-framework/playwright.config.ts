@@ -7,6 +7,8 @@ const env = loadEnv();
 // Locator and feature labs teach one thing each; running them once, on Chromium, is enough.
 // Journeys and smoke tests are the cross-browser suite.
 const LABS = ['**/locators/**', '**/features/**', '**/healing/**', '**/visual/**'];
+// Lighthouse audits launch their own browser with a debugging port, so they get a dedicated project.
+const AUDITS = '**/audits/**';
 const ready = ['setup', 'auth'];
 
 // PW_CHANNEL=chrome (or msedge) runs the "chromium" project in an installed browser
@@ -49,9 +51,32 @@ export default defineConfig<Options>({
     // Runs first: health-checks every target, then saves a logged-in session.
     { name: 'setup', testMatch: '**/health.setup.ts' },
     { name: 'auth', testMatch: '**/auth.setup.ts', dependencies: ['setup'] },
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel }, dependencies: ready },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ready, testIgnore: LABS },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ready, testIgnore: LABS },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], channel },
+      dependencies: ready,
+      testIgnore: AUDITS,
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      dependencies: ready,
+      testIgnore: [...LABS, AUDITS],
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      dependencies: ready,
+      testIgnore: [...LABS, AUDITS],
+    },
+    {
+      name: 'lighthouse',
+      use: { ...devices['Desktop Chrome'], channel },
+      dependencies: ready,
+      testMatch: AUDITS,
+      timeout: 120_000,
+      retries: 0,
+    },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, dependencies: ready, testMatch: '**/smoke/**' },
     {
       name: 'mobile-safari',

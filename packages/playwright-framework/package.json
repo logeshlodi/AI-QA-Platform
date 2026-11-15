@@ -7,6 +7,9 @@
   "scripts": {
     "test": "playwright test",
     "test:chromium": "playwright test --project=chromium",
+    "test:chrome": "cross-env PW_BRANDED_BROWSERS=chrome playwright test --project=chrome",
+    "test:edge": "cross-env PW_BRANDED_BROWSERS=msedge playwright test --project=msedge",
+    "test:lighthouse": "playwright test --project=lighthouse",
     "test:headed": "playwright test --project=chromium --headed",
     "test:ui-mode": "playwright test --ui",
     "snapshots:update": "playwright test tests/visual --project=chromium --update-snapshots",
@@ -19,9 +22,11 @@
     "@aiqa/shared": "workspace:*",
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
-    "allure-playwright": "catalog:"
+    "allure-playwright": "catalog:",
+    "lighthouse": "catalog:"
   },
   "devDependencies": {
-    "allure": "catalog:"
+    "allure": "catalog:",
+    "cross-env": "catalog:"
   }
 }

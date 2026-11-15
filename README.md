@@ -96,11 +96,12 @@ and it can only choose from a list it is given.
 
 ## Useful switches
 
-| Variable                                                                               | Effect                                               |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `PW_CHANNEL=chrome` or `msedge`                                                        | Run the `chromium` project in your installed browser |
-| `PW_BRANDED_BROWSERS=chrome,msedge`                                                    | Add smoke runs in real Chrome and Edge               |
-| `HEAL_MODE`, `HEAL_THRESHOLD`, `AI_ENABLED`, `OLLAMA_URL`, `OLLAMA_MODEL`, `LOG_LEVEL` | See `.env.example`                                   |
+| Variable                                                                               | Effect                                                                        |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `PW_CHANNEL=chrome` or `msedge`                                                        | Run the `chromium` project in your installed browser                          |
+| `PW_BRANDED_BROWSERS=chrome,msedge`                                                    | Add smoke runs in real Chrome and Edge (`pnpm test:chrome`, `pnpm test:edge`) |
+| `LH_MIN_PERFORMANCE`, `LH_MIN_ACCESSIBILITY`, `LH_MIN_BEST_PRACTICES`, `LH_MIN_SEO`    | Lighthouse score floors for `pnpm test:lighthouse`                            |
+| `HEAL_MODE`, `HEAL_THRESHOLD`, `AI_ENABLED`, `OLLAMA_URL`, `OLLAMA_MODEL`, `LOG_LEVEL` | See `.env.example`                                                            |
 
 ## Status
 

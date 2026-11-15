@@ -32,6 +32,7 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 
 | Feature group                                                                   | Spec                                                                    | Target                            |
 | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| Lighthouse audit (performance, accessibility, best practices, SEO)              | `audits/lighthouse.spec.ts`, `src/checks/lighthouse.ts`                 | SauceDemo                         |
 | Projects, devices, branded channels                                             | `playwright.config.ts`, `smoke/saucedemo.smoke.spec.ts`                 | SauceDemo                         |
 | Setup project, health check, saved login                                        | `setup/*.setup.ts`                                                      | All targets                       |
 | Fixtures (test, worker, option, auto, mergeTests)                               | `src/fixtures/index.ts`, `features/execution.spec.ts`                   | none                              |
@@ -60,6 +61,6 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 
 ## In the plan, not built yet
 
-Lighthouse audit, service-worker interception, test locks and `--shuffle` examples, legacy layout
+Service-worker interception, test locks and `--shuffle` examples, legacy layout
 and framework selectors, component testing (deferred to the new stories model), OAuth and JWT,
 Pact, OpenAPI validation, Playwright test agents (`npx playwright init-agents`).

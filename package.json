@@ -14,6 +14,9 @@
     "format:check": "prettier --check .",
     "test:unit": "vitest run",
     "browsers": "pnpm --filter @aiqa/playwright-framework exec playwright install chromium firefox webkit",
+    "test:lighthouse": "pnpm --filter @aiqa/playwright-framework test:lighthouse",
+    "test:chrome": "pnpm --filter @aiqa/playwright-framework test:chrome",
+    "test:edge": "pnpm --filter @aiqa/playwright-framework test:edge",
     "test:smoke": "pnpm --filter @aiqa/playwright-framework exec playwright test --grep @smoke",
     "test:ui": "pnpm --filter @aiqa/playwright-framework exec playwright test",
     "test:api": "pnpm --filter @aiqa/api-framework exec playwright test",
@@ -34,6 +37,7 @@
     "lint-staged": "catalog:",
     "pnpm": "10.28.0",
     "prettier": "catalog:",
+    "tslib": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
