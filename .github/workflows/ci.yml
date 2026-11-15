@@ -1,0 +1,91 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule: [{ cron: '30 1 * * *' }] # nightly, 07:00 IST
+  workflow_dispatch:
+
+concurrency: { group: 'ci-${{ github.ref }}', cancel-in-progress: true }
+
+jobs:
+  quality:
+    name: Type-check, lint, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+
+  api:
+    name: API specs
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:api
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: api-report, path: packages/api-framework/playwright-report, retention-days: 14 }
+
+  ui:
+    name: UI specs (shard ${{ matrix.shard }}/3)
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          {
+            name: 'blob-report-${{ matrix.shard }}',
+            path: packages/playwright-framework/blob-report,
+            retention-days: 3,
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          {
+            name: 'allure-results-${{ matrix.shard }}',
+            path: packages/playwright-framework/allure-results,
+            retention-days: 3,
+          }
+
+  report:
+    name: Merge shard reports
+    if: always()
+    needs: ui
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with: { path: all-blob-reports, pattern: blob-report-*, merge-multiple: true }
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --reporter html ../../all-blob-reports
+      - uses: actions/upload-artifact@v4
+        with:
+          { name: ui-html-report, path: packages/playwright-framework/playwright-report, retention-days: 14 }

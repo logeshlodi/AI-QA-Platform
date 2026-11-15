@@ -1,0 +1,50 @@
+{
+  "name": "ai-qa-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted enterprise Playwright automation platform (working core)",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:unit": "vitest run",
+    "browsers": "pnpm --filter @aiqa/playwright-framework exec playwright install chromium firefox webkit",
+    "test:smoke": "pnpm --filter @aiqa/playwright-framework exec playwright test --grep @smoke",
+    "test:ui": "pnpm --filter @aiqa/playwright-framework exec playwright test",
+    "test:api": "pnpm --filter @aiqa/api-framework exec playwright test",
+    "test": "pnpm test:unit && pnpm test:api && pnpm test:ui",
+    "report:html": "pnpm --filter @aiqa/playwright-framework exec playwright show-report",
+    "licenses": "pnpm licenses list",
+    "prepare": "husky",
+    "report:allure": "pnpm --filter @aiqa/playwright-framework report:allure",
+    "test:ai": "vitest run --config vitest.live.config.ts"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-playwright": "catalog:",
+    "husky": "catalog:",
+    "lint-staged": "catalog:",
+    "pnpm": "10.28.0",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "lint-staged": {
+    "*.{ts,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

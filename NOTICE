@@ -1,0 +1,17 @@
+AI-QA-Platform
+Copyright 2026 Logesh
+
+This project is licensed under the Apache License, Version 2.0.
+
+It was designed with reference to the following open-source projects. No source
+files were copied from them; where a pattern was adapted, the file says so.
+
+- microsoft/playwright (Apache-2.0): fixture, project and reporter patterns; official demo apps
+- akshayp7/playwright-typescript-playwright-test (MIT): single-repo layout for UI, API and visual tests
+- nirtal85/Playwright-Typescript-Example (Apache-2.0): Allure wiring and CI workflow shape
+- sardar-usman/qa-core-heal (MIT): deterministic healing with reviewable diffs and explicit refusals
+- healenium/healenium-web (Apache-2.0): the idea of scoring candidates against a stored element description
+
+Demo applications under test (not redistributed): saucelabs/sample-app-web (MIT),
+saucelabs/the-internet (Apache-2.0), mwinteringham/restful-booker (GPL-3.0),
+UI Test Automation Playground, Playwright demo apps, Countries GraphQL API, DNE Online calculator.

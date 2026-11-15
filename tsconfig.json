@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@aiqa/shared": ["./packages/shared/src/index.ts"],
+      "@aiqa/ai-engine": ["./packages/ai-engine/src/index.ts"],
+      "@aiqa/self-healing-engine": ["./packages/self-healing-engine/src/index.ts"],
+      "@aiqa/playwright-framework": ["./packages/playwright-framework/src/index.ts"],
+      "@aiqa/api-framework": ["./packages/api-framework/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src",
+    "packages/*/tests",
+    "packages/*/*.ts",
+    "vitest.config.ts",
+    "vitest.live.config.ts"
+  ]
+}

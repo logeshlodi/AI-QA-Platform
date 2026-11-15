@@ -1,0 +1,21 @@
+# Run from the repository root:  docker compose -f infrastructure/docker/docker-compose.yml up --build tests
+services:
+  tests:
+    build: { context: ../.., dockerfile: infrastructure/docker/Dockerfile }
+    ipc: host # Chromium needs more shared memory than Docker gives by default
+    environment:
+      AI_ENABLED: ${AI_ENABLED:-false}
+      OLLAMA_URL: http://ollama:11434
+    volumes:
+      - ../../packages/playwright-framework/playwright-report:/work/packages/playwright-framework/playwright-report
+      - ../../packages/playwright-framework/allure-results:/work/packages/playwright-framework/allure-results
+
+  # Optional local model:  docker compose --profile ai up ollama
+  ollama:
+    image: ollama/ollama
+    profiles: [ai]
+    ports: ['11434:11434']
+    volumes: ['ollama:/root/.ollama']
+
+volumes:
+  ollama:

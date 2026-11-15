@@ -1,0 +1,36 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# Versions are pinned once here; packages refer to them as "catalog:".
+catalog:
+  # Test runner and Playwright plugins
+  '@playwright/test': 1.65.0
+  'allure-playwright': 3.14.0
+  'allure': 3.33.0
+  '@axe-core/playwright': 4.14.0
+
+  # API testing and test data
+  'zod': 4.6.7
+  'fast-xml-parser': 5.12.0
+  '@faker-js/faker': 10.6.0
+
+  # Runtime utilities
+  'pino': 10.4.0
+  'dotenv': 18.0.10
+
+  # Language, unit tests, quality gates
+  'typescript': 6.0.3
+  '@types/node': ^22.0.0
+  'vitest': 5.1.0
+  'eslint': 10.14.0
+  'typescript-eslint': 8.72.2
+  'eslint-plugin-playwright': 2.12.2
+  'prettier': 3.10.1
+  'husky': 9.1.7
+  'lint-staged': 17.6.0
+  '@commitlint/cli': 21.2.4
+  '@commitlint/config-conventional': 21.2.4
+
+onlyBuiltDependencies:
+  - esbuild
