@@ -1,7 +1,7 @@
 # Official Playwright image: browsers and their system libraries are preinstalled.
 # Keep this tag equal to @playwright/test in pnpm-workspace.yaml; CI warns when it lags
 # (scripts/check-playwright-image.mjs). A lagging tag still works: see the browser install below.
-FROM mcr.microsoft.com/playwright:v1.65.0-noble
+FROM mcr.microsoft.com/playwright:v1.65.1-noble
 
 WORKDIR /work
 RUN npm install -g pnpm@10

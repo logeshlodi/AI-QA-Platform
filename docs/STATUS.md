@@ -1,6 +1,6 @@
 # Status
 
-Last full run: 19 Nov 2026, Windows laptop (Dell Latitude 7420), Node 23.3.0, Playwright 1.65.0.
+Last full run: 19 Nov 2026, Windows laptop (Dell Latitude 7420), Node 23.3.0, Playwright 1.65.0 (1.65.1 since PR #6).
 Sprints 1 to 8 of the plan are built and have run on the laptop. Sprint 9 onward (agents, chat app, Kubernetes, learning content) is not started.
 
 ## What was run, and the result
@@ -74,9 +74,11 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 ## Known gaps and honest notes
 
 - **pnpm links fail intermittently on the laptop** ("EPERM: operation not permitted, symlink"), with
-  pnpm 10 as well as 12, and with Defender real-time protection off. Windows itself creates the same
-  link (`mklink /J <link> <target>`) and `pnpm install` then completes. Root cause not found. If it
-  happens: create the junction pnpm names, rerun the install. Node 22 or 24 LTS is worth trying first.
+  pnpm 10 as well as 12, and with Defender real-time protection off. Likely cause, not proven: VS Code
+  was running a Playwright test server and an ESLint bridge out of this `node_modules`, holding files
+  open while pnpm relinked them. Retrying gets through: `scripts/install-windows.ps1` retries
+  `pnpm install` and creates any link pnpm names (it needed 5 attempts for the Playwright 1.65.1
+  update). Closing VS Code before an install is worth trying first.
 - **kafkajs is unmaintained** (last release 2023). It works with Kafka 4.3 here; the maintained
   `@platformatic/kafka` needs Node 22.22+ or 24.6+. The client sits behind `KafkaBus` in
   `packages/data-framework/src/bus.ts`, so switching is one file.

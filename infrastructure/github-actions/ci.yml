@@ -140,7 +140,7 @@ jobs:
     # Same image that created the baselines (docker compose ... run --rm snapshots), so fonts and
     # rendering match. If @playwright/test is newer than the tag, the setup step adds the matching
     # browser, so a Playwright update does not break this job; bump the tag when the quality job warns.
-    container: { image: 'mcr.microsoft.com/playwright:v1.65.0-noble', options: --ipc=host }
+    container: { image: 'mcr.microsoft.com/playwright:v1.65.1-noble', options: --ipc=host }
     env: { PW_VISUAL: '1', HOME: /root }
     steps:
       - uses: actions/checkout@v7

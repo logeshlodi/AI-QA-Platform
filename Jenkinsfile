@@ -16,7 +16,7 @@ pipeline {
   stages {
     stage('Quality and API') {
       // Same image as Docker and GitHub: Node, browsers and their libraries are already inside.
-      agent { docker { image 'mcr.microsoft.com/playwright:v1.65.0-noble'; args '--ipc=host' } }
+      agent { docker { image 'mcr.microsoft.com/playwright:v1.65.1-noble'; args '--ipc=host' } }
       stages {
         stage('Install') { steps { sh 'npm install -g pnpm@10 && pnpm install --frozen-lockfile' } }
         stage('Type-check') { steps { sh 'pnpm typecheck' } }
@@ -38,7 +38,7 @@ pipeline {
       // Three shards in parallel, each in its own container; blob reports merged afterwards.
       matrix {
         axes { axis { name 'SHARD'; values '1', '2', '3' } }
-        agent { docker { image 'mcr.microsoft.com/playwright:v1.65.0-noble'; args '--ipc=host' } }
+        agent { docker { image 'mcr.microsoft.com/playwright:v1.65.1-noble'; args '--ipc=host' } }
         stages {
           stage('Shard') {
             steps {
@@ -58,7 +58,7 @@ pipeline {
     }
 
     stage('Merge UI report') {
-      agent { docker { image 'mcr.microsoft.com/playwright:v1.65.0-noble' } }
+      agent { docker { image 'mcr.microsoft.com/playwright:v1.65.1-noble' } }
       steps {
         sh 'npm install -g pnpm@10 && pnpm install --frozen-lockfile'
         script { ['1', '2', '3'].each { n -> unstash "blob-${n}" ; sh "mkdir -p all-blob-reports && cp packages/playwright-framework/blob-report/*.zip all-blob-reports/ || true" } }

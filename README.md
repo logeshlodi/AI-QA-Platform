@@ -14,6 +14,8 @@ Grafana, and the same pipeline for GitHub Actions, Azure DevOps and Jenkins. Eve
 ```bash
 npx -y pnpm@10.34.5 install     # first install; pnpm is then a local dev dependency
 npx pnpm browsers               # download Chromium, Firefox and WebKit (once)
+# Windows: if the install fails with "EPERM ... symlink", close VS Code or run
+#   powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 
 npx pnpm test:unit              # engines: no browser, no network, about 2 seconds
 npx pnpm test:api               # REST, GraphQL and SOAP against live APIs

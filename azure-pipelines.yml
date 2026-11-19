@@ -15,7 +15,7 @@ pool: { vmImage: ubuntu-latest }
 variables:
   CI: 'true'
   PNPM_STORE: $(Pipeline.Workspace)/.pnpm-store
-  PW_IMAGE: mcr.microsoft.com/playwright:v1.65.0-noble # keep equal to @playwright/test
+  PW_IMAGE: mcr.microsoft.com/playwright:v1.65.1-noble # keep equal to @playwright/test
 
 stages:
   - stage: quality
