@@ -2,10 +2,10 @@
 
 Two pipelines:
 
-| File                                         | For                                                                                                                                                                                                                                                            |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `infrastructure/jenkins/Jenkinsfile.windows` | A Windows Jenkins (the Windows installer, running as a service). Runs on the machine itself with `bat` steps; the data stage uses Docker Desktop and is marked unstable, not failed, when it is not running. Checked on a Windows laptop with Jenkins 2.580.2. |
-| `Jenkinsfile` (repository root)              | A Linux Jenkins with Docker: every stage in the Playwright image, UI shards in parallel.                                                                                                                                                                       |
+| File                                         | For                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `infrastructure/jenkins/Jenkinsfile.windows` | A Windows Jenkins (the Windows installer, running as a service). Runs on the machine itself with `bat` steps; the data stage uses Docker Desktop and is marked unstable, not failed, when it is not running. Set up and run on a Windows laptop with Jenkins 2.580.2 (job `AI-QA-Platform`). |
+| `Jenkinsfile` (repository root)              | A Linux Jenkins with Docker: every stage in the Playwright image, UI shards in parallel.                                                                                                                                                                                                     |
 
 ## Linux Jenkins
 

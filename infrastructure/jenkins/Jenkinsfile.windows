@@ -21,10 +21,10 @@ pipeline {
 
   triggers { pollSCM('H/15 * * * *') } // build within 15 minutes of a push; nightly runs come from GitHub
 
+  // Browsers go to Playwright's default folder for the account Jenkins runs as. When that is your own
+  // account (as with the Windows service here), builds reuse the browsers you already have.
   environment {
     CI = 'true'
-    // Browsers are kept outside the workspace, so a clean checkout does not download them again.
-    PLAYWRIGHT_BROWSERS_PATH = "${env.JENKINS_HOME}\\ms-playwright"
     DOCKER_BIN = "${env.LOCALAPPDATA ?: env.USERPROFILE + '\\AppData\\Local'}\\Programs\\DockerDesktop\\resources\\bin"
   }
 
