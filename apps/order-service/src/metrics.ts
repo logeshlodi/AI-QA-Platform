@@ -22,4 +22,8 @@ export const processingSeconds = meter.createHistogram('order_processing_seconds
   advice: { explicitBucketBoundaries: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5] },
 });
 
+export const transactionRetries = meter.createCounter('order_transaction_retries', {
+  description: 'Order transactions retried after Postgres chose them as a deadlock or serialization victim',
+});
+
 export const shutdownMetrics = () => provider.shutdown();

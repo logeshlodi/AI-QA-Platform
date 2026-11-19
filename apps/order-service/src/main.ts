@@ -1,9 +1,18 @@
 import http from 'node:http';
-import { Admin, Consumer, Producer, stringDeserializers, stringSerializers } from '@platformatic/kafka';
+import {
+  Admin,
+  Consumer,
+  Producer,
+  stringDeserializers,
+  stringSerializers,
+  type Message,
+  type MessagesStream,
+} from '@platformatic/kafka';
 import { config, TOPICS } from './config';
 import { placedOrder, productUpsert } from './contract';
 import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
 import { ordersProcessed, processingSeconds, shutdownMetrics } from './metrics';
+import { PartitionWorkers } from './partitions';
 
 const kafka = { clientId: 'order-service', bootstrapBrokers: config.kafkaBrokers };
 const producer = new Producer({ ...kafka, idempotent: true, serializers: stringSerializers });
@@ -151,22 +160,64 @@ async function start(): Promise<void> {
   if (missing.length > 0) await admin.createTopics({ topics: missing, partitions: 3, replicas: 1 });
   await admin.close();
   // A new group starts from the earliest offset; after that it resumes from its committed offset.
-  const stream = await consumer.consume({
+  // Offsets are committed by hand, after an order is handled: committing on read (autocommit) could
+  // skip orders that were read but not yet handled when the service stopped.
+  stream = await consumer.consume({
     topics: [TOPICS.placed],
     mode: 'committed',
     fallbackMode: 'earliest',
-    autocommit: true,
+    autocommit: false,
   });
-  // One message at a time, in order, as kafkajs's eachMessage did.
   void (async () => {
-    for await (const message of stream) await handle(message.value ?? undefined, message.key || undefined);
+    for await (const message of stream!) await workers.push(message);
   })().catch((error: unknown) => {
     log('consumer stopped', { error: (error as Error).message });
     process.exit(1);
   });
   ready = true;
-  log('order service ready', { port: config.port, metricsPort: config.metricsPort });
+  log('order service ready', {
+    port: config.port,
+    metricsPort: config.metricsPort,
+    parallelPartitions: config.parallelPartitions,
+  });
 }
+
+type PlacedMessage = Message<string, string, string, string>;
+let stream: MessagesStream<string, string, string, string> | undefined;
+
+/**
+ * Commits at most once a second per partition, after the message is handled: a commit is a round
+ * trip to Kafka, and committing an offset also covers every earlier one in that partition. The last
+ * handled message of each partition is committed again on shutdown. At-least-once: after a crash up
+ * to a second of orders is handled again, which saveOrder's duplicate check makes harmless.
+ */
+const lastHandled = new Map<number, PlacedMessage>();
+const lastCommitAt = new Map<number, number>();
+const commitHandled = async () => {
+  await Promise.allSettled([...lastHandled.values()].map((message) => message.commit()));
+};
+
+const workers = new PartitionWorkers<PlacedMessage>(
+  async (message) => {
+    await handle(message.value ?? undefined, message.key || undefined);
+    lastHandled.set(message.partition, message);
+    if (Date.now() - (lastCommitAt.get(message.partition) ?? 0) >= 1000) {
+      lastCommitAt.set(message.partition, Date.now());
+      await message.commit();
+    }
+  },
+  {
+    queueOf: config.parallelPartitions ? undefined : () => 0,
+    onError: (error, message) => {
+      log('order handling failed; stopping', {
+        error: (error as Error).message,
+        partition: message.partition,
+        offset: String(message.offset),
+      });
+      process.exit(1);
+    },
+  },
+);
 
 server.listen(config.port);
 start().catch((error: unknown) => {
@@ -177,6 +228,10 @@ start().catch((error: unknown) => {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, async () => {
     ready = false;
+    // Stop reading, finish what is queued, commit it, then let go of the group.
+    await stream?.close().catch(() => undefined);
+    await workers.drain();
+    await commitHandled();
     await consumer.close(true).catch(() => undefined);
     await producer.close().catch(() => undefined);
     await Promise.allSettled([pool.end(), mongo.close(), shutdownMetrics()]);

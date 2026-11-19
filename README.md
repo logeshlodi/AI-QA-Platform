@@ -88,10 +88,25 @@ processing time. Load is only ever aimed at the order service, never at a public
 Both record their numbers in the run history. `aiqa perf` and the dashboard compare each metric's
 latest value with the median of its previous runs and flag regressions.
 
-What the stress profile found on the laptop (19 Nov 2026): the service accepts orders at any rate
-(`POST /orders` p95 8 ms) but confirms only about 35 a second, because it handles Kafka messages one
-at a time. Beyond that a queue builds and end-to-end time climbs to tens of seconds. The load
-profile (20 a second) holds every threshold.
+What the stress profile found on the laptop (19 to 20 Nov 2026), in three steps:
+
+1. **The first bottleneck was the load test.** Polling every 25 ms sent 1,600 reads a second, which
+   competed with the service for its five Postgres connections. Backing off (25 ms up to 500 ms)
+   gave a fair baseline.
+2. **The service handled Kafka messages one at a time.** At 150 offered orders a second it peaked at
+   99 confirmed a second; end-to-end p95 reached 7.5 s and the end-to-end threshold failed.
+3. **Handling the three partitions in parallel exposed a deadlock**: two orders reserving the same
+   products in opposite line order. Locking product rows in SKU order fixed it; a concurrency spec
+   that reproduces it failed 3 of 3 before the fix and passes after.
+
+| Stress profile, same script and laptop | One message at a time | Partitions in parallel |
+| -------------------------------------- | --------------------- | ---------------------- |
+| Peak orders handled a second           | 99                    | 132                    |
+| Order end-to-end p95                   | 7.54 s                | 1.31 s                 |
+| Orders k6 had to drop                  | 2,316                 | 233                    |
+| Thresholds                             | end-to-end crossed    | all held               |
+
+`PARALLEL_PARTITIONS=false` on the order service brings back the old behaviour to compare.
 
 ## Where the specs are
 

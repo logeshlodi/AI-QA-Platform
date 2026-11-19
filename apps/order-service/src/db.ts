@@ -2,6 +2,7 @@ import pg from 'pg';
 import { MongoClient, type Collection } from 'mongodb';
 import { config } from './config';
 import type { PlacedOrder } from './contract';
+import { transactionRetries } from './metrics';
 
 export const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 5 });
 export const mongo = new MongoClient(config.mongoUrl);
@@ -48,11 +49,32 @@ export async function migrate(): Promise<void> {
 
 export type Outcome = { kind: 'confirmed' } | { kind: 'rejected'; reason: string } | { kind: 'duplicate' };
 
+/** Postgres codes for "this transaction lost a lock race; running it again will work". */
+const RETRYABLE = new Set(['40P01', '40001']); // deadlock_detected, serialization_failure
+const MAX_ATTEMPTS = 3;
+
 /**
  * Stores the order and reserves stock in one transaction. A duplicate message (same order id)
  * changes nothing. If any line cannot be reserved, no stock moves and the order is kept as rejected.
+ *
+ * Retried when Postgres aborts it to break a deadlock: the whole transaction rolled back, so running
+ * it again is safe. Reserving stock in SKU order (below) should make that rare; this is the backstop.
  */
 export async function saveOrder(order: PlacedOrder): Promise<Outcome> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await saveOrderOnce(order);
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (!code || !RETRYABLE.has(code) || attempt >= MAX_ATTEMPTS) throw error;
+      transactionRetries.add(1, { code });
+      // A short random pause, so the two transactions do not collide again straight away.
+      await new Promise((resolve) => setTimeout(resolve, 5 + Math.random() * 20 * attempt));
+    }
+  }
+}
+
+async function saveOrderOnce(order: PlacedOrder): Promise<Outcome> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -74,7 +96,11 @@ export async function saveOrder(order: PlacedOrder): Promise<Outcome> {
 
     await client.query('SAVEPOINT reserve');
     let reason: string | undefined;
-    for (const line of order.lines) {
+    // Lock product rows in one global order (by SKU). Two orders running at the same time that
+    // share products then queue for the first shared row instead of each holding a row the other
+    // needs: line order made exactly that deadlock happen once orders ran in parallel (20 Nov 2026).
+    const bySku = [...order.lines].sort((a, b) => (a.sku < b.sku ? -1 : a.sku > b.sku ? 1 : 0));
+    for (const line of bySku) {
       const reserved = await client.query(
         'UPDATE products SET stock = stock - $2 WHERE sku = $1 AND stock >= $2 RETURNING stock',
         [line.sku, line.quantity],

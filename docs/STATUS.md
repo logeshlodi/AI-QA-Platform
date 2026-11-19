@@ -44,22 +44,45 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 
 All run on the Windows laptop, Node 24.22.3, Docker Desktop.
 
-| Check                                               | Result                                                                                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:perf` (6 specs, Chromium, one at a time) | Passed in both runs with the final budgets (after three measuring runs). Login LCP 324 to 404 ms; INP 24 to 32 ms; slow-phone LCP 2,044 to 2,184 ms |
-| Page-weight budget                                  | Identical in every run once images had loaded: 10 requests, 730 KB decoded, 550 KB of it scripts                                                    |
-| Memory-leak check                                   | 4.2 to 4.3 KB per round, steady; budget 8 KB                                                                                                        |
-| Data suites with the new HTTP API spec              | 29 passed (24 before, plus 5 for `POST /orders` and `PUT /products/:sku`)                                                                           |
-| `pnpm perf:load smoke`                              | Every threshold held: 60 orders, all confirmed, end-to-end p95 33 ms                                                                                |
-| `pnpm perf:load load` (20 orders a second)          | Every threshold held: 3,360 orders, all confirmed, 0 failed requests, both endpoints about 4 ms at p95                                              |
-| `pnpm perf:load stress` (to 150 a second)           | Thresholds crossed, as intended: see below                                                                                                          |
-| `aiqa perf`, dashboard section                      | Trends and verdicts from the recorded runs                                                                                                          |
+| Check                                                   | Result                                                                                                                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:perf` (6 specs, Chromium, one at a time)     | Passed in both runs with the final budgets (after three measuring runs). Login LCP 324 to 404 ms; INP 24 to 32 ms; slow-phone LCP 2,044 to 2,184 ms |
+| Page-weight budget                                      | Identical in every run once images had loaded: 10 requests, 730 KB decoded, 550 KB of it scripts                                                    |
+| Memory-leak check                                       | 4.2 to 4.3 KB per round, steady; budget 8 KB                                                                                                        |
+| Data suites with the new HTTP API and concurrency specs | 30 passed (24 before, 5 for `POST /orders` and `PUT /products/:sku`, 1 for concurrent orders)                                                       |
+| `pnpm perf:load smoke`                                  | Every threshold held: 60 orders, all confirmed, end-to-end p95 33 ms                                                                                |
+| `pnpm perf:load load` (20 orders a second)              | Every threshold held: 3,360 orders, all confirmed, 0 failed requests, both endpoints about 4 ms at p95                                              |
+| `pnpm perf:load stress` (to 150 a second)               | First run: thresholds crossed (see below). After the two fixes below: every threshold held                                                          |
+| `aiqa perf`, dashboard section                          | Trends and verdicts from the recorded runs                                                                                                          |
 
-What the stress run found: `POST /orders` kept a p95 of 8 ms and no request failed, but the service
-confirmed only about 35 orders a second, because it handles Kafka messages one at a time. Beyond
-that a queue built up: end-to-end p95 32.5 s, 80% confirmed within the 5-second window, and k6
-dropped 8,524 orders for lack of free virtual users. Processing the three partitions in parallel
-(order kept within each partition) is the obvious next step for the service; not done here.
+What the stress runs found, in order:
+
+1. **The first run measured mostly the load test.** It showed about 35 orders a second confirmed,
+   end-to-end p95 32.5 s and 80% confirmed, but the script polled every 25 ms: 1,600 reads a second
+   against the service's five Postgres connections. With polling that backs off, the same service
+   peaked at 99 orders a second (Prometheus `orders_processed_total`), confirmed all 13,733 orders,
+   and crossed only the end-to-end threshold (p95 7.54 s, 2,316 orders dropped).
+2. **The service handled Kafka messages one at a time.** It now handles its three partitions in
+   parallel, one message at a time within each, so everything about one order stays in order
+   (`apps/order-service/src/partitions.ts`, unit-tested). Offsets are committed after handling, at
+   most once a second per partition, instead of automatically on read.
+3. **That exposed a deadlock**, which stopped the service in its first parallel stress run: two
+   orders reserving the same products in opposite line order. Stock is now reserved in SKU order,
+   and a transaction Postgres aborts as a deadlock victim is retried up to three times
+   (`order_transaction_retries_total`; zero in every run since). `tests/flows/concurrency.spec.ts`
+   places 60 orders with crossed product order at once: it failed 3 of 3 runs on the deadlocking
+   build and passes 5 of 5 on the fixed one.
+
+| Stress profile, same script and laptop | One message at a time | Partitions in parallel |
+| -------------------------------------- | --------------------- | ---------------------- |
+| Peak orders handled a second           | 99                    | 132                    |
+| Orders completed                       | 13,733                | 15,817                 |
+| Order end-to-end p95                   | 7.54 s                | 1.31 s                 |
+| Orders k6 had to drop                  | 2,316                 | 233                    |
+| Thresholds                             | end-to-end crossed    | all held               |
+
+The stress profile offers at most 150 orders a second, so 132 is not the new ceiling, only what this
+run needed. `PARALLEL_PARTITIONS=false` brings back the old behaviour to compare.
 
 Corrections made on the way:
 
