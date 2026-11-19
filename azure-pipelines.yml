@@ -1,0 +1,102 @@
+# Azure DevOps pipeline: the same stages as .github/workflows/ci.yml.
+# Set up: Pipelines > New pipeline > your repo > Existing Azure Pipelines YAML file > /azure-pipelines.yml.
+# Microsoft-hosted ubuntu-latest agents have Node, Docker and Docker Compose.
+
+trigger: { branches: { include: [main] } }
+pr: { branches: { include: [main] } }
+schedules:
+  - cron: '30 1 * * *' # nightly, 07:00 IST
+    displayName: Nightly
+    branches: { include: [main] }
+    always: true
+
+pool: { vmImage: ubuntu-latest }
+
+variables:
+  CI: 'true'
+  PNPM_STORE: $(Pipeline.Workspace)/.pnpm-store
+  PW_IMAGE: mcr.microsoft.com/playwright:v1.65.0-noble # keep equal to @playwright/test
+
+stages:
+  - stage: quality
+    displayName: Type-check, lint, unit tests
+    jobs:
+      - job: quality
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+          - script: pnpm typecheck
+            displayName: Type-check
+          - script: pnpm lint
+            displayName: Lint
+          - script: pnpm test:unit
+            displayName: Unit tests
+
+  - stage: tests
+    displayName: API, UI and data suites
+    dependsOn: quality
+    jobs:
+      - job: api
+        displayName: API specs
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+          - script: pnpm test:api
+            displayName: API specs
+          - template: infrastructure/azure-devops/publish.yml
+            parameters: { package: api-framework, name: api }
+
+      - job: ui
+        displayName: UI specs
+        # Three copies of this job; each runs one shard. Playwright's merge happens in the next job.
+        strategy: { parallel: 3 }
+        container: { image: $(PW_IMAGE), options: --ipc=host }
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+            parameters: { browsers: false }
+          - script: >
+              pnpm --filter @aiqa/playwright-framework exec playwright test
+              --shard=$(System.JobPositionInPhase)/$(System.TotalJobsInPhase) --grep-invert @audit
+            displayName: UI shard $(System.JobPositionInPhase) of $(System.TotalJobsInPhase)
+          - publish: packages/playwright-framework/blob-report
+            artifact: ui-blob-$(System.JobPositionInPhase)
+            condition: always()
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/playwright-framework/test-results/junit.xml
+              testRunTitle: UI shard $(System.JobPositionInPhase)
+
+      - job: ui_report
+        displayName: Merge UI shards
+        dependsOn: ui
+        condition: succeededOrFailed()
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+          - task: DownloadPipelineArtifact@2
+            inputs: { itemPattern: 'ui-blob-*/**', path: $(Pipeline.Workspace)/blobs }
+          - script: |
+              mkdir -p all-blob-reports
+              find "$(Pipeline.Workspace)/blobs" -name '*.zip' -exec cp {} all-blob-reports/ \;
+              pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --config merge.config.ts ../../all-blob-reports
+            displayName: Merge shard reports and record history
+          - publish: packages/playwright-framework/playwright-report
+            artifact: ui-html-report
+          - publish: .aiqa/dashboard
+            artifact: ui-dashboard
+
+      - job: data
+        displayName: Postgres, MongoDB and Kafka suites
+        timeoutInMinutes: 30
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+            parameters: { browsers: false }
+          - script: pnpm stack:test
+            displayName: Start the stack and run the data suites in it
+          - script: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
+            displayName: Order service logs
+            condition: failed()
+          - script: pnpm stack:down
+            displayName: Stop the stack
+            condition: always()
+          - template: infrastructure/azure-devops/publish.yml
+            parameters: { package: data-framework, name: data }

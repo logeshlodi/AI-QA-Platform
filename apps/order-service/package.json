@@ -1,0 +1,23 @@
+{
+  "name": "@aiqa/order-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "System under test for the data and messaging suites: Kafka in, Postgres and MongoDB writes, Kafka out",
+  "main": "./src/main.ts",
+  "scripts": {
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/exporter-prometheus": "catalog:",
+    "@opentelemetry/sdk-metrics": "catalog:",
+    "kafkajs": "catalog:",
+    "mongodb": "catalog:",
+    "pg": "catalog:",
+    "tsx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "catalog:"
+  }
+}

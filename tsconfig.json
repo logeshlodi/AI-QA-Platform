@@ -5,12 +5,17 @@
       "@aiqa/shared": ["./packages/shared/src/index.ts"],
       "@aiqa/ai-engine": ["./packages/ai-engine/src/index.ts"],
       "@aiqa/self-healing-engine": ["./packages/self-healing-engine/src/index.ts"],
+      "@aiqa/reporting-engine": ["./packages/reporting-engine/src/index.ts"],
+      "@aiqa/test-data-engine": ["./packages/test-data-engine/src/index.ts"],
+      "@aiqa/cli": ["./packages/cli/src/index.ts"],
       "@aiqa/playwright-framework": ["./packages/playwright-framework/src/index.ts"],
-      "@aiqa/api-framework": ["./packages/api-framework/src/index.ts"]
+      "@aiqa/api-framework": ["./packages/api-framework/src/index.ts"],
+      "@aiqa/data-framework": ["./packages/data-framework/src/index.ts"]
     }
   },
   "include": [
     "packages/*/src",
+    "apps/*/src",
     "packages/*/tests",
     "packages/*/*.ts",
     "vitest.config.ts",

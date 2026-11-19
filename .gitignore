@@ -8,3 +8,4 @@ lighthouse-report/
 .aiqa/
 .env
 *.log
+_to_delete/

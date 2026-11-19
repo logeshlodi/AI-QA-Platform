@@ -2,6 +2,10 @@ packages:
   - 'packages/*'
   - 'apps/*'
 
+# The `pnpm` dev dependency's install script only self-installs a global copy; not wanted here.
+ignoredBuiltDependencies:
+  - pnpm
+
 # Versions are pinned once here; packages refer to them as "catalog:".
 catalog:
   # Test runner and Playwright plugins
@@ -23,10 +27,26 @@ catalog:
   # A root copy lets Node's upward lookup find it.
   'tslib': 2.9.1
   'cross-env': 10.1.0
+  'tsx': 4.23.15
+  'commander': 15.1.0
+
+  # Data and messaging suites, and the order service they test
+  'pg': 8.23.1
+  '@types/pg': 8.23.1
+  'mongodb': 7.9.0
+  # kafkajs is unmaintained (last release 2023) but works on every Node this repo meets and with
+  # Kafka 4 (KIP-896 kept its protocol versions). It sits behind one adapter in data-framework.
+  'kafkajs': 2.2.4
+  '@opentelemetry/api': 1.10.0
+  '@opentelemetry/sdk-metrics': 3.1.1
+  '@opentelemetry/exporter-prometheus': 0.301.2
 
   # Language, unit tests, quality gates
-  'typescript': 7.0.2
-  '@types/node': ^26.6.6
+  # typescript-eslint supports TypeScript up to 6.0; 7.0 also has no programmatic API yet.
+  # Dependabot skips TypeScript majors until that changes (.github/dependabot.yml).
+  'typescript': 6.0.3
+  # Types match the oldest Node the project runs on (22, as in CI), so code cannot use newer APIs by mistake.
+  '@types/node': ^22.0.0
   'vitest': 5.1.0
   'eslint': 10.14.0
   'typescript-eslint': 8.72.2
@@ -36,6 +56,3 @@ catalog:
   'lint-staged': 17.6.0
   '@commitlint/cli': 21.2.4
   '@commitlint/config-conventional': 21.2.4
-
-onlyBuiltDependencies:
-  - esbuild

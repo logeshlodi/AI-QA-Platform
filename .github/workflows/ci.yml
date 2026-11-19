@@ -33,10 +33,43 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # History survives between CI runs in the Actions cache: restore the newest, save a new one.
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-api-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-api-${{ github.ref_name }}-
+            aiqa-history-api-main-
       - run: pnpm test:api
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: api-report, path: packages/api-framework/playwright-report, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: api-dashboard, path: .aiqa/dashboard, retention-days: 30 }
+
+  data:
+    name: Postgres, MongoDB and Kafka suites
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # One command: build the order service, start Postgres, MongoDB, Kafka, run the suites in a container.
+      - run: pnpm stack:test
+      - if: failure()
+        run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
+      - if: always()
+        run: pnpm stack:down
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: data-report, path: packages/data-framework/playwright-report, retention-days: 14 }
 
   branded:
     name: Smoke in real ${{ matrix.channel }}
@@ -144,7 +177,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with: { path: all-blob-reports, pattern: blob-report-*, merge-multiple: true }
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --reporter html ../../all-blob-reports
+      # History survives between CI runs in the Actions cache: restore the newest, save a new one.
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-ui-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-ui-${{ github.ref_name }}-
+            aiqa-history-ui-main-
+      # merge.config.ts adds the history reporter, so the three shards are recorded as one run.
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --config merge.config.ts ../../all-blob-reports
       - uses: actions/upload-artifact@v7
         with:
           { name: ui-html-report, path: packages/playwright-framework/playwright-report, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        with: { name: ui-dashboard, path: .aiqa/dashboard, retention-days: 30 }

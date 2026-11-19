@@ -1,3 +1,10 @@
-# cli
+# @aiqa/cli
 
-Planned for Phase 4 (Sprints 6 to 8). Not built yet; see the Phase 1 plan and the root README roadmap.
+`npx pnpm aiqa <command>` from the repository root.
+
+| Command                                                                              | What it does                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aiqa new page <name> [--target saucedemo] [--path /] [--url] [--dry-run] [--force]` | Writes a page object to `playwright-framework/src/pages/<target>/` and a starter spec to `tests/generated/`. With `--url` it opens the page and builds `getByRole` locators from its accessibility tree (unique, named elements only). Never overwrites without `--force`. |
+| `aiqa history [--suite ui] [--limit 15]`                                             | Recorded runs from `.aiqa/history`, newest first.                                                                                                                                                                                                                          |
+| `aiqa flaky`                                                                         | Tests that passed only on retry or flipped green/red at least twice.                                                                                                                                                                                                       |
+| `aiqa data <customer\|product\|order\|shop> [--count 1] [--seed 1]`                  | Seeded test data as JSON. Same seed, same data.                                                                                                                                                                                                                            |

@@ -1,0 +1,16 @@
+{
+  "name": "@aiqa/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "aiqa: generate page objects and specs, read run history, print test data",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@aiqa/ai-engine": "workspace:*",
+    "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/test-data-engine": "workspace:*",
+    "@playwright/test": "catalog:",
+    "commander": "catalog:",
+    "prettier": "catalog:"
+  }
+}

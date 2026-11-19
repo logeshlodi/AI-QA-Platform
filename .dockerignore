@@ -4,3 +4,9 @@
 **/allure-results
 **/.aiqa
 .git
+**/lighthouse-report
+**/allure-report
+**/blob-report
+_to_delete
+.env
+.kilo

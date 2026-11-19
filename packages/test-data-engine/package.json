@@ -1,0 +1,13 @@
+{
+  "name": "@aiqa/test-data-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@aiqa/ai-engine": "workspace:*",
+    "@faker-js/faker": "catalog:",
+    "zod": "catalog:",
+    "@aiqa/shared": "workspace:*"
+  }
+}

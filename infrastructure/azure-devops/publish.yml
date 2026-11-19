@@ -1,0 +1,20 @@
+# Shared steps: JUnit results into the Tests tab, HTML report and dashboard as artifacts.
+parameters:
+  - name: package
+    type: string
+  - name: name
+    type: string
+
+steps:
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFormat: JUnit
+      testResultsFiles: packages/${{ parameters.package }}/test-results/junit.xml
+      testRunTitle: ${{ parameters.name }}
+  - publish: packages/${{ parameters.package }}/playwright-report
+    artifact: ${{ parameters.name }}-html-report
+    condition: always()
+  - publish: .aiqa/dashboard
+    artifact: ${{ parameters.name }}-dashboard
+    condition: always()

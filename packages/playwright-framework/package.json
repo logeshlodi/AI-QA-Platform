@@ -6,6 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "test": "playwright test",
+    "test:history": "cross-env AIQA_HISTORY=ui playwright test",
     "test:chromium": "playwright test --project=chromium",
     "test:chrome": "cross-env PW_BRANDED_BROWSERS=chrome playwright test --project=chrome",
     "test:edge": "cross-env PW_BRANDED_BROWSERS=msedge playwright test --project=msedge",
@@ -19,6 +20,7 @@
   },
   "dependencies": {
     "@aiqa/ai-engine": "workspace:*",
+    "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "@axe-core/playwright": "catalog:",

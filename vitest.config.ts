@@ -9,11 +9,15 @@ export default defineConfig({
       '@aiqa/shared': pkg('shared'),
       '@aiqa/ai-engine': pkg('ai-engine'),
       '@aiqa/self-healing-engine': pkg('self-healing-engine'),
+      '@aiqa/reporting-engine': pkg('reporting-engine'),
+      '@aiqa/test-data-engine': pkg('test-data-engine'),
     },
   },
   test: {
     // Unit tests only. Browser and API specs are run by Playwright.
-    include: ['packages/{shared,ai-engine,self-healing-engine}/tests/**/*.test.ts'],
+    include: [
+      'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,cli}/tests/**/*.test.ts',
+    ],
     environment: 'node',
   },
 });

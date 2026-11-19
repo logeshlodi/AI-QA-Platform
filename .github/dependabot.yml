@@ -7,6 +7,18 @@ updates:
     schedule: { interval: weekly, day: monday }
     open-pull-requests-limit: 5
     commit-message: { prefix: build }
+    ignore:
+      # typescript-eslint supports TypeScript up to 6.0 (7.0 has no programmatic API yet):
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Node types follow the Node version the project runs on (22), not the newest Node.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # pnpm 12's native linker fails with "Access is denied" creating links on the Windows dev laptop,
+      # where pnpm 10 works. Revisit with Windows Developer Mode on (see docs/STATUS.md).
+      - dependency-name: pnpm
+        update-types: ['version-update:semver-major']
     groups:
       playwright:
         patterns: ['@playwright/*', 'playwright*', 'allure*', '@axe-core/playwright']

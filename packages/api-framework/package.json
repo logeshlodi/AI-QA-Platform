@@ -5,15 +5,20 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:history": "cross-env AIQA_HISTORY=api playwright test"
   },
   "dependencies": {
     "@aiqa/ai-engine": "workspace:*",
+    "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "@faker-js/faker": "catalog:",
     "@playwright/test": "catalog:",
     "allure-playwright": "catalog:",
     "fast-xml-parser": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "cross-env": "catalog:"
   }
 }

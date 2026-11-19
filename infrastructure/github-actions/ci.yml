@@ -12,10 +12,10 @@ jobs:
     name: Type-check, lint, unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
@@ -27,16 +27,49 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # History survives between CI runs in the Actions cache: restore the newest, save a new one.
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-api-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-api-${{ github.ref_name }}-
+            aiqa-history-api-main-
       - run: pnpm test:api
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: api-report, path: packages/api-framework/playwright-report, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: api-dashboard, path: .aiqa/dashboard, retention-days: 30 }
+
+  data:
+    name: Postgres, MongoDB and Kafka suites
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # One command: build the order service, start Postgres, MongoDB, Kafka, run the suites in a container.
+      - run: pnpm stack:test
+      - if: failure()
+        run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
+      - if: always()
+        run: pnpm stack:down
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: data-report, path: packages/data-framework/playwright-report, retention-days: 14 }
 
   branded:
     name: Smoke in real ${{ matrix.channel }}
@@ -46,10 +79,10 @@ jobs:
       fail-fast: false
       matrix: { channel: [chrome, msedge] }
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps ${{ matrix.channel }}
@@ -61,15 +94,15 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test --project=lighthouse
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           {
@@ -86,14 +119,14 @@ jobs:
     container: { image: 'mcr.microsoft.com/playwright:v1.65.0-noble', options: --ipc=host }
     env: { PW_VISUAL: '1', HOME: /root }
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test tests/visual --project=chromium
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with: { name: visual-diff, path: packages/playwright-framework/test-results, retention-days: 7 }
 
@@ -105,15 +138,15 @@ jobs:
       fail-fast: false
       matrix: { shard: [1, 2, 3] }
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium firefox webkit
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${{ matrix.shard }}/3 --grep-invert @audit
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           {
@@ -121,7 +154,7 @@ jobs:
             path: packages/playwright-framework/blob-report,
             retention-days: 3,
           }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           {
@@ -136,15 +169,26 @@ jobs:
     needs: ui
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with: { path: all-blob-reports, pattern: blob-report-*, merge-multiple: true }
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --reporter html ../../all-blob-reports
-      - uses: actions/upload-artifact@v4
+      # History survives between CI runs in the Actions cache: restore the newest, save a new one.
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-ui-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-ui-${{ github.ref_name }}-
+            aiqa-history-ui-main-
+      # merge.config.ts adds the history reporter, so the three shards are recorded as one run.
+      - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --config merge.config.ts ../../all-blob-reports
+      - uses: actions/upload-artifact@v7
         with:
           { name: ui-html-report, path: packages/playwright-framework/playwright-report, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        with: { name: ui-dashboard, path: .aiqa/dashboard, retention-days: 30 }

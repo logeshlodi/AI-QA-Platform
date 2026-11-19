@@ -3,9 +3,11 @@
 [![CI](https://github.com/logeshlodi/AI-QA-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/logeshlodi/AI-QA-Platform/actions/workflows/ci.yml)
 
 An AI-assisted Playwright + TypeScript automation platform, built as a pnpm monorepo and tested
-against live public demo applications. This is the **working core** (Sprints 1 to 5 of the plan):
-cross-browser UI tests, API tests, a self-healing engine with an audit trail, and an optional
-local-model layer. Every dependency is open source; nothing here needs a paid service.
+against live public demo applications. It covers Sprints 1 to 8 of the plan:
+cross-browser UI tests, API tests, a self-healing engine with an audit trail, an optional
+local-model layer, run history with trends and flaky-test detection, seeded test data, a code
+generator, Postgres/MongoDB/Kafka suites against a real service on Docker Compose, metrics in
+Grafana, and the same pipeline for GitHub Actions, Azure DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
 
 ## Quick start (Windows `cmd`, macOS, Linux)
 
@@ -18,10 +20,20 @@ npx pnpm test:api               # REST, GraphQL and SOAP against live APIs
 npx pnpm test:smoke             # SauceDemo smoke on every browser and device project
 npx pnpm test:ui                # everything: journeys, locator labs, feature labs, healing, visual
 npx pnpm report:html            # open the last HTML report
+npx pnpm report:dashboard       # open the run-history dashboard (trends, flaky tests, failures)
 
 npx pnpm test:chrome            # smoke in your installed Chrome   (test:edge for Edge)
 npx pnpm test:lighthouse        # Lighthouse audit of the SauceDemo login page
 npx pnpm test:shuffle           # Chromium run in a random order; prints the seed to replay it
+
+npx pnpm stack:up               # Postgres, MongoDB, Kafka, the order service, Prometheus, Grafana (Docker)
+npx pnpm test:data              # the data and messaging suites against that stack
+npx pnpm stack:test             # one command: build, start, run the data suites in a container, stop
+npx pnpm stack:down             # stop the stack and delete its data
+
+npx pnpm aiqa new page Inventory --path /inventory.html --url   # page object + spec from the live page
+npx pnpm aiqa data order --count 3 --seed 42                    # seeded test data as JSON
+npx pnpm aiqa history           # recorded runs; `aiqa flaky` for the flaky list
 ```
 
 Requires Node 22 or newer. If your global `pnpm` works you can drop the `npx` prefix.
@@ -35,9 +47,14 @@ Requires Node 22 or newer. If your global `pnpm` works you can drop the `npx` pr
 | `packages/self-healing-engine`  | Fingerprints, four rule strategies plus a model tie-breaker, scoring, stores (memory, JSON, SQLite), heal report | Vitest                |
 | `packages/playwright-framework` | Fixtures, page objects, components, flows, checks, the Playwright healing adapter, all UI specs                  | Playwright            |
 | `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                          | Playwright            |
+| `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard      | Vitest                |
+| `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records   | Vitest                |
+| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data              | Vitest                |
+| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, Kafka adapter, stack fixtures                                                | Playwright, Docker    |
+| `apps/order-service`            | The system under test for the data suites: Kafka in, Postgres and MongoDB writes, Kafka out, OpenTelemetry       | Data suites           |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
-import the test runner. Specs import the framework; the framework imports the engines; the
+import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
 engines import `shared`.
 
 ## Where the specs are
@@ -120,6 +137,29 @@ agents, created with `npx playwright init-agents --loop=claude`. They start from
 (a logged-in SauceDemo session on this project's fixtures) and write plans to `specs/`.
 See `packages/playwright-framework/specs/README.md` for other tools (VS Code, Copilot, Codex).
 
+## Run history and the dashboard
+
+`pnpm test:ui` and `pnpm test:api` record every run to `.aiqa/history` (SQLite when Node has it,
+one JSON file per run otherwise) and rebuild `.aiqa/dashboard/index.html`. That page shows each
+suite's latest result, pass-rate and duration trends, flaky tests, the latest failures with their
+likely cause, the slowest tests and a run log. A run of a single spec (`playwright test some.spec.ts`)
+is not recorded, so the trend lines only ever compare whole-suite runs.
+
+A test counts as **flaky** when it passed only on a retry, or flipped between green and red at least
+twice in the last 20 runs. Going green to red and staying red is a regression, not flakiness, and
+shows up under failures instead.
+
+## Data and messaging suites
+
+`apps/order-service` reads orders from Kafka, stores them and reserves stock in Postgres in one
+transaction, writes an audit trail to MongoDB, and publishes confirmed, rejected or dead-letter
+events. `packages/data-framework` tests it from the outside: schema and constraints, data-quality
+queries over every stored order, the audit index, Kafka partition ordering, and the full flow for
+a confirmed order, too little stock, an unknown SKU, a duplicate delivery and four invalid messages.
+
+Grafana at http://localhost:3000 shows the service while the suites run (orders by outcome,
+processing time p50 and p95); Prometheus is at http://localhost:9090.
+
 ## Docker and CI
 
 ```bash
@@ -129,7 +169,13 @@ docker compose -f infrastructure/docker/docker-compose.yml run --rm snapshots   
 
 GitHub Actions (`.github/workflows/ci.yml`) runs type-check, lint and unit tests, the API specs,
 the UI specs in three shards with a merged report, smoke in real Chrome and Edge, and the
-Lighthouse audit. Dependabot (`.github/dependabot.yml`) groups weekly updates.
+Lighthouse audit, and the data suites on the Docker stack. The API job and the shard-merge job
+record history in the Actions cache and upload the dashboard as an artifact (`api-dashboard`,
+`ui-dashboard`).
+
+The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
+`infrastructure/azure-devops/`) and **Jenkins** (`Jenkinsfile`, set-up notes in
+`infrastructure/jenkins/README.md`). Dependabot (`.github/dependabot.yml`) groups weekly updates.
 
 ## Useful switches
 

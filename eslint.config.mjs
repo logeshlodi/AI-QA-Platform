@@ -26,11 +26,21 @@ export default tseslint.config(
   },
   {
     // Architecture boundary: engines stay runnable without the test runner.
-    files: ['packages/ai-engine/**/*.ts', 'packages/self-healing-engine/**/*.ts'],
+    files: [
+      'packages/ai-engine/**/*.ts',
+      'packages/self-healing-engine/**/*.ts',
+      'packages/reporting-engine/**/*.ts',
+      'packages/test-data-engine/**/*.ts',
+    ],
+    // reporting-engine may import the reporter *types* (@playwright/test/reporter) but not the runner itself.
     rules: noImport(['@playwright/test'], 'Engines must not import the test runner.'),
   },
   {
-    files: ['packages/playwright-framework/tests/**/*.ts', 'packages/api-framework/tests/**/*.ts'],
+    files: [
+      'packages/playwright-framework/tests/**/*.ts',
+      'packages/api-framework/tests/**/*.ts',
+      'packages/data-framework/tests/**/*.ts',
+    ],
     ...playwright.configs['flat/recommended'],
     rules: {
       ...playwright.configs['flat/recommended'].rules,

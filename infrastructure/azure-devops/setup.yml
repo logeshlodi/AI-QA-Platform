@@ -1,0 +1,22 @@
+# Shared steps: Node 22, pnpm 10 with a cached store, install, and (optionally) Playwright browsers.
+parameters:
+  - name: browsers
+    type: boolean
+    default: true
+
+steps:
+  - task: UseNode@1
+    inputs: { version: '22.x' }
+  - script: npm install -g pnpm@10 && pnpm config set store-dir $(PNPM_STORE)
+    displayName: Install pnpm
+  - task: Cache@2
+    inputs:
+      key: 'pnpm | "$(Agent.OS)" | pnpm-lock.yaml'
+      restoreKeys: 'pnpm | "$(Agent.OS)"'
+      path: $(PNPM_STORE)
+    displayName: Cache the pnpm store
+  - script: pnpm install --frozen-lockfile
+    displayName: Install dependencies
+  - ${{ if eq(parameters.browsers, true) }}:
+      - script: pnpm browsers --with-deps
+        displayName: Install Playwright browsers

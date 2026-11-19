@@ -1,3 +1,4 @@
+import { historyReporter } from '@aiqa/reporting-engine';
 import { defineConfig } from '@playwright/test';
 import { loadEnv } from '@aiqa/shared';
 
@@ -16,6 +17,7 @@ export default defineConfig({
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
     ['allure-playwright', { resultsDir: 'allure-results' }],
+    ...historyReporter(),
   ],
   use: { trace: 'on-first-retry', extraHTTPHeaders: { Accept: 'application/json' } },
   projects: [{ name: 'api' }],

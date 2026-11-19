@@ -1,3 +1,4 @@
+import { historyReporter } from '@aiqa/reporting-engine';
 import { defineConfig, devices } from '@playwright/test';
 import { loadEnv, targetUrl } from '@aiqa/shared';
 import type { Options } from './src/fixtures';
@@ -43,6 +44,7 @@ export default defineConfig<Options>({
     ['json', { outputFile: 'test-results/results.json' }],
     ['allure-playwright', { resultsDir: 'allure-results' }],
     ...(env.CI ? ([['blob'], ['github']] as const) : []),
+    ...historyReporter(),
   ],
   metadata: { product: 'AI-QA-Platform', healMode: env.HEAL_MODE, aiEnabled: env.AI_ENABLED },
   use: {
