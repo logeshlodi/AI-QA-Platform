@@ -4,9 +4,11 @@ import { collectWebVitals, observeWebVitals, overBudget, recordMetrics, throttle
 // The same page on a mid-range phone: Lighthouse's mobile profile (slow 4G and a CPU four times
 // slower). Fast office connections hide what many real users see.
 //
-// Measured on 19 Nov 2026 and set about 50% above, since throttled timings vary more.
-// LCP 2068 to 2184 ms, FCP 1752 to 1868 ms.
-const SLOW_PHONE_BUDGET = { lcp_ms: 3200, fcp_ms: 2800 };
+// The budget is LCP not rated "poor" (Google's 4-second line), as for the unthrottled pages. Slowing
+// the CPU multiplies the machine's own speed and unevenness: LCP was 2.0 to 2.2 s on the laptop but
+// 2.0 to 3.6 s on a 2-CPU Linux container like a CI runner (20 Nov 2026). FCP and TTFB are recorded
+// for the trend without a budget of their own.
+const SLOW_PHONE_BUDGET = { lcp_ms: 4000 };
 
 test.describe('on a slow phone connection', { tag: '@perf' }, () => {
   test.use({ targetName: 'saucedemo' });

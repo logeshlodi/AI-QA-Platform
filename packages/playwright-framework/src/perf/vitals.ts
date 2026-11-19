@@ -72,15 +72,32 @@ export async function observeWebVitals(page: Page): Promise<void> {
  * hidden, as when a user switches tabs: that is when the library reports its final LCP, CLS and INP.
  * Do it last; the page believes it is in the background afterwards.
  */
-export async function collectWebVitals(page: Page, { finalize = true } = {}): Promise<WebVitals> {
+export async function collectWebVitals(
+  page: Page,
+  { finalize = true, lcpTimeoutMs = 5_000 } = {},
+): Promise<WebVitals> {
   await page.waitForLoadState('load');
   // Two frames and a short pause, so paints that follow the load event are recorded.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 300))));
+  // The library hands its reports over asynchronously. On a busy machine (2-CPU Linux runners, found
+  // 20 Nov 2026) the first LCP report sometimes had not arrived yet, and hiding the page then lost it.
+  // Wait for it, within a limit: a page that truly has no LCP element still ends as "not measured".
+  await page
+    .waitForFunction(
+      () => (window as unknown as { __aiqaVitals?: { lcp?: number } }).__aiqaVitals?.lcp !== undefined,
+      null,
+      {
+        timeout: lcpTimeoutMs,
+      },
+    )
+    .catch(() => undefined);
   if (finalize) {
     await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
       document.dispatchEvent(new Event('visibilitychange'));
     });
+    // Final values are reported from the visibilitychange handlers: let them run.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 100)));
   }
   const values = await page.evaluate(
     () => (window as unknown as { __aiqaVitals?: Record<string, number> }).__aiqaVitals,

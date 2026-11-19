@@ -77,9 +77,17 @@ Corrections made on the way:
   load. Such readings are now counted (`clock_jumps`) instead of averaged in.
 - **A verdict on one earlier run is noise.** The trend analysis waits for 3 earlier runs.
 - **Grafana 13 read dashboard files only at start-up** here; the provisioning now rescans every 10 s.
+- **The first GitHub run failed the slow-phone spec: "lcp_ms: not measured".** Reproduced in the
+  project's Linux image limited to 2 CPUs (2 failures in 22 runs, the unthrottled login page too):
+  the library's LCP report had not arrived when the page was told it was hidden. `collectWebVitals`
+  now waits up to 5 s for it, then lets the final reports run. No "not measured" in the next 42 runs.
+- **The same runs showed the slow-phone budget was set from laptop numbers.** With the CPU slowed 4x,
+  LCP was 2.0 to 2.2 s on the laptop but 2.0 to 3.6 s on 2-CPU Linux. The budget is now Google's
+  "poor" line (4 s), as for the other pages, and FCP is recorded without a budget. INP is likewise held
+  to "not poor": one interaction in twenty passed 200 ms on 2 CPUs.
 
-Not yet seen on CI: the new `perf` and `load` jobs (GitHub Actions and both Azure pipelines) and the
-Jenkins `RUN_PERF` / `LOAD_PROFILE` parameters run on the next push.
+On GitHub Actions the first run passed the `load` job (k6 smoke) and failed `perf` as described below.
+Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_PROFILE` parameters.
 
 ## Clean-up sprint (19 Nov)
 
