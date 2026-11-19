@@ -48,11 +48,11 @@ catalog:
   # Types match the oldest Node the project runs on (22, as in CI), so code cannot use newer APIs by mistake.
   '@types/node': ^22.0.0
   'vitest': 5.1.0
-  'eslint': 10.14.0
+  'eslint': 10.15.0
   'typescript-eslint': 8.72.2
   'eslint-plugin-playwright': 2.12.2
   'prettier': 3.10.1
   'husky': 9.1.7
-  'lint-staged': 17.6.0
+  'lint-staged': 17.6.1
   '@commitlint/cli': 21.2.4
   '@commitlint/config-conventional': 21.2.4
