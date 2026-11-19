@@ -7,7 +7,7 @@ export const stack = {
   mongoUrl: process.env.MONGO_URL ?? 'mongodb://localhost:27017',
   mongoDb: process.env.MONGO_DB ?? 'shop',
   kafkaBrokers: (process.env.KAFKA_BROKERS ?? 'localhost:9092').split(','),
-  serviceUrl: process.env.ORDER_SERVICE_URL ?? 'http://localhost:8080',
+  serviceUrl: process.env.ORDER_SERVICE_URL ?? 'http://localhost:8088',
   metricsUrl: process.env.ORDER_METRICS_URL ?? 'http://localhost:9464/metrics',
 };
 

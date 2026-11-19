@@ -60,7 +60,8 @@ services:
       DATABASE_URL: postgres://aiqa:aiqa@postgres:5432/shop
       MONGO_URL: mongodb://mongo:27017
       KAFKA_BROKERS: kafka:19092
-    ports: ['8080:8080', '9464:9464']
+    # Host port 8088, not 8080: Jenkins and many dev tools already listen on 8080.
+    ports: ['8088:8080', '9464:9464']
     depends_on:
       postgres: { condition: service_healthy }
       mongo: { condition: service_healthy }

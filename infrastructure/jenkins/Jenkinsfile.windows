@@ -1,0 +1,94 @@
+// Jenkins pipeline for a Windows Jenkins (for example the Windows installer, running as a service).
+// It runs on the Jenkins machine itself with Node, Git and, for the data stage, Docker Desktop.
+// The root Jenkinsfile is the Linux version, with each stage in the Playwright Docker image.
+//
+// Job: New Item > Pipeline > "Pipeline script from SCM" > Git > this repository, branch main,
+// Script Path infrastructure/jenkins/Jenkinsfile.windows. Plugins: Pipeline, Git, JUnit.
+
+pipeline {
+  agent any
+
+  parameters {
+    booleanParam(name: 'RUN_UI', defaultValue: true, description: 'Full UI suite (Chromium, Firefox, WebKit, mobile)')
+    booleanParam(name: 'RUN_DATA', defaultValue: true, description: 'Postgres, MongoDB and Kafka suites (needs Docker Desktop running)')
+  }
+
+  options {
+    timeout(time: 60, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    disableConcurrentBuilds()
+  }
+
+  triggers { pollSCM('H/15 * * * *') } // build within 15 minutes of a push; nightly runs come from GitHub
+
+  environment {
+    CI = 'true'
+    // Browsers are kept outside the workspace, so a clean checkout does not download them again.
+    PLAYWRIGHT_BROWSERS_PATH = "${env.JENKINS_HOME}\\ms-playwright"
+    DOCKER_BIN = "${env.LOCALAPPDATA ?: env.USERPROFILE + '\\AppData\\Local'}\\Programs\\DockerDesktop\\resources\\bin"
+  }
+
+  stages {
+    stage('Install') {
+      steps {
+        // Retries through the intermittent Windows "EPERM ... symlink" link errors.
+        powershell 'powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\install-windows.ps1'
+      }
+    }
+
+    stage('Quality') {
+      steps {
+        bat 'node_modules\\.bin\\pnpm.cmd typecheck'
+        bat 'node_modules\\.bin\\pnpm.cmd lint'
+        bat 'node_modules\\.bin\\pnpm.cmd test:unit'
+      }
+    }
+
+    stage('API specs') {
+      steps { bat 'node_modules\\.bin\\pnpm.cmd test:api' }
+      post { always { junit allowEmptyResults: true, testResults: 'packages/api-framework/test-results/junit.xml' } }
+    }
+
+    stage('UI specs') {
+      // On a job's first build its parameters are not defined yet: treat missing as true.
+      when { expression { params.RUN_UI != false } }
+      steps {
+        bat 'node_modules\\.bin\\pnpm.cmd browsers'
+        bat 'node_modules\\.bin\\pnpm.cmd test:ui'
+      }
+      post { always { junit allowEmptyResults: true, testResults: 'packages/playwright-framework/test-results/junit.xml' } }
+    }
+
+    stage('Data suites') {
+      when { expression { params.RUN_DATA != false } }
+      steps {
+        script {
+          def docker = bat(returnStatus: true, script: "\"${env.DOCKER_BIN}\\docker.exe\" version --format \"{{.Server.Version}}\"")
+          if (docker != 0) {
+            unstable('Docker Desktop is not running, so the data suites were skipped. Start it and run the build again.')
+            return
+          }
+          withEnv(["PATH+DOCKER=${env.DOCKER_BIN}"]) {
+            try {
+              bat 'node_modules\\.bin\\pnpm.cmd stack:up'
+              bat 'node_modules\\.bin\\pnpm.cmd test:data'
+            } finally {
+              bat 'node_modules\\.bin\\pnpm.cmd stack:down'
+            }
+          }
+        }
+      }
+      post { always { junit allowEmptyResults: true, testResults: 'packages/data-framework/test-results/junit.xml' } }
+    }
+  }
+
+  post {
+    always {
+      bat(returnStatus: true, script: 'node_modules\\.bin\\pnpm.cmd -s aiqa history --limit 8')
+      archiveArtifacts allowEmptyArchive: true, artifacts: [
+        '.aiqa/dashboard/**',
+        'packages/*/playwright-report/**',
+      ].join(', ')
+    }
+  }
+}

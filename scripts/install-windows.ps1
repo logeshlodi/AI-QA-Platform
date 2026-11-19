@@ -8,7 +8,9 @@ param([string[]] $PnpmArgs = @('install', '--frozen-lockfile'), [int] $MaxTries 
 
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
-$pnpm = if (Test-Path 'node_modules\.bin\pnpm.cmd') { 'node_modules\.bin\pnpm.cmd' } else { 'pnpm' }
+# The project's own pnpm once installed; on a fresh checkout (a CI workspace), the pinned version via npx.
+$pinned = (Get-Content package.json -Raw | ConvertFrom-Json).devDependencies.pnpm
+$pnpm = if (Test-Path 'node_modules\.bin\pnpm.cmd') { 'node_modules\.bin\pnpm.cmd' } else { "npx --yes pnpm@$pinned" }
 
 for ($try = 1; $try -le $MaxTries; $try++) {
   $output = & cmd /c "$pnpm $($PnpmArgs -join ' ') 2>&1"

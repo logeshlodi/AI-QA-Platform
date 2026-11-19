@@ -1,5 +1,14 @@
 # Jenkins
 
+Two pipelines:
+
+| File                                         | For                                                                                                                                                                                                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `infrastructure/jenkins/Jenkinsfile.windows` | A Windows Jenkins (the Windows installer, running as a service). Runs on the machine itself with `bat` steps; the data stage uses Docker Desktop and is marked unstable, not failed, when it is not running. Checked on a Windows laptop with Jenkins 2.580.2. |
+| `Jenkinsfile` (repository root)              | A Linux Jenkins with Docker: every stage in the Playwright image, UI shards in parallel.                                                                                                                                                                       |
+
+## Linux Jenkins
+
 The pipeline is the root `Jenkinsfile`. It mirrors the GitHub workflow: type-check, lint, unit and
 API specs in the Playwright image; three UI shards in parallel with a merged report; the data suites
 on an agent labelled `docker` that can run Docker Compose.
