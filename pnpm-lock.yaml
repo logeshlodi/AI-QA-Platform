@@ -55,8 +55,8 @@ catalogs:
       specifier: 2.12.2
       version: 2.12.2
     fast-xml-parser:
-      specifier: 5.12.0
-      version: 5.12.0
+      specifier: 5.12.1
+      version: 5.12.1
     husky:
       specifier: 9.1.7
       version: 9.1.7
@@ -126,8 +126,8 @@ importers:
         specifier: 'catalog:'
         version: 17.6.0
       pnpm:
-        specifier: 10.34.5
-        version: 10.34.5
+        specifier: 10.34.9
+        version: 10.34.9
       prettier:
         specifier: 'catalog:'
         version: 3.10.1
@@ -209,7 +209,7 @@ importers:
         version: 3.14.0(@playwright/test@1.65.0)
       fast-xml-parser:
         specifier: 'catalog:'
-        version: 5.12.0
+        version: 5.12.1
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -301,11 +301,11 @@ importers:
         version: 3.14.0(@playwright/test@1.65.0)
       lighthouse:
         specifier: 'catalog:'
-        version: 13.6.0(ajv@8.20.0)
+        version: 13.6.0
     devDependencies:
       allure:
         specifier: 'catalog:'
-        version: 3.33.0(preact@11.2.0)
+        version: 3.33.0(debug@4.4.3)(preact@11.2.0)
       cross-env:
         specifier: 'catalog:'
         version: 10.1.0
@@ -1299,11 +1299,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -1758,8 +1753,15 @@ packages:
   fast-xml-builder@1.3.1:
     resolution: {integrity: sha512-pIM/1n3ntFXKYrUZwW7QCK0gAW7XY+wzj1YMIV3tLDvPj/V+zTGJK5e3/4WJfwj0qWw2ElNXiTixda/R+3YSug==}
 
+  fast-xml-builder@1.3.2:
+    resolution: {integrity: sha512-OX91VSlShLPDgRZV7tk/YQ4l8tT75QziF5Ixg8g4PFbCVPjuTWwN+yQfAxLJ0dufJpprdOd6HlM74Jhd39TcBQ==}
+
   fast-xml-parser@5.12.0:
     resolution: {integrity: sha512-/pXxRBtwxY9w8z7YbgsvIPPcPvFDsTbIkWwTQJhzNJPokj+TbN6ftmcv4j/pEQDvOCNnKGDzuk5Bo2oogIOiFg==}
+    hasBin: true
+
+  fast-xml-parser@5.12.1:
+    resolution: {integrity: sha512-wR8dO/fx+z8C5exuem1e7BKOWvjsuzvjS/tvA/Xu3Z1zQqJGcXrPzXbcAiaMgp2KjreEROcTkmnnisrcmJ2hYQ==}
     hasBin: true
 
   fdir@6.5.0:
@@ -2378,8 +2380,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  pnpm@10.34.5:
-    resolution: {integrity: sha512-pO4F8vc2WCVb1qiYWcBlpFwopX2u+uLIk6Fo7itzFow3uR6D5X6mdlStA/AwMXRkMOi84442LgQmBfuKvIAZLg==}
+  pnpm@10.34.9:
+    resolution: {integrity: sha512-9JtajqD97bRLs8DB1ldQkqU8KVDZW3rRXfEfF5dId6LeOgHAfpNOmyjOcW5RwJqUlixzBtCb4uHksYqMh2L9Mg==}
     engines: {node: '>=18.12'}
     hasBin: true
 
@@ -2875,11 +2877,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/ci@3.33.0':
+  '@allurereport/ci@3.33.0(debug@4.4.3)':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1
+      axios: 1.21.1(debug@4.4.3)
       glob: 13.0.7
     transitivePeerDependencies:
       - bare-abort-controller
@@ -2897,9 +2899,9 @@ snapshots:
       '@marcbachmann/cel-js': 8.0.0
       d3-shape: 3.2.1
 
-  '@allurereport/core@3.33.0(preact@11.2.0)':
+  '@allurereport/core@3.33.0(debug@4.4.3)(preact@11.2.0)':
     dependencies:
-      '@allurereport/ci': 3.33.0
+      '@allurereport/ci': 3.33.0(debug@4.4.3)
       '@allurereport/cli-commons': 3.33.0
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-agent': 3.33.0
@@ -2909,17 +2911,17 @@ snapshots:
       '@allurereport/plugin-classic': 3.33.0(preact@11.2.0)
       '@allurereport/plugin-csv': 3.33.0
       '@allurereport/plugin-dashboard': 3.33.0(preact@11.2.0)
-      '@allurereport/plugin-jira': 3.33.0
+      '@allurereport/plugin-jira': 3.33.0(debug@4.4.3)
       '@allurereport/plugin-log': 3.33.0
       '@allurereport/plugin-metrics': 3.33.0
       '@allurereport/plugin-progress': 3.33.0
       '@allurereport/plugin-slack': 3.33.0
-      '@allurereport/plugin-testops': 3.33.0
+      '@allurereport/plugin-testops': 3.33.0(debug@4.4.3)
       '@allurereport/plugin-testplan': 3.33.0
-      '@allurereport/plugin-xray': 3.33.0
+      '@allurereport/plugin-xray': 3.33.0(debug@4.4.3)
       '@allurereport/reader': 3.33.0
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0
+      '@allurereport/service': 3.33.0(debug@4.4.3)
       '@allurereport/summary': 3.33.0
       glob: 13.0.7
       handlebars: 4.7.10
@@ -3020,11 +3022,11 @@ snapshots:
       - preact
       - react-native-b4a
 
-  '@allurereport/plugin-jira@3.33.0':
+  '@allurereport/plugin-jira@3.33.0(debug@4.4.3)':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1
+      axios: 1.21.1(debug@4.4.3)
     transitivePeerDependencies:
       - bare-abort-controller
       - debug
@@ -3073,16 +3075,16 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/plugin-testops@3.33.0':
+  '@allurereport/plugin-testops@3.33.0(debug@4.4.3)':
     dependencies:
-      '@allurereport/ci': 3.33.0
+      '@allurereport/ci': 3.33.0(debug@4.4.3)
       '@allurereport/cli-commons': 3.33.0
       '@allurereport/core-api': 3.33.0
       '@allurereport/git': 3.33.0
       '@allurereport/plugin-api': 3.33.0
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0
-      axios: 1.21.1
+      '@allurereport/service': 3.33.0(debug@4.4.3)
+      axios: 1.21.1(debug@4.4.3)
       form-data: 4.0.6
       lodash-es: 4.18.1
       p-limit: 7.3.3
@@ -3101,11 +3103,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/plugin-xray@3.33.0':
+  '@allurereport/plugin-xray@3.33.0(debug@4.4.3)':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1
+      axios: 1.21.1(debug@4.4.3)
     transitivePeerDependencies:
       - bare-abort-controller
       - debug
@@ -3131,11 +3133,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/service@3.33.0':
+  '@allurereport/service@3.33.0(debug@4.4.3)':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1
+      axios: 1.21.1(debug@4.4.3)
       open: 11.0.4
     transitivePeerDependencies:
       - bare-abort-controller
@@ -3896,8 +3898,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:
@@ -3925,12 +3927,12 @@ snapshots:
       '@playwright/test': 1.65.0
       allure-js-commons: 3.14.0(allure-playwright@3.14.0(@playwright/test@1.65.0))
 
-  allure@3.33.0(preact@11.2.0):
+  allure@3.33.0(debug@4.4.3)(preact@11.2.0):
     dependencies:
       '@allurereport/charts-api': 3.33.0
-      '@allurereport/ci': 3.33.0
+      '@allurereport/ci': 3.33.0(debug@4.4.3)
       '@allurereport/cli-commons': 3.33.0
-      '@allurereport/core': 3.33.0(preact@11.2.0)
+      '@allurereport/core': 3.33.0(debug@4.4.3)(preact@11.2.0)
       '@allurereport/core-api': 3.33.0
       '@allurereport/directory-watcher': 3.33.0
       '@allurereport/plugin-agent': 3.33.0
@@ -3940,15 +3942,15 @@ snapshots:
       '@allurereport/plugin-classic': 3.33.0(preact@11.2.0)
       '@allurereport/plugin-csv': 3.33.0
       '@allurereport/plugin-dashboard': 3.33.0(preact@11.2.0)
-      '@allurereport/plugin-jira': 3.33.0
+      '@allurereport/plugin-jira': 3.33.0(debug@4.4.3)
       '@allurereport/plugin-log': 3.33.0
       '@allurereport/plugin-metrics': 3.33.0
       '@allurereport/plugin-progress': 3.33.0
       '@allurereport/plugin-server-reload': 3.33.0
       '@allurereport/plugin-slack': 3.33.0
-      '@allurereport/plugin-xray': 3.33.0
+      '@allurereport/plugin-xray': 3.33.0(debug@4.4.3)
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0
+      '@allurereport/service': 3.33.0(debug@4.4.3)
       '@allurereport/static-server': 3.33.0
       adm-zip: 0.6.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
@@ -3997,9 +3999,9 @@ snapshots:
 
   axe-core@4.14.0: {}
 
-  axios@1.21.1:
+  axios@1.21.1(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.16.3
+      follow-redirects: 1.16.3(debug@4.4.3)
       form-data: 4.0.6
       https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
@@ -4390,10 +4392,24 @@ snapshots:
       path-expression-matcher: 1.6.2
       xml-naming: 0.3.0
 
+  fast-xml-builder@1.3.2:
+    dependencies:
+      path-expression-matcher: 1.6.2
+      xml-naming: 0.3.0
+
   fast-xml-parser@5.12.0:
     dependencies:
       '@nodable/entities': 3.1.0
       fast-xml-builder: 1.3.1
+      is-unsafe: 2.0.3
+      path-expression-matcher: 1.6.2
+      strnum: 2.5.1
+      xml-naming: 0.3.0
+
+  fast-xml-parser@5.12.1:
+    dependencies:
+      '@nodable/entities': 3.1.0
+      fast-xml-builder: 1.3.2
       is-unsafe: 2.0.3
       path-expression-matcher: 1.6.2
       strnum: 2.5.1
@@ -4420,7 +4436,9 @@ snapshots:
 
   flatted@3.4.4: {}
 
-  follow-redirects@1.16.3: {}
+  follow-redirects@1.16.3(debug@4.4.3):
+    optionalDependencies:
+      debug: 4.4.3
 
   form-data@4.0.6:
     dependencies:
@@ -4627,11 +4645,11 @@ snapshots:
 
   lighthouse-stack-packs@1.12.3: {}
 
-  lighthouse@13.6.0(ajv@8.20.0):
+  lighthouse@13.6.0:
     dependencies:
       '@paulirish/trace_engine': 0.0.67
       '@sentry/node': 11.12.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       axe-core: 4.14.0
       chrome-launcher: 1.2.3
       configstore: 8.0.0
@@ -4652,7 +4670,6 @@ snapshots:
       yargs: 18.2.0
       yargs-parser: 22.0.0
     transitivePeerDependencies:
-      - ajv
       - bufferutil
       - proxy-agent
       - rollup
@@ -4967,7 +4984,7 @@ snapshots:
     dependencies:
       playwright-core: 1.65.0
 
-  pnpm@10.34.5: {}
+  pnpm@10.34.9: {}
 
   postcss@8.5.32:
     dependencies:
