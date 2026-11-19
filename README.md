@@ -38,7 +38,7 @@ npx pnpm aiqa data order --count 3 --seed 42                    # seeded test da
 npx pnpm aiqa history           # recorded runs; `aiqa flaky` for the flaky list
 ```
 
-Requires Node 22 or newer. If your global `pnpm` works you can drop the `npx` prefix.
+Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` works you can drop the `npx` prefix.
 
 ## Packages
 

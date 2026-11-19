@@ -27,6 +27,9 @@ catalogs:
     '@opentelemetry/sdk-metrics':
       specifier: 3.1.1
       version: 3.1.1
+    '@platformatic/kafka':
+      specifier: 2.17.0
+      version: 2.17.0
     '@playwright/test':
       specifier: 1.65.1
       version: 1.65.1
@@ -60,9 +63,6 @@ catalogs:
     husky:
       specifier: 9.1.7
       version: 9.1.7
-    kafkajs:
-      specifier: 2.2.4
-      version: 2.2.4
     lighthouse:
       specifier: 13.6.0
       version: 13.6.0
@@ -158,9 +158,9 @@ importers:
       '@opentelemetry/sdk-metrics':
         specifier: 'catalog:'
         version: 3.1.1(@opentelemetry/api@1.10.0)
-      kafkajs:
+      '@platformatic/kafka':
         specifier: 'catalog:'
-        version: 2.2.4
+        version: 2.17.0
       mongodb:
         specifier: 'catalog:'
         version: 7.9.0
@@ -250,12 +250,12 @@ importers:
       '@aiqa/test-data-engine':
         specifier: workspace:*
         version: link:../test-data-engine
+      '@platformatic/kafka':
+        specifier: 'catalog:'
+        version: 2.17.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.65.1
-      kafkajs:
-        specifier: 'catalog:'
-        version: 2.2.4
       mongodb:
         specifier: 'catalog:'
         version: 7.9.0
@@ -301,11 +301,11 @@ importers:
         version: 3.14.0(@playwright/test@1.65.1)
       lighthouse:
         specifier: 'catalog:'
-        version: 13.6.0
+        version: 13.6.0(ajv@8.20.0)
     devDependencies:
       allure:
         specifier: 'catalog:'
-        version: 3.33.0(debug@4.4.3)(preact@11.2.0)
+        version: 3.33.0(preact@11.2.0)
       cross-env:
         specifier: 'catalog:'
         version: 10.1.0
@@ -827,6 +827,92 @@ packages:
   '@nodable/entities@3.1.0':
     resolution: {integrity: sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ==}
 
+  '@node-rs/crc32-android-arm-eabi@1.10.8':
+    resolution: {integrity: sha512-Ed2P9uQAOlOSveuPKSlmCctcZ73+9VIBTD84F8MjfKU26q33Y0hYlcl9vlzfc9UQX7LLMGEZhOuU1xxYtx49tg==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@node-rs/crc32-android-arm64@1.10.8':
+    resolution: {integrity: sha512-gvEOdU8tkSwK2McdlMeXDoyqtvJFPYShNopJtGaGMNoltN5EzFOsM/7XKF3rk9JLQ9GnZHQrCxur0Cksonow2A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@node-rs/crc32-darwin-arm64@1.10.8':
+    resolution: {integrity: sha512-ylDspj/s3i+FCdTGoLZtOBsbR2PvAsI5taJDE5Pl7kDgeKX7IywdAYQtkh2orvTs0RqCjcnIBxrCDI/O/r+z1g==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@node-rs/crc32-darwin-x64@1.10.8':
+    resolution: {integrity: sha512-DVTORLWomcx7F0CxQxlfBszAcMh8IkNGx/hgYHQ4iDnuf/uVjhs7l1hoVBghPymdFxP129+I/+b1WoQBbTJzaQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@node-rs/crc32-freebsd-x64@1.10.8':
+    resolution: {integrity: sha512-ZzuW7RS9VFy7zD64YUFI2dK6tJrlAFfe1NBuNx/ouKZ6SK+NHW5F8hxZNrZCkv2XB7QyZk9wZ53oJ20PKylQTw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@node-rs/crc32-linux-arm-gnueabihf@1.10.8':
+    resolution: {integrity: sha512-5/2kW7V4KMV3o37ApvcnF4Pk11luzLnd38kQZowVCw5D/xGlCByEQOODfJHX9pv0C+4hp+8Dosul06RODjPEUw==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@node-rs/crc32-linux-arm64-gnu@1.10.8':
+    resolution: {integrity: sha512-Vr1P3+WF+RsUVI8CNLiunl1vuzdpgTR1sf9PxgQFr3o//hh2KdqJeU4zZsFVTn+GbGZtqvRoba0wi8nKMzRLeg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@node-rs/crc32-linux-arm64-musl@1.10.8':
+    resolution: {integrity: sha512-eS8YXANJLBqdOzf5jCNVEXiDI4wjXVqQybaJextJJINvHhnhhOXPar8402GMagewOxGxYsy4C69G8rBIzqL4cg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@node-rs/crc32-linux-x64-gnu@1.10.8':
+    resolution: {integrity: sha512-DFd0eV47MAykz4PQDcBSlEvY3CtXqPt2gkBpvPngCpOUoIJgEk9tKtPjEgUwLatMkvsy4fEvAg7gckGickOyEw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@node-rs/crc32-linux-x64-musl@1.10.8':
+    resolution: {integrity: sha512-U7fP8FjDQuOb61YoT8EoWDIJ9x40ZrCzM6OcAH1wqYiu9Z94U14S+i8KwTC7YorotGtICdYZ/APn1eI8vNne5w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@node-rs/crc32-win32-arm64-msvc@1.10.8':
+    resolution: {integrity: sha512-VJezyT9OWnMPnArDR5ok0ARLemiL83LLNYh4MC++oHoLegqzyBllqNlO8fVp2PmczGkn+rfKkZbtG4w3MQ6BbQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@node-rs/crc32-win32-ia32-msvc@1.10.8':
+    resolution: {integrity: sha512-01HooQK7WiG07/vvp0XzRnqSC5cvXvQ1MsQwlH9wwMWZ9qqHRO1j08cSeSt7DM4eALNisfX83bjqqrHzSKI9Iw==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@node-rs/crc32-win32-x64-msvc@1.10.8':
+    resolution: {integrity: sha512-4O6G7yme7s98LUGwiqW7q2QqYmWD2IRQvV+q7+S4vjkUWiXUMbP8QEPYP9cF2WEQSdXCkyDEqDW10zeUdniPRA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@node-rs/crc32@1.10.8':
+    resolution: {integrity: sha512-gOYKFwkojSdWrSmreCcGocRcAXSpRkNZYxv6nscmtddSWBKVGypdMbfLxu5qgmymdaCNApajuwZblYEfs7HswA==}
+    engines: {node: '>= 10'}
+
   '@opentelemetry/api@1.10.0':
     resolution: {integrity: sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ==}
     engines: {node: '>=8.0.0'}
@@ -992,6 +1078,18 @@ packages:
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
+
+  '@platformatic/dynamic-buffer@0.5.0':
+    resolution: {integrity: sha512-iUyF211Jr1WzpwWHp+M/Kh2UWCOpqhizRijIvQwvK/XXTbmtSw05NJH3q53RkHmTWLXfTE+M1IZ6ROlAI/CW+Q==}
+    engines: {node: '>= 22.19.0'}
+
+  '@platformatic/kafka@2.17.0':
+    resolution: {integrity: sha512-v0UyUBCiINA3W2YevBvCUNFHDnkJsl0TITx6K4TAZMmPe/nkSgQvGULhhxLCirpSq+42dqgyGcr87Rx/oJdWvw==}
+    engines: {node: '>= 22.22.0 || >= 24.6.0'}
+
+  '@platformatic/wasm-utils@0.4.0':
+    resolution: {integrity: sha512-q/Ezc4ZxVm8ZaEYIk8uS/fDsryJIiLAu/FQTgCy0yHgEVmUtWzQYg/F1KnFRRiJrjqLSkEnA28PS3TjrGiSmnA==}
+    engines: {node: '>= 22.19.0'}
 
   '@playwright/test@1.65.1':
     resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
@@ -1297,8 +1395,21 @@ packages:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
 
+  ajv-draft-04@1.0.0:
+    resolution: {integrity: sha512-mv00Te6nmYbRp5DCwclxtt7yV/joXJPGS7nM+97GdxvuttCOfgI3K4U25zboyeX0O+myI8ERluxQe5wljMmVIw==}
+    peerDependencies:
+      ajv: ^8.5.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
+
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -1371,6 +1482,10 @@ packages:
 
   atomically@2.1.1:
     resolution: {integrity: sha512-P4w9o2dqARji6P7MHprklbfiArZAWvo07yW7qs3pdljb3BWr12FIB7W+p0zJiuiVsUpRO0iZn1kFFcpPegg0tQ==}
+
+  avsc@5.7.9:
+    resolution: {integrity: sha512-yOA4wFeI7ET3v32Di/sUybQ+ttP20JHSW3mxLuNGeO0uD6PPcvLrIQXSvy/rhJOWU5JrYh7U4OHplWMmtAtjMg==}
+    engines: {node: '>=0.11'}
 
   axe-core@4.14.0:
     resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
@@ -1764,6 +1879,9 @@ packages:
     resolution: {integrity: sha512-wR8dO/fx+z8C5exuem1e7BKOWvjsuzvjS/tvA/Xu3Z1zQqJGcXrPzXbcAiaMgp2KjreEROcTkmnnisrcmJ2hYQ==}
     hasBin: true
 
+  fastq@1.20.3:
+    resolution: {integrity: sha512-XKv5nnLs6nLF71NgiKJLIZFLkPyIEuOselLG7ujZnGrRfQK8HpvY+WqKhAJUAdLomwVHErVS4LfxFlPq0/FTAw==}
+
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -2012,10 +2130,6 @@ packages:
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
 
-  kafkajs@2.2.4:
-    resolution: {integrity: sha512-j/YeapB1vfPT2iOIUn/vxdyKEuhuY2PxMBvf5JWux6iSaukAccrMtXEY/Lb7OvavDhOWME589bpLrEdnVHjfjA==}
-    engines: {node: '>=14.0.0'}
-
   keyv@5.6.0:
     resolution: {integrity: sha512-CYDD3SOtsHtyXeEORYRx2qBtpDJFjRTGXUtmNEMGyzYOKj1TE3tycdlho7kA1Ufx9OYWZzg52QFBGALTirzDSw==}
 
@@ -2136,6 +2250,9 @@ packages:
   lodash.omit@4.18.0:
     resolution: {integrity: sha512-hZXIupXdHtocTnvIJ2aCd2vxKYtxex6gbiGuPvgBRnFQO9yu3AtmDAbVuCXcSsQx3INo/1g71OktlFFA/ES8Xg==}
 
+  long@5.3.2:
+    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
+
   lru-cache@11.5.3:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
@@ -2196,6 +2313,9 @@ packages:
 
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
+
+  mnemonist@0.40.8:
+    resolution: {integrity: sha512-tebbu8e/W45Nz7USfGcmnHUiOcNsXa9Mow8eb0UPwOk3gu6grw0/2+SefXBJCgDQpE9mdn7dNUMJBra9mcRUVw==}
 
   modern-tar@0.8.6:
     resolution: {integrity: sha512-LYSks0tNVqbtez/9OB0YFP6qLRSqkdAxJWOQpVaR67lNTbj2zNLyYpowkRMia5lXLCZKzxwoxkxH2MbbBR2aEg==}
@@ -2258,6 +2378,9 @@ packages:
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
+
+  obliterator@2.0.5:
+    resolution: {integrity: sha512-42CPE9AhahZRsMNslczq0ctAEtqk8Eka26QofnqC346BZdHDySk3LWka23LI7ULIw11NmltpiLagIq8gBozxTw==}
 
   obug@3.0.0:
     resolution: {integrity: sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==}
@@ -2437,6 +2560,10 @@ packages:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
 
+  protobufjs@8.8.1:
+    resolution: {integrity: sha512-d9e9179bjXSJdpJ3+R9fP8hzXsnKLyxTjHLG1dUzje8a27pPyXCe6PrcRtgx2rjoM3IZzHd2vAs+6J/BsO1k7Q==}
+    engines: {node: '>=12.0.0'}
+
   proxy-from-env@2.1.0:
     resolution: {integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==}
     engines: {node: '>=10'}
@@ -2483,6 +2610,10 @@ packages:
     resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
     engines: {node: '>=8'}
 
+  reusify@1.1.0:
+    resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
+    engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
+
   robots-parser@3.0.1:
     resolution: {integrity: sha512-s+pyvQeIKIZ0dx5iJiQk1tPLJAWln39+MI5jtM8wnyws+G5azk+dMnMX0qfbqNetKKNgcWWOdi0sfm+FbQbgdQ==}
     engines: {node: '>=10.0.0'}
@@ -2502,6 +2633,9 @@ packages:
   safe-stable-stringify@2.5.0:
     resolution: {integrity: sha512-b3rppTKm9T+PsVCBEOUR46GWI7fdOs00VKZ1+9c1EWDaDMvjQc6tUwuFyIprgGgTcWoVHSKrU8H31ZHA2e0RHA==}
     engines: {node: '>=10'}
+
+  scule@1.3.0:
+    resolution: {integrity: sha512-6FtHJEvt+pVMIB9IBY+IcCJ6Z5f1iQnytgyfKMhDKgmzYG+TeH/wx1y3l27rshSbLiSanrR9ffZDrEsmjlQF2g==}
 
   semver@7.8.6:
     resolution: {integrity: sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==}
@@ -2877,11 +3011,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/ci@3.33.0(debug@4.4.3)':
+  '@allurereport/ci@3.33.0':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1(debug@4.4.3)
+      axios: 1.21.1
       glob: 13.0.7
     transitivePeerDependencies:
       - bare-abort-controller
@@ -2899,9 +3033,9 @@ snapshots:
       '@marcbachmann/cel-js': 8.0.0
       d3-shape: 3.2.1
 
-  '@allurereport/core@3.33.0(debug@4.4.3)(preact@11.2.0)':
+  '@allurereport/core@3.33.0(preact@11.2.0)':
     dependencies:
-      '@allurereport/ci': 3.33.0(debug@4.4.3)
+      '@allurereport/ci': 3.33.0
       '@allurereport/cli-commons': 3.33.0
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-agent': 3.33.0
@@ -2911,17 +3045,17 @@ snapshots:
       '@allurereport/plugin-classic': 3.33.0(preact@11.2.0)
       '@allurereport/plugin-csv': 3.33.0
       '@allurereport/plugin-dashboard': 3.33.0(preact@11.2.0)
-      '@allurereport/plugin-jira': 3.33.0(debug@4.4.3)
+      '@allurereport/plugin-jira': 3.33.0
       '@allurereport/plugin-log': 3.33.0
       '@allurereport/plugin-metrics': 3.33.0
       '@allurereport/plugin-progress': 3.33.0
       '@allurereport/plugin-slack': 3.33.0
-      '@allurereport/plugin-testops': 3.33.0(debug@4.4.3)
+      '@allurereport/plugin-testops': 3.33.0
       '@allurereport/plugin-testplan': 3.33.0
-      '@allurereport/plugin-xray': 3.33.0(debug@4.4.3)
+      '@allurereport/plugin-xray': 3.33.0
       '@allurereport/reader': 3.33.0
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0(debug@4.4.3)
+      '@allurereport/service': 3.33.0
       '@allurereport/summary': 3.33.0
       glob: 13.0.7
       handlebars: 4.7.10
@@ -3022,11 +3156,11 @@ snapshots:
       - preact
       - react-native-b4a
 
-  '@allurereport/plugin-jira@3.33.0(debug@4.4.3)':
+  '@allurereport/plugin-jira@3.33.0':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1(debug@4.4.3)
+      axios: 1.21.1
     transitivePeerDependencies:
       - bare-abort-controller
       - debug
@@ -3075,16 +3209,16 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/plugin-testops@3.33.0(debug@4.4.3)':
+  '@allurereport/plugin-testops@3.33.0':
     dependencies:
-      '@allurereport/ci': 3.33.0(debug@4.4.3)
+      '@allurereport/ci': 3.33.0
       '@allurereport/cli-commons': 3.33.0
       '@allurereport/core-api': 3.33.0
       '@allurereport/git': 3.33.0
       '@allurereport/plugin-api': 3.33.0
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0(debug@4.4.3)
-      axios: 1.21.1(debug@4.4.3)
+      '@allurereport/service': 3.33.0
+      axios: 1.21.1
       form-data: 4.0.6
       lodash-es: 4.18.1
       p-limit: 7.3.3
@@ -3103,11 +3237,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/plugin-xray@3.33.0(debug@4.4.3)':
+  '@allurereport/plugin-xray@3.33.0':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1(debug@4.4.3)
+      axios: 1.21.1
     transitivePeerDependencies:
       - bare-abort-controller
       - debug
@@ -3133,11 +3267,11 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  '@allurereport/service@3.33.0(debug@4.4.3)':
+  '@allurereport/service@3.33.0':
     dependencies:
       '@allurereport/core-api': 3.33.0
       '@allurereport/plugin-api': 3.33.0
-      axios: 1.21.1(debug@4.4.3)
+      axios: 1.21.1
       open: 11.0.4
     transitivePeerDependencies:
       - bare-abort-controller
@@ -3524,6 +3658,62 @@ snapshots:
 
   '@nodable/entities@3.1.0': {}
 
+  '@node-rs/crc32-android-arm-eabi@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-android-arm64@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-darwin-arm64@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-darwin-x64@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-freebsd-x64@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-linux-arm-gnueabihf@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-linux-arm64-gnu@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-linux-arm64-musl@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-linux-x64-gnu@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-linux-x64-musl@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-win32-arm64-msvc@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-win32-ia32-msvc@1.10.8':
+    optional: true
+
+  '@node-rs/crc32-win32-x64-msvc@1.10.8':
+    optional: true
+
+  '@node-rs/crc32@1.10.8':
+    optionalDependencies:
+      '@node-rs/crc32-android-arm-eabi': 1.10.8
+      '@node-rs/crc32-android-arm64': 1.10.8
+      '@node-rs/crc32-darwin-arm64': 1.10.8
+      '@node-rs/crc32-darwin-x64': 1.10.8
+      '@node-rs/crc32-freebsd-x64': 1.10.8
+      '@node-rs/crc32-linux-arm-gnueabihf': 1.10.8
+      '@node-rs/crc32-linux-arm64-gnu': 1.10.8
+      '@node-rs/crc32-linux-arm64-musl': 1.10.8
+      '@node-rs/crc32-linux-x64-gnu': 1.10.8
+      '@node-rs/crc32-linux-x64-musl': 1.10.8
+      '@node-rs/crc32-win32-arm64-msvc': 1.10.8
+      '@node-rs/crc32-win32-ia32-msvc': 1.10.8
+      '@node-rs/crc32-win32-x64-msvc': 1.10.8
+    optional: true
+
   '@opentelemetry/api@1.10.0': {}
 
   '@opentelemetry/core@3.1.1(@opentelemetry/api@1.10.0)':
@@ -3619,6 +3809,29 @@ snapshots:
       third-party-web: 0.30.0
 
   '@pinojs/redact@0.4.0': {}
+
+  '@platformatic/dynamic-buffer@0.5.0': {}
+
+  '@platformatic/kafka@2.17.0':
+    dependencies:
+      '@platformatic/dynamic-buffer': 0.5.0
+      '@platformatic/wasm-utils': 0.4.0
+      ajv: 8.20.0
+      ajv-draft-04: 1.0.0(ajv@8.20.0)
+      avsc: 5.7.9
+      debug: 4.4.3
+      fastq: 1.20.3
+      mnemonist: 0.40.8
+      scule: 1.3.0
+    optionalDependencies:
+      '@node-rs/crc32': 1.10.8
+      protobufjs: 8.8.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@platformatic/wasm-utils@0.4.0':
+    dependencies:
+      '@platformatic/dynamic-buffer': 0.5.0
 
   '@playwright/test@1.65.1':
     dependencies:
@@ -3898,8 +4111,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-draft-04@1.0.0(ajv@8.20.0):
+    optionalDependencies:
+      ajv: 8.20.0
+
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:
@@ -3927,12 +4144,12 @@ snapshots:
       '@playwright/test': 1.65.1
       allure-js-commons: 3.14.0(allure-playwright@3.14.0(@playwright/test@1.65.1))
 
-  allure@3.33.0(debug@4.4.3)(preact@11.2.0):
+  allure@3.33.0(preact@11.2.0):
     dependencies:
       '@allurereport/charts-api': 3.33.0
-      '@allurereport/ci': 3.33.0(debug@4.4.3)
+      '@allurereport/ci': 3.33.0
       '@allurereport/cli-commons': 3.33.0
-      '@allurereport/core': 3.33.0(debug@4.4.3)(preact@11.2.0)
+      '@allurereport/core': 3.33.0(preact@11.2.0)
       '@allurereport/core-api': 3.33.0
       '@allurereport/directory-watcher': 3.33.0
       '@allurereport/plugin-agent': 3.33.0
@@ -3942,15 +4159,15 @@ snapshots:
       '@allurereport/plugin-classic': 3.33.0(preact@11.2.0)
       '@allurereport/plugin-csv': 3.33.0
       '@allurereport/plugin-dashboard': 3.33.0(preact@11.2.0)
-      '@allurereport/plugin-jira': 3.33.0(debug@4.4.3)
+      '@allurereport/plugin-jira': 3.33.0
       '@allurereport/plugin-log': 3.33.0
       '@allurereport/plugin-metrics': 3.33.0
       '@allurereport/plugin-progress': 3.33.0
       '@allurereport/plugin-server-reload': 3.33.0
       '@allurereport/plugin-slack': 3.33.0
-      '@allurereport/plugin-xray': 3.33.0(debug@4.4.3)
+      '@allurereport/plugin-xray': 3.33.0
       '@allurereport/reader-api': 3.33.0
-      '@allurereport/service': 3.33.0(debug@4.4.3)
+      '@allurereport/service': 3.33.0
       '@allurereport/static-server': 3.33.0
       adm-zip: 0.6.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
@@ -3997,11 +4214,13 @@ snapshots:
       stubborn-fs: 2.0.0
       when-exit: 2.1.5
 
+  avsc@5.7.9: {}
+
   axe-core@4.14.0: {}
 
-  axios@1.21.1(debug@4.4.3):
+  axios@1.21.1:
     dependencies:
-      follow-redirects: 1.16.3(debug@4.4.3)
+      follow-redirects: 1.16.3
       form-data: 4.0.6
       https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
@@ -4415,6 +4634,10 @@ snapshots:
       strnum: 2.5.1
       xml-naming: 0.3.0
 
+  fastq@1.20.3:
+    dependencies:
+      reusify: 1.1.0
+
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
       picomatch: 4.0.7
@@ -4436,9 +4659,7 @@ snapshots:
 
   flatted@3.4.4: {}
 
-  follow-redirects@1.16.3(debug@4.4.3):
-    optionalDependencies:
-      debug: 4.4.3
+  follow-redirects@1.16.3: {}
 
   form-data@4.0.6:
     dependencies:
@@ -4623,8 +4844,6 @@ snapshots:
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
-  kafkajs@2.2.4: {}
-
   keyv@5.6.0:
     dependencies:
       '@keyv/serialize': 1.1.1
@@ -4645,11 +4864,11 @@ snapshots:
 
   lighthouse-stack-packs@1.12.3: {}
 
-  lighthouse@13.6.0:
+  lighthouse@13.6.0(ajv@8.20.0):
     dependencies:
       '@paulirish/trace_engine': 0.0.67
       '@sentry/node': 11.12.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       axe-core: 4.14.0
       chrome-launcher: 1.2.3
       configstore: 8.0.0
@@ -4670,6 +4889,7 @@ snapshots:
       yargs: 18.2.0
       yargs-parser: 22.0.0
     transitivePeerDependencies:
+      - ajv
       - bufferutil
       - proxy-agent
       - rollup
@@ -4751,6 +4971,9 @@ snapshots:
 
   lodash.omit@4.18.0: {}
 
+  long@5.3.2:
+    optional: true
+
   lru-cache@11.5.3: {}
 
   magic-string@1.4.5:
@@ -4807,6 +5030,10 @@ snapshots:
 
   mitt@3.0.1: {}
 
+  mnemonist@0.40.8:
+    dependencies:
+      obliterator: 2.0.5
+
   modern-tar@0.8.6: {}
 
   mongodb-connection-string-url@7.0.3:
@@ -4833,6 +5060,8 @@ snapshots:
   node-stream-zip@1.16.0: {}
 
   normalize-path@3.0.0: {}
+
+  obliterator@2.0.5: {}
 
   obug@3.0.0: {}
 
@@ -5019,6 +5248,11 @@ snapshots:
       kleur: 3.0.3
       sisteransi: 1.0.5
 
+  protobufjs@8.8.1:
+    dependencies:
+      long: 5.3.2
+    optional: true
+
   proxy-from-env@2.1.0: {}
 
   punycode.js@2.3.1: {}
@@ -5063,6 +5297,8 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
+  reusify@1.1.0: {}
+
   robots-parser@3.0.1: {}
 
   rolldown@1.2.19:
@@ -5092,6 +5328,8 @@ snapshots:
   safe-buffer@5.2.1: {}
 
   safe-stable-stringify@2.5.0: {}
+
+  scule@1.3.0: {}
 
   semver@7.8.6: {}
 

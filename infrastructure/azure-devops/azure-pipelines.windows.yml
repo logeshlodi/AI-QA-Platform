@@ -1,0 +1,122 @@
+# Azure DevOps pipeline for a self-hosted Windows agent (for example a developer laptop).
+# The root azure-pipelines.yml is the Linux version for Microsoft-hosted agents.
+#
+# The machine needs Node 24, Git and, for the data suites, Docker Desktop running. Free Azure DevOps
+# organisations get one self-hosted parallel job, so everything runs in one job, one stage after another.
+#
+# Set up: Pipelines > New pipeline > GitHub > this repository > Existing Azure Pipelines YAML file >
+# /infrastructure/azure-devops/azure-pipelines.windows.yml. The agent goes in the "Default" pool.
+
+trigger: { branches: { include: [main] } }
+pr: none
+
+parameters:
+  - name: runUi
+    displayName: Full UI suite (Chromium, Firefox, WebKit, mobile)
+    type: boolean
+    default: true
+  - name: runData
+    displayName: Postgres, MongoDB and Kafka suites (needs Docker Desktop running)
+    type: boolean
+    default: true
+
+pool:
+  name: Default
+  demands: [Agent.OS -equals Windows_NT]
+
+variables:
+  CI: 'true'
+  PNPM: node_modules\.bin\pnpm.cmd
+
+jobs:
+  - job: windows
+    displayName: Quality, API, UI and data suites on Windows
+    timeoutInMinutes: 90
+    steps:
+      - checkout: self
+        fetchDepth: 1
+        clean: true
+
+      - script: node -v && git --version
+        displayName: Tool versions
+
+      # Retries through the intermittent Windows "EPERM ... symlink" link errors.
+      - powershell: .\scripts\install-windows.ps1
+        displayName: Install dependencies
+
+      - script: $(PNPM) typecheck
+        displayName: Type-check
+      - script: $(PNPM) lint
+        displayName: Lint
+      - script: $(PNPM) test:unit
+        displayName: Unit tests
+
+      - script: $(PNPM) test:api
+        displayName: API specs
+      - task: PublishTestResults@2
+        displayName: API results
+        condition: always()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: packages/api-framework/test-results/junit.xml
+          testRunTitle: API specs (Windows)
+
+      - ${{ if eq(parameters.runUi, true) }}:
+          - script: $(PNPM) browsers
+            displayName: Install Playwright browsers
+          - script: $(PNPM) test:ui
+            displayName: UI specs
+          - task: PublishTestResults@2
+            displayName: UI results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/playwright-framework/test-results/junit.xml
+              testRunTitle: UI specs (Windows)
+
+      - ${{ if eq(parameters.runData, true) }}:
+          # Docker Desktop's CLI is not on the agent's PATH by default; add it, and skip with a warning
+          # (not a failure) when Docker Desktop is not running.
+          - powershell: |
+              $bin = Join-Path $env:LOCALAPPDATA 'Programs\DockerDesktop\resources\bin'
+              Write-Host "##vso[task.prependpath]$bin"
+              & (Join-Path $bin 'docker.exe') version --format '{{.Server.Version}}' 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "##vso[task.setvariable variable=DOCKER_UP]true"
+              } else {
+                Write-Host "##vso[task.logissue type=warning]Docker Desktop is not running, so the data suites were skipped."
+                Write-Host "##vso[task.complete result=SucceededWithIssues;]"
+              }
+            displayName: Check Docker Desktop
+          - script: $(PNPM) stack:up && $(PNPM) test:data
+            displayName: Start the stack and run the data suites
+            condition: and(succeeded(), eq(variables.DOCKER_UP, 'true'))
+          - script: $(PNPM) stack:down
+            displayName: Stop the stack
+            condition: eq(variables.DOCKER_UP, 'true')
+          - task: PublishTestResults@2
+            displayName: Data results
+            condition: eq(variables.DOCKER_UP, 'true')
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/data-framework/test-results/junit.xml
+              testRunTitle: Data suites (Windows)
+
+      - script: $(PNPM) -s aiqa history --limit 8
+        displayName: Run history
+        condition: always()
+        continueOnError: true
+
+      - publish: packages/api-framework/playwright-report
+        artifact: api-html-report
+        condition: always()
+        continueOnError: true
+      - ${{ if eq(parameters.runUi, true) }}:
+          - publish: packages/playwright-framework/playwright-report
+            artifact: ui-html-report
+            condition: always()
+            continueOnError: true
+      - publish: .aiqa/dashboard
+        artifact: dashboard
+        condition: always()
+        continueOnError: true

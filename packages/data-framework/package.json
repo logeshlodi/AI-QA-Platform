@@ -14,7 +14,7 @@
     "@aiqa/shared": "workspace:*",
     "@aiqa/test-data-engine": "workspace:*",
     "@playwright/test": "catalog:",
-    "kafkajs": "catalog:",
+    "@platformatic/kafka": "catalog:",
     "mongodb": "catalog:",
     "pg": "catalog:",
     "zod": "catalog:"

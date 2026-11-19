@@ -1,6 +1,6 @@
 name: Setup
 description: >-
-  Node 22 and pnpm 10 with a cached store, a frozen install, and optionally Playwright browsers.
+  Node (from .nvmrc) and pnpm 10 with a cached store, a frozen install, and optionally Playwright browsers.
   Browsers are installed for the Playwright version in the lockfile, so a Playwright update needs no
   workflow change; their download is cached per version.
 inputs:
@@ -16,7 +16,7 @@ runs:
     - uses: pnpm/action-setup@v6
       with: { version: 10 }
     - uses: actions/setup-node@v7
-      with: { node-version: 22, cache: pnpm }
+      with: { node-version-file: .nvmrc, cache: pnpm }
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile

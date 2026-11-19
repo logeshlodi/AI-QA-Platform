@@ -1,3 +1,10 @@
 # kubernetes
 
-Planned for Phase 4 (Sprints 6 to 8). Not built yet; see the Phase 1 plan and the root README roadmap.
+Not built yet. Planned for the Kubernetes and monitoring sprint, after the performance sprint:
+
+- a local [kind](https://kind.sigs.k8s.io/) cluster and a Helm chart for the order-service stack
+  (Postgres, MongoDB, Kafka, the service, Prometheus, Grafana);
+- the test suites run as Kubernetes Jobs against it;
+- a shared Playwright browser server (`playwright run-server`) that UI tests connect to.
+
+Until then the stack runs on Docker Compose: see `infrastructure/docker/stack.compose.yml`.

@@ -1,4 +1,4 @@
-# Shared steps: Node 22, pnpm 10 with a cached store, install, and (optionally) Playwright browsers.
+# Shared steps: Node 24, pnpm 10 with a cached store, install, and (optionally) Playwright browsers.
 parameters:
   - name: browsers
     type: boolean
@@ -6,7 +6,7 @@ parameters:
 
 steps:
   - task: UseNode@1
-    inputs: { version: '22.x' }
+    inputs: { version: '24.x' }
   - script: npm install -g pnpm@10 && pnpm config set store-dir $(PNPM_STORE)
     displayName: Install pnpm
   - task: Cache@2

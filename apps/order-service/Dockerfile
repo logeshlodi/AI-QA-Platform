@@ -1,5 +1,5 @@
 # Built from the repository root (docker compose does this): docker build -f apps/order-service/Dockerfile .
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /work
 RUN npm install -g pnpm@10
 
@@ -22,4 +22,6 @@ COPY apps/order-service apps/order-service
 WORKDIR /work/apps/order-service
 ENV NODE_ENV=production
 EXPOSE 8080 9464
-CMD ["pnpm", "start"]
+# Node itself is the container's main process, so the service's own SIGTERM handler closes Kafka,
+# Postgres and MongoDB and exits 0. Through pnpm and the tsx CLI, a clean stop was reported as exit 1.
+CMD ["node", "--import", "tsx", "src/main.ts"]

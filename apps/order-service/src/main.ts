@@ -1,20 +1,20 @@
 import http from 'node:http';
-import { Kafka, logLevel, type Producer } from 'kafkajs';
+import { Admin, Consumer, Producer, stringDeserializers, stringSerializers } from '@platformatic/kafka';
 import { config, TOPICS } from './config';
 import { placedOrder } from './contract';
 import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
 import { ordersProcessed, processingSeconds, shutdownMetrics } from './metrics';
 
-const kafka = new Kafka({ clientId: 'order-service', brokers: config.kafkaBrokers, logLevel: logLevel.WARN });
-const producer: Producer = kafka.producer({ idempotent: true });
-const consumer = kafka.consumer({ groupId: 'order-service' });
+const kafka = { clientId: 'order-service', bootstrapBrokers: config.kafkaBrokers };
+const producer = new Producer({ ...kafka, idempotent: true, serializers: stringSerializers });
+const consumer = new Consumer({ ...kafka, groupId: 'order-service', deserializers: stringDeserializers });
 let ready = false;
 
 const log = (message: string, extra: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ at: new Date().toISOString(), message, ...extra }));
 
 const publish = (topic: string, key: string, value: unknown) =>
-  producer.send({ topic, messages: [{ key, value: JSON.stringify(value) }] });
+  producer.send({ messages: [{ topic, key, value: JSON.stringify(value) }] });
 
 /** One message from orders.placed, start to finish. */
 async function handle(raw: string | undefined, key: string | undefined): Promise<void> {
@@ -94,17 +94,25 @@ const server = http.createServer(async (req, res) => {
 async function start(): Promise<void> {
   await mongo.connect();
   await migrate();
-  const admin = kafka.admin();
-  await admin.connect();
-  await admin.createTopics({
-    topics: Object.values(TOPICS).map((topic) => ({ topic, numPartitions: 3, replicationFactor: 1 })),
+  // Create only the topics that are missing: creating an existing topic is an error.
+  const admin = new Admin(kafka);
+  const existing = new Set(await admin.listTopics());
+  const missing = Object.values(TOPICS).filter((topic) => !existing.has(topic));
+  if (missing.length > 0) await admin.createTopics({ topics: missing, partitions: 3, replicas: 1 });
+  await admin.close();
+  // A new group starts from the earliest offset; after that it resumes from its committed offset.
+  const stream = await consumer.consume({
+    topics: [TOPICS.placed],
+    mode: 'committed',
+    fallbackMode: 'earliest',
+    autocommit: true,
   });
-  await admin.disconnect();
-  await producer.connect();
-  await consumer.connect();
-  await consumer.subscribe({ topic: TOPICS.placed, fromBeginning: true });
-  await consumer.run({
-    eachMessage: async ({ message }) => handle(message.value?.toString(), message.key?.toString()),
+  // One message at a time, in order, as kafkajs's eachMessage did.
+  void (async () => {
+    for await (const message of stream) await handle(message.value ?? undefined, message.key || undefined);
+  })().catch((error: unknown) => {
+    log('consumer stopped', { error: (error as Error).message });
+    process.exit(1);
   });
   ready = true;
   log('order service ready', { port: config.port, metricsPort: config.metricsPort });
@@ -119,8 +127,8 @@ start().catch((error: unknown) => {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, async () => {
     ready = false;
-    await consumer.disconnect().catch(() => undefined);
-    await producer.disconnect().catch(() => undefined);
+    await consumer.close(true).catch(() => undefined);
+    await producer.close().catch(() => undefined);
     await Promise.allSettled([pool.end(), mongo.close(), shutdownMetrics()]);
     server.close(() => process.exit(0));
   });

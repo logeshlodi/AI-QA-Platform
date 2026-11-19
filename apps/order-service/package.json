@@ -11,7 +11,7 @@
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/exporter-prometheus": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
-    "kafkajs": "catalog:",
+    "@platformatic/kafka": "catalog:",
     "mongodb": "catalog:",
     "pg": "catalog:",
     "tsx": "catalog:",
