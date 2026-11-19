@@ -42,7 +42,7 @@
     "eslint-plugin-playwright": "catalog:",
     "husky": "catalog:",
     "lint-staged": "catalog:",
-    "pnpm": "10.34.5",
+    "pnpm": "10.34.9",
     "prettier": "catalog:",
     "tslib": "catalog:",
     "tsx": "catalog:",
