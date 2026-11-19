@@ -14,6 +14,8 @@ catalog:
   'allure': 3.33.0
   '@axe-core/playwright': 4.14.0
   'lighthouse': 13.6.0
+  # Google's Core Web Vitals library, injected into pages by the performance specs.
+  'web-vitals': 6.2.3
 
   # API testing and test data
   'zod': 4.6.7

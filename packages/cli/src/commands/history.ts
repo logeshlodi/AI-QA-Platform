@@ -1,4 +1,12 @@
-import { detectFlaky, HISTORY_DIR, openRunHistory, summarize, type StoredRun } from '@aiqa/reporting-engine';
+import {
+  detectFlaky,
+  formatMetric,
+  HISTORY_DIR,
+  openRunHistory,
+  summarize,
+  type MetricTrend,
+  type StoredRun,
+} from '@aiqa/reporting-engine';
 
 const pad = (value: string | number, width: number): string => String(value).padEnd(width);
 const when = (iso: string): string => iso.replace('T', ' ').slice(0, 16);
@@ -40,4 +48,36 @@ export function formatFlaky(runs: StoredRun[]): string {
         `${f.score.toFixed(2)}  ${f.title}  [${f.project}]\n      ${f.file}: ${f.runs} runs, ${f.failures} failed, ${f.retriedPasses} passed on retry, ${f.flips} flips`,
     )
     .join('\n');
+}
+
+const VERDICT_LABEL: Record<MetricTrend['verdict'], string> = {
+  regressed: 'REGRESSED',
+  improved: 'improved',
+  steady: 'steady',
+  new: 'new',
+};
+
+/**
+ * Performance metrics against their usual level. Steady metrics are left out unless `all` is set,
+ * so the output is the list of things worth looking at.
+ */
+export function formatPerf(trends: MetricTrend[], all = false): string {
+  if (trends.length === 0) return 'No performance metrics recorded. Run "pnpm test:perf" first.';
+  const shown = all ? trends : trends.filter((t) => t.verdict !== 'steady');
+  const steady = trends.length - shown.length;
+  if (shown.length === 0) return `All ${trends.length} metrics are steady (within 20% of their median).`;
+  const lines = shown.map((t) => {
+    const usual =
+      t.baseline === undefined ? 'no baseline yet' : `usual ${formatMetric(t.metric, t.baseline)}`;
+    const change =
+      t.change === undefined
+        ? ''
+        : Number.isFinite(t.change)
+          ? ` (${t.change > 0 ? '+' : ''}${Math.round(t.change * 100)}%)`
+          : '';
+    return `${pad(VERDICT_LABEL[t.verdict], 10)}${t.title}  [${t.project}]\n          ${t.metric}: ${formatMetric(t.metric, t.latest)}, ${usual}${change}`;
+  });
+  if (steady > 0)
+    lines.push(`... and ${steady} steady metric${steady === 1 ? '' : 's'} (--all to list them).`);
+  return lines.join('\n');
 }

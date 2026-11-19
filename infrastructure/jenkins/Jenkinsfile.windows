@@ -11,6 +11,8 @@ pipeline {
   parameters {
     booleanParam(name: 'RUN_UI', defaultValue: true, description: 'Full UI suite (Chromium, Firefox, WebKit, mobile)')
     booleanParam(name: 'RUN_DATA', defaultValue: true, description: 'Postgres, MongoDB and Kafka suites (needs Docker Desktop running)')
+    booleanParam(name: 'RUN_PERF', defaultValue: true, description: 'Browser performance: Web Vitals, page weight, memory (Chromium)')
+    choice(name: 'LOAD_PROFILE', choices: ['none', 'smoke', 'load', 'stress'], description: 'k6 load test against the order service, run with the data suites')
   }
 
   options {
@@ -59,6 +61,12 @@ pipeline {
       post { always { junit allowEmptyResults: true, testResults: 'packages/playwright-framework/test-results/junit.xml' } }
     }
 
+    stage('Browser performance') {
+      when { expression { params.RUN_PERF != false } }
+      steps { bat 'node_modules\\.bin\\pnpm.cmd test:perf' }
+      post { always { junit allowEmptyResults: true, testResults: 'packages/playwright-framework/test-results/junit.xml' } }
+    }
+
     stage('Data suites') {
       when { expression { params.RUN_DATA != false } }
       steps {
@@ -72,6 +80,9 @@ pipeline {
             try {
               bat 'node_modules\\.bin\\pnpm.cmd stack:up'
               bat 'node_modules\\.bin\\pnpm.cmd test:data'
+              if ((params.LOAD_PROFILE ?: 'none') != 'none') {
+                bat "node_modules\\.bin\\pnpm.cmd perf:load ${params.LOAD_PROFILE}"
+              }
             } finally {
               bat 'node_modules\\.bin\\pnpm.cmd stack:down'
             }
@@ -85,9 +96,11 @@ pipeline {
   post {
     always {
       bat(returnStatus: true, script: 'node_modules\\.bin\\pnpm.cmd -s aiqa history --limit 8')
+      bat(returnStatus: true, script: 'node_modules\\.bin\\pnpm.cmd -s aiqa perf')
       archiveArtifacts allowEmptyArchive: true, artifacts: [
         '.aiqa/dashboard/**',
         'packages/*/playwright-report/**',
+        'packages/load-tests/results/**',
       ].join(', ')
     }
   }

@@ -1,6 +1,6 @@
 # Status
 
-Last full run: 19 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1.
+Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
 Sprints 1 to 8 of the plan are built and have run on the laptop. Sprint 9 onward (agents, chat app, Kubernetes, learning content) is not started.
 
 ## What was run, and the result
@@ -39,6 +39,47 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Performance sprint (19 to 20 Nov)
+
+All run on the Windows laptop, Node 24.22.3, Docker Desktop.
+
+| Check                                               | Result                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:perf` (6 specs, Chromium, one at a time) | Passed in both runs with the final budgets (after three measuring runs). Login LCP 324 to 404 ms; INP 24 to 32 ms; slow-phone LCP 2,044 to 2,184 ms |
+| Page-weight budget                                  | Identical in every run once images had loaded: 10 requests, 730 KB decoded, 550 KB of it scripts                                                    |
+| Memory-leak check                                   | 4.2 to 4.3 KB per round, steady; budget 8 KB                                                                                                        |
+| Data suites with the new HTTP API spec              | 29 passed (24 before, plus 5 for `POST /orders` and `PUT /products/:sku`)                                                                           |
+| `pnpm perf:load smoke`                              | Every threshold held: 60 orders, all confirmed, end-to-end p95 33 ms                                                                                |
+| `pnpm perf:load load` (20 orders a second)          | Every threshold held: 3,360 orders, all confirmed, 0 failed requests, both endpoints about 4 ms at p95                                              |
+| `pnpm perf:load stress` (to 150 a second)           | Thresholds crossed, as intended: see below                                                                                                          |
+| `aiqa perf`, dashboard section                      | Trends and verdicts from the recorded runs                                                                                                          |
+
+What the stress run found: `POST /orders` kept a p95 of 8 ms and no request failed, but the service
+confirmed only about 35 orders a second, because it handles Kafka messages one at a time. Beyond
+that a queue built up: end-to-end p95 32.5 s, 80% confirmed within the 5-second window, and k6
+dropped 8,524 orders for lack of free virtual users. Processing the three partitions in parallel
+(order kept within each partition) is the obvious next step for the service; not done here.
+
+Corrections made on the way:
+
+- **Web Vitals came back empty at first.** Playwright runs each init script in its own scope, so the
+  library's top-level `var webVitals` never reached `window`. The injected script now assigns it.
+- **The first leak check read 22.5 KB per round on TodoMVC.** A probe showed growth front-loaded and
+  the same with plain in-page events (439 KB over 20 rounds, 157 KB over the next 40): warm-up, not a
+  leak. The check now warms up for 20 rounds and measures 40.
+- **Page weight varied from 4 to 10 requests** because product images arrive after the load event.
+  The spec now waits until every image has loaded.
+- **The k6 script measured its own polling.** Polling every 100 ms reported a 121 ms p95 for orders
+  that took about 30 ms; polling every 25 ms then sent 1,600 reads a second in the stress run and
+  slowed the endpoint it was timing. It now starts at 25 ms and backs off to 500 ms.
+- **One stress reading was negative** (-3.97 s): Docker's virtual machine clock went backwards under
+  load. Such readings are now counted (`clock_jumps`) instead of averaged in.
+- **A verdict on one earlier run is noise.** The trend analysis waits for 3 earlier runs.
+- **Grafana 13 read dashboard files only at start-up** here; the provisioning now rescans every 10 s.
+
+Not yet seen on CI: the new `perf` and `load` jobs (GitHub Actions and both Azure pipelines) and the
+Jenkins `RUN_PERF` / `LOAD_PROFILE` parameters run on the next push.
 
 ## Clean-up sprint (19 Nov)
 
@@ -108,6 +149,11 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 - **Node 23.3 is no longer supported here.** Its `node:sqlite` needs a flag (the stores fall back to
   JSON files), it is outside what Vitest 5 and ESLint 10 support, and `@platformatic/kafka` needs
   22.22+ or 24.6+. Use Node 24 LTS (`nvm use 24.22.3` on the laptop).
+- **k6's Prometheus remote-write output is deprecated** (planned for removal in k6 3, with
+  OpenTelemetry as the replacement). It works in k6 2.4; moving to OpenTelemetry means reading
+  histograms instead of ready-made percentiles in Grafana.
+- **The browser performance specs measure public sites over the internet.** Their timing budgets are
+  Google's "poor" thresholds, not "good", so a slow connection does not fail them; the trends catch drift.
 - **The project carries pnpm as a dev dependency** (corepack failed on Node 23.3); `npx pnpm ...` works
   on any Node.
 - **`tslib` sits in the root `package.json`** because pnpm on the Windows laptop did not link it for

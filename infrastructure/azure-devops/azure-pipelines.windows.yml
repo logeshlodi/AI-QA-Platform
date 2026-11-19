@@ -19,6 +19,15 @@ parameters:
     displayName: Postgres, MongoDB and Kafka suites (needs Docker Desktop running)
     type: boolean
     default: true
+  - name: runPerf
+    displayName: 'Browser performance: Web Vitals, page weight, memory (Chromium)'
+    type: boolean
+    default: true
+  - name: loadProfile
+    displayName: k6 load test against the order service, run with the data suites
+    type: string
+    default: none
+    values: [none, smoke, load, stress]
 
 pool:
   name: Default
@@ -74,6 +83,17 @@ jobs:
               testResultsFiles: packages/playwright-framework/test-results/junit.xml
               testRunTitle: UI specs (Windows)
 
+      - ${{ if eq(parameters.runPerf, true) }}:
+          - script: $(PNPM) test:perf
+            displayName: Browser performance specs
+          - task: PublishTestResults@2
+            displayName: Performance results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/playwright-framework/test-results/junit.xml
+              testRunTitle: Browser performance (Windows)
+
       - ${{ if eq(parameters.runData, true) }}:
           # Docker Desktop's CLI is not on the agent's PATH by default; add it, and skip with a warning
           # (not a failure) when Docker Desktop is not running.
@@ -91,6 +111,10 @@ jobs:
           - script: $(PNPM) stack:up && $(PNPM) test:data
             displayName: Start the stack and run the data suites
             condition: and(succeeded(), eq(variables.DOCKER_UP, 'true'))
+          - ${{ if ne(parameters.loadProfile, 'none') }}:
+              - script: $(PNPM) perf:load ${{ parameters.loadProfile }}
+                displayName: k6 load test (${{ parameters.loadProfile }})
+                condition: and(succeeded(), eq(variables.DOCKER_UP, 'true'))
           - script: $(PNPM) stack:down
             displayName: Stop the stack
             condition: eq(variables.DOCKER_UP, 'true')
@@ -102,8 +126,8 @@ jobs:
               testResultsFiles: packages/data-framework/test-results/junit.xml
               testRunTitle: Data suites (Windows)
 
-      - script: $(PNPM) -s aiqa history --limit 8
-        displayName: Run history
+      - script: $(PNPM) -s aiqa history --limit 8 && $(PNPM) -s aiqa perf
+        displayName: Run history and performance trends
         condition: always()
         continueOnError: true
 

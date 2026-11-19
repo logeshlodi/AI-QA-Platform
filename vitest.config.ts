@@ -16,7 +16,7 @@ export default defineConfig({
   test: {
     // Unit tests only. Browser and API specs are run by Playwright.
     include: [
-      'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,cli}/tests/**/*.test.ts',
+      'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,cli,load-tests}/tests/**/*.test.ts',
     ],
     environment: 'node',
   },

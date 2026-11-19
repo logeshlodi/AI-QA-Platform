@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createRunRepository, type StoredRun } from '@aiqa/reporting-engine';
+import { createRunRepository, type MetricTrend, type StoredRun } from '@aiqa/reporting-engine';
 import {
   formatFiles,
   formatFlaky,
+  formatPerf,
   formatHistory,
   kebab,
   loadRuns,
@@ -180,6 +181,37 @@ describe('history and flaky', () => {
     const out = formatFlaky([runOf('ui', '2026-11-19T11:00:00.000Z', [['failed', 'passed']])]);
     expect(out).toContain('1.00  test 0  [chromium]');
     expect(out).toContain('1 passed on retry');
+  });
+});
+
+describe('perf', () => {
+  const trend = (verdict: MetricTrend['verdict'], latest: number, baseline?: number): MetricTrend => ({
+    testId: 't',
+    title: 'the login page paints fast',
+    file: 'tests/performance/web-vitals.spec.ts',
+    project: 'perf',
+    metric: 'lcp_ms',
+    latest,
+    baseline,
+    change: baseline === undefined ? undefined : (latest - baseline) / baseline,
+    verdict,
+    values: [],
+  });
+
+  it('shows what changed and hides steady metrics unless asked', () => {
+    const trends = [trend('regressed', 600, 400), trend('steady', 410, 400)];
+    const out = formatPerf(trends);
+    expect(out).toContain('REGRESSED the login page paints fast  [perf]');
+    expect(out).toContain('lcp_ms: 600 ms, usual 400 ms (+50%)');
+    expect(out).toContain('1 steady metric (--all to list them)');
+    expect(formatPerf(trends, true)).toContain('steady    the login page');
+  });
+
+  it('says so when everything is steady, or nothing was recorded', () => {
+    expect(formatPerf([trend('steady', 410, 400)])).toBe(
+      'All 1 metrics are steady (within 20% of their median).',
+    );
+    expect(formatPerf([])).toMatch(/No performance metrics recorded/);
   });
 });
 

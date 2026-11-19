@@ -38,6 +38,23 @@ const git = (...args: string[]): string | undefined => {
  * It runs in Playwright's main process, so there is one writer however many workers run.
  * A reporter must never fail a test run: any error here is printed and swallowed.
  */
+/** Annotation type tests record numbers with (see `recordMetrics` in playwright-framework). */
+export const METRIC_ANNOTATION = 'metric';
+
+/** Reads `metric` annotations ("name=value"). Later values of the same name win. */
+export function metricsOf(
+  annotations: { type: string; description?: string }[],
+): Record<string, number> | undefined {
+  const metrics: Record<string, number> = {};
+  for (const { type, description } of annotations) {
+    if (type !== METRIC_ANNOTATION || !description) continue;
+    const at = description.lastIndexOf('=');
+    const value = Number(description.slice(at + 1));
+    if (at > 0 && Number.isFinite(value)) metrics[description.slice(0, at).trim()] = value;
+  }
+  return Object.keys(metrics).length > 0 ? metrics : undefined;
+}
+
 export default class HistoryReporter implements Reporter {
   private readonly runId = randomUUID();
   private readonly results: ResultRecord[] = [];
@@ -53,6 +70,7 @@ export default class HistoryReporter implements Reporter {
   }
 
   onTestEnd(test: TestCase, result: TestResult): void {
+    const metrics = metricsOf([...test.annotations, ...result.annotations]);
     const failed = result.status === 'failed' || result.status === 'timedOut';
     const errorMessage = failed ? (result.error?.message ?? '').replace(ANSI, '').slice(0, 2000) : undefined;
     this.results.push({
@@ -69,6 +87,7 @@ export default class HistoryReporter implements Reporter {
       failureCategory: failed
         ? (classifyByRules({ errorMessage: errorMessage ?? '' })?.category ?? 'unknown')
         : undefined,
+      metrics,
     });
   }
 

@@ -80,6 +80,11 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.16.0
+    # The image's own two flags, plus the remote-write receiver: k6 pushes its metrics here.
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-remote-write-receiver
     volumes: ['../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro']
     ports: ['9090:9090']
     depends_on: [order-service]
@@ -95,6 +100,27 @@ services:
       - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ['3000:3000']
     depends_on: [prometheus]
+
+  # Only with --profile perf, through `pnpm perf:load [smoke|load|stress]` once the stack is up:
+  # k6 places orders over HTTP, streams its metrics to Prometheus (Grafana: "Load tests" dashboard)
+  # and writes its summary to packages/load-tests/results for the run history.
+  k6:
+    profiles: [perf]
+    image: grafana/k6:2.4.0
+    command: run --summary-export=/results/summary.json -o experimental-prometheus-rw /scripts/order-flow.js
+    environment:
+      ORDER_SERVICE_URL: http://order-service:8080
+      PROFILE: smoke
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),max
+    # Root, so it can write the summary into a folder owned by whoever runs the tests.
+    user: '0'
+    volumes:
+      - ../../packages/load-tests/scripts:/scripts:ro
+      - ../../packages/load-tests/results:/results
+    depends_on:
+      order-service: { condition: service_healthy }
+      prometheus: { condition: service_started }
 
   # Only with --profile test (pnpm stack:test): the data suites, run inside the compose network.
   data-tests:

@@ -3,7 +3,8 @@ import { chromium } from '@playwright/test';
 import { targetNames, targetUrl, type TargetName } from '@aiqa/shared';
 import { Argument, Command, InvalidArgumentError, Option } from 'commander';
 import { ENTITIES, makeData, type Entity } from './commands/data';
-import { formatFlaky, formatHistory, loadRuns } from './commands/history';
+import { metricTrends } from '@aiqa/reporting-engine';
+import { formatFlaky, formatHistory, formatPerf, loadRuns } from './commands/history';
 import { formatFiles, renderPage, writeFiles } from './commands/new-page';
 
 const FRAMEWORK = path.resolve(__dirname, '..', '..', 'playwright-framework');
@@ -88,6 +89,17 @@ program
   .command('flaky')
   .description('tests that passed only on retry or flipped between runs')
   .action(() => console.log(formatFlaky(loadRuns())));
+
+program
+  .command('perf')
+  .description('performance metrics against their usual level: regressions first')
+  .option('--all', 'list steady metrics too')
+  .option('--fail-on-regression', 'exit with code 1 when a metric regressed (for CI)')
+  .action((opts: { all?: boolean; failOnRegression?: boolean }) => {
+    const trends = metricTrends(loadRuns());
+    console.log(formatPerf(trends, opts.all));
+    if (opts.failOnRegression && trends.some((t) => t.verdict === 'regressed')) process.exitCode = 1;
+  });
 
 program
   .command('data')

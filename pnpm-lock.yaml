@@ -96,6 +96,9 @@ catalogs:
     vitest:
       specifier: 5.1.0
       version: 5.1.0
+    web-vitals:
+      specifier: 6.2.3
+      version: 6.2.3
     zod:
       specifier: 4.6.7
       version: 4.6.7
@@ -276,6 +279,15 @@ importers:
         specifier: 'catalog:'
         version: 10.1.0
 
+  packages/load-tests:
+    dependencies:
+      '@aiqa/reporting-engine':
+        specifier: workspace:*
+        version: link:../reporting-engine
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+
   packages/playwright-framework:
     dependencies:
       '@aiqa/ai-engine':
@@ -302,6 +314,9 @@ importers:
       lighthouse:
         specifier: 'catalog:'
         version: 13.6.0(ajv@8.20.0)
+      web-vitals:
+        specifier: 'catalog:'
+        version: 6.2.3
     devDependencies:
       allure:
         specifier: 'catalog:'
@@ -2898,6 +2913,9 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  web-vitals@6.2.3:
+    resolution: {integrity: sha512-Dmy+vdO1UPMqXiAtZSNayhl4f794Bxfd94W4HIj2HlYtczEQfEOon969memlcpcHrTuOKLa5baFjX7WbgmOq+A==}
 
   webdriver-bidi-protocol@1.0.2:
     resolution: {integrity: sha512-nghazPI+J5RrLZ+qb6vMjC6l1/tnwqr2muVEax4Ufd6eIdcjeqNnhLsAxTG9s+7Zf4umgf0DrEwDC8CoU91nAA==}
@@ -5537,6 +5555,8 @@ snapshots:
       '@types/node': 22.20.5
     transitivePeerDependencies:
       - msw
+
+  web-vitals@6.2.3: {}
 
   webdriver-bidi-protocol@1.0.2: {}
 

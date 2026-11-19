@@ -132,6 +132,66 @@ jobs:
             retention-days: 14,
           }
 
+  perf:
+    name: Browser performance (Web Vitals, page weight, memory)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium }
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-perf-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-perf-${{ github.ref_name }}-
+            aiqa-history-perf-main-
+      # One test at a time, Chromium only (DevTools throttling and heap readings).
+      - run: pnpm test:perf
+      - name: Summary
+        if: always()
+        continue-on-error: true # a reporting glitch must never fail the tests' job
+        run: |
+          { echo '### Performance metrics against their usual level'; echo '```'; pnpm -s aiqa perf --all; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: perf-report, path: packages/playwright-framework/playwright-report, retention-days: 14 }
+
+  load:
+    name: Load test (k6 smoke against the order service)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-load-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-load-${{ github.ref_name }}-
+            aiqa-history-load-main-
+      - run: pnpm stack:up
+      # 2 orders a second for 30 seconds: is everything wired up, and do the thresholds hold?
+      # The heavier `load` and `stress` profiles are for a machine you control: pnpm perf:load load.
+      - run: pnpm perf:load smoke
+      - name: Order service logs
+        if: failure()
+        run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
+      - if: always()
+        run: pnpm stack:down
+      - name: Summary
+        if: always()
+        continue-on-error: true
+        run: |
+          { echo '### Load test metrics against their usual level'; echo '```'; pnpm -s aiqa perf --all; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: k6-summary, path: packages/load-tests/results, retention-days: 14 }
+
   visual:
     name: Visual comparison (Linux baselines)
     needs: quality

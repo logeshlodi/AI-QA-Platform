@@ -14,3 +14,4 @@ export * from './components/header.component';
 export * from './components/product-card.component';
 export * from './flows/login.flow';
 export * from './flows/checkout.flow';
+export * from './perf';

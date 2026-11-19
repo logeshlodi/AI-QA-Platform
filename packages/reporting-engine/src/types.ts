@@ -25,6 +25,8 @@ export interface ResultRecord {
   durationMs: number;
   errorMessage?: string;
   failureCategory?: string;
+  /** Numbers the test recorded with `metric` annotations, e.g. { lcp_ms: 412, transfer_bytes: 337291 }. */
+  metrics?: Record<string, number>;
 }
 
 export interface StoredRun {

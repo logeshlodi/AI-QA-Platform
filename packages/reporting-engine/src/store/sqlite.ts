@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS test_run (
 CREATE TABLE IF NOT EXISTS test_result (
   run_id TEXT NOT NULL REFERENCES test_run(id), test_id TEXT NOT NULL, retry INTEGER NOT NULL,
   title TEXT NOT NULL, file TEXT NOT NULL, status TEXT NOT NULL, duration_ms INTEGER NOT NULL,
-  error_message TEXT, failure_category TEXT, project TEXT NOT NULL DEFAULT '',
+  error_message TEXT, failure_category TEXT, project TEXT NOT NULL DEFAULT '', metrics TEXT,
   PRIMARY KEY (run_id, test_id, retry)
 );
 CREATE INDEX IF NOT EXISTS test_result_by_test ON test_result (test_id);
@@ -34,6 +34,15 @@ interface Database {
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 const optional = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
+
+function parseMetrics(value: unknown): Record<string, number> | undefined {
+  if (typeof value !== 'string' || value === '') return undefined;
+  try {
+    return JSON.parse(value) as Record<string, number>;
+  } catch {
+    return undefined;
+  }
+}
 
 /** SQLite store on Node's built-in driver: one file, queryable with any SQLite tool. */
 export class SqliteRunRepository implements RunRepository {
@@ -62,6 +71,10 @@ export class SqliteRunRepository implements RunRepository {
     if (!columns.some((column) => column.name === 'project')) {
       this.db.exec("ALTER TABLE test_result ADD COLUMN project TEXT NOT NULL DEFAULT ''");
     }
+    // ...and before performance metrics were recorded (JSON text, one object per attempt).
+    if (!columns.some((column) => column.name === 'metrics')) {
+      this.db.exec('ALTER TABLE test_result ADD COLUMN metrics TEXT');
+    }
   }
 
   saveRun({ run, results }: StoredRun): void {
@@ -82,7 +95,7 @@ export class SqliteRunRepository implements RunRepository {
           run.suite,
         );
       const insert = this.db.prepare(
-        'INSERT INTO test_result (run_id, test_id, retry, title, file, status, duration_ms, error_message, failure_category, project) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO test_result (run_id, test_id, retry, title, file, status, duration_ms, error_message, failure_category, project, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       );
       for (const r of results) {
         insert.run(
@@ -96,6 +109,7 @@ export class SqliteRunRepository implements RunRepository {
           r.errorMessage ?? null,
           r.failureCategory ?? null,
           r.project,
+          r.metrics ? JSON.stringify(r.metrics) : null,
         );
       }
       this.db.exec('COMMIT');
@@ -131,6 +145,7 @@ export class SqliteRunRepository implements RunRepository {
         durationMs: Number(r.duration_ms),
         errorMessage: optional(r.error_message),
         failureCategory: optional(r.failure_category),
+        metrics: parseMetrics(r.metrics),
       })),
     }));
   }

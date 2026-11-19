@@ -58,6 +58,13 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 | AI: locator generation from an aria snapshot                                    | `ai/locator-generation.spec.ts`                                         | SauceDemo                         |
 | AI: schema-driven test data                                                     | `api-framework/tests/restful-booker/generated-data.spec.ts`             | Restful-Booker                    |
 | Playwright test agents (planner, generator, healer)                             | `.claude/agents/`, `tests/seed.spec.ts`, `specs/`                       | SauceDemo                         |
+| Core Web Vitals (LCP, CLS, INP, FCP, TTFB) with Google's `web-vitals`           | `performance/web-vitals.spec.ts`, `src/perf/vitals.ts`                  | SauceDemo, TodoMVC                |
+| Performance budget: requests and bytes from Resource Timing                     | `performance/page-weight.spec.ts`, `src/perf/resources.ts`              | SauceDemo                         |
+| Network and CPU throttling (DevTools Protocol)                                  | `performance/throttled.spec.ts`, `src/perf/throttling.ts`               | SauceDemo                         |
+| Memory-leak check (garbage-collected JS heap)                                   | `performance/memory.spec.ts`, `src/perf/memory.ts`                      | TodoMVC                           |
+| Chrome performance trace (`browser.startTracing`)                               | `src/perf/tracing.ts` (`PERF_TRACE=1`)                                  | SauceDemo                         |
+| Performance trends and regressions in the run history                           | `reporting-engine` `metricTrends`, `aiqa perf`, dashboard               | Recorded runs                     |
+| Load testing (k6: smoke, load, stress), end-to-end order latency                | `load-tests/scripts/order-flow.js`, `pnpm perf:load`                    | Order service (Docker)            |
 | Visual comparison                                                               | `visual/login.visual.spec.ts`                                           | SauceDemo                         |
 | Data-driven tests                                                               | `journeys/login.spec.ts`, `api-framework/tests/soap/calculator.spec.ts` | SauceDemo, SOAP                   |
 | Self-healing                                                                    | `healing/healer-local.spec.ts`, `healing/dynamic-id.spec.ts`            | Local page, UI Testing Playground |

@@ -160,3 +160,110 @@ export const slowest = (outcomes: TestOutcome[], count = 10): TestOutcome[] =>
     .filter((o) => o.outcome !== 'skipped')
     .sort((a, b) => b.durationMs - a.durationMs)
     .slice(0, count);
+
+export type TrendVerdict = 'regressed' | 'improved' | 'steady' | 'new';
+
+export interface MetricTrend {
+  testId: string;
+  title: string;
+  file: string;
+  project: string;
+  metric: string;
+  /** Value in the most recent run that recorded this metric. */
+  latest: number;
+  /** Median of the previous runs in the window; undefined when there are none yet. */
+  baseline?: number;
+  /** (latest - baseline) / baseline, e.g. 0.25 for 25% higher. */
+  change?: number;
+  verdict: TrendVerdict;
+  /** Values oldest first, the latest included: enough for a sparkline. */
+  values: number[];
+}
+
+export interface TrendOptions {
+  /** How many earlier runs form the baseline. Default 10. */
+  baselineRuns?: number;
+  /** Relative change that counts as a regression or improvement. Default 0.2 (20%). */
+  tolerance?: number;
+  /** Changes smaller than this, in the metric's own unit, are noise whatever the percentage. Default 0. */
+  minAbsoluteChange?: number;
+  /** Earlier runs needed before a verdict; until then the metric is "new". Default 3. */
+  minBaselineRuns?: number;
+}
+
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? (sorted[mid] as number)
+    : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+};
+
+/**
+ * Performance trends: for every metric a test records, compares its latest value with the median of
+ * the runs before it. The median, not the mean, so one slow run in the baseline does not move it.
+ *
+ * Lower is better for every metric recorded here (times, bytes, layout shift, heap growth), so a rise
+ * beyond the tolerance is a regression. Only each test's final attempt counts, and only when it ran.
+ */
+export function metricTrends(history: StoredRun[], options: TrendOptions = {}): MetricTrend[] {
+  const baselineRuns = options.baselineRuns ?? 10;
+  const tolerance = options.tolerance ?? 0.2;
+  const minAbsolute = options.minAbsoluteChange ?? 0;
+  // A median of one or two runs is one or two runs: too few to call anything a regression.
+  const minBaseline = Math.min(options.minBaselineRuns ?? 3, baselineRuns);
+  const runs = [...history].sort((a, b) => a.run.startedAt.localeCompare(b.run.startedAt));
+
+  type Series = { info: ResultRecord; values: number[] };
+  const series = new Map<string, Series>();
+  for (const stored of runs) {
+    const lastAttempt = new Map<string, ResultRecord>();
+    for (const result of stored.results) {
+      const seen = lastAttempt.get(result.testId);
+      if (!seen || result.retry > seen.retry) lastAttempt.set(result.testId, result);
+    }
+    for (const result of lastAttempt.values()) {
+      if (result.status === 'skipped' || !result.metrics) continue;
+      for (const [metric, value] of Object.entries(result.metrics)) {
+        const key = `${result.testId}\u0000${metric}`;
+        const entry = series.get(key) ?? { info: result, values: [] };
+        entry.info = result;
+        entry.values.push(value);
+        series.set(key, entry);
+      }
+    }
+  }
+
+  const trends: MetricTrend[] = [];
+  for (const [key, { info, values }] of series) {
+    const metric = key.split('\u0000')[1] as string;
+    const latest = values[values.length - 1] as number;
+    const earlier = values.slice(0, -1).slice(-baselineRuns);
+    const base = {
+      testId: info.testId,
+      title: info.title,
+      file: info.file,
+      project: info.project,
+      metric,
+      latest,
+    };
+    if (earlier.length === 0) {
+      trends.push({ ...base, verdict: 'new', values });
+      continue;
+    }
+    const baseline = median(earlier);
+    const delta = latest - baseline;
+    const change = baseline === 0 ? (latest === 0 ? 0 : Infinity) : delta / baseline;
+    const significant = Math.abs(delta) > minAbsolute && Math.abs(change) > tolerance;
+    const verdict: TrendVerdict =
+      earlier.length < minBaseline ? 'new' : !significant ? 'steady' : delta > 0 ? 'regressed' : 'improved';
+    trends.push({ ...base, baseline, change, verdict, values });
+  }
+  const order: Record<TrendVerdict, number> = { regressed: 0, improved: 1, new: 2, steady: 3 };
+  return trends.sort(
+    (a, b) =>
+      order[a.verdict] - order[b.verdict] ||
+      a.title.localeCompare(b.title) ||
+      a.metric.localeCompare(b.metric),
+  );
+}

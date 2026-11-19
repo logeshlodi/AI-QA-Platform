@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { Admin, Consumer, Producer, stringDeserializers, stringSerializers } from '@platformatic/kafka';
 import { config, TOPICS } from './config';
-import { placedOrder } from './contract';
+import { placedOrder, productUpsert } from './contract';
 import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
 import { ordersProcessed, processingSeconds, shutdownMetrics } from './metrics';
 
@@ -56,9 +56,58 @@ const json = (res: http.ServerResponse, status: number, body: unknown) => {
   res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
 };
 
+const MAX_BODY_BYTES = 64 * 1024;
+
+/** Reads a JSON body. Returns undefined for a body that is not JSON; rejects one that is too large. */
+async function readJson(req: http.IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('request body too large'), { status: 413 });
+    chunks.push(chunk as Buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+const issues = (error: { issues: { message: string }[] }) => error.issues.map((i) => i.message).join('; ');
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.url === '/health') return json(res, ready ? 200 : 503, { ready });
+
+    // HTTP front door for orders (used by the load tests): checked against the same contract as the
+    // Kafka path, then published to orders.placed. 202: accepted, the outcome follows asynchronously
+    // (GET /orders/:id, or orders.confirmed / orders.rejected). An invalid order is refused here
+    // with 400 instead of travelling to the dead-letter topic.
+    if (req.method === 'POST' && req.url === '/orders') {
+      if (!ready) return json(res, 503, { error: 'not ready' });
+      const parsed = placedOrder.safeParse(await readJson(req));
+      if (!parsed.success) return json(res, 400, { error: issues(parsed.error) });
+      await publish(TOPICS.placed, parsed.data.id, parsed.data);
+      return json(res, 202, { orderId: parsed.data.id, status: 'accepted' });
+    }
+
+    // Catalogue upkeep: create a product or replace its name, price and stock. A demo service with no
+    // authentication; a real one would put this behind an admin role.
+    const product = /^\/products\/([A-Za-z0-9._-]{1,64})$/.exec(req.url ?? '');
+    if (req.method === 'PUT' && product) {
+      const parsed = productUpsert.safeParse(await readJson(req));
+      if (!parsed.success) return json(res, 400, { error: issues(parsed.error) });
+      const { name, priceCents, stock } = parsed.data;
+      const saved = await pool.query(
+        `INSERT INTO products (sku, name, price_cents, stock) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name, price_cents = EXCLUDED.price_cents, stock = EXCLUDED.stock
+         RETURNING (xmax = 0) AS created`,
+        [product[1], name, priceCents, stock],
+      );
+      return json(res, saved.rows[0].created ? 201 : 200, { sku: product[1], name, priceCents, stock });
+    }
+
     const match = /^\/orders\/([0-9a-f-]{36})$/i.exec(req.url ?? '');
     if (req.method === 'GET' && match) {
       const order = await pool.query(
@@ -87,7 +136,8 @@ const server = http.createServer(async (req, res) => {
     }
     return json(res, 404, { error: 'not found' });
   } catch (error) {
-    return json(res, 500, { error: (error as Error).message });
+    const status = (error as { status?: number }).status ?? 500;
+    return json(res, status, { error: (error as Error).message });
   }
 });
 

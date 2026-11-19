@@ -7,7 +7,7 @@ against live public demo applications. It covers Sprints 1 to 8 of the plan:
 cross-browser UI tests, API tests, a self-healing engine with an audit trail, an optional
 local-model layer, run history with trends and flaky-test detection, seeded test data, a code
 generator, Postgres/MongoDB/Kafka suites against a real service on Docker Compose, metrics in
-Grafana, and the same pipeline for GitHub Actions, Azure DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
+Grafana, browser performance checks and k6 load tests with trends, and the same pipeline for GitHub Actions, Azure DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
 
 ## Quick start (Windows `cmd`, macOS, Linux)
 
@@ -33,6 +33,10 @@ npx pnpm test:data              # the data and messaging suites against that sta
 npx pnpm stack:test             # one command: build, start, run the data suites in a container, stop
 npx pnpm stack:down             # stop the stack and delete its data
 
+npx pnpm test:perf              # Web Vitals, page weight, slow-phone run, memory leak check (Chromium)
+npx pnpm perf:load              # k6 load test of the order service (needs stack:up); smoke | load | stress
+npx pnpm aiqa perf              # performance metrics against their usual level, regressions first
+
 npx pnpm aiqa new page Inventory --path /inventory.html --url   # page object + spec from the live page
 npx pnpm aiqa data order --count 3 --seed 42                    # seeded test data as JSON
 npx pnpm aiqa history           # recorded runs; `aiqa flaky` for the flaky list
@@ -52,12 +56,42 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard      | Vitest                |
 | `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records   | Vitest                |
 | `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data              | Vitest                |
-| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, Kafka adapter, stack fixtures                                                | Playwright, Docker    |
+| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                        | Playwright, Docker    |
+| `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                             | Vitest, k6 in Docker  |
 | `apps/order-service`            | The system under test for the data suites: Kafka in, Postgres and MongoDB writes, Kafka out, OpenTelemetry       | Data suites           |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
 import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
 engines import `shared`.
+
+## Performance testing
+
+Two halves, because Playwright measures one user in great detail but cannot generate load.
+
+**One user, in the browser** (`pnpm test:perf`, `packages/playwright-framework/src/perf/`):
+
+- Core Web Vitals (LCP, CLS, INP, FCP, TTFB) measured inside the page by Google's `web-vitals`
+  library, injected before the page's own scripts.
+- A page-weight budget from Resource Timing: requests, bytes, scripts, images.
+- The same page on a slow phone: Lighthouse's mobile profile (slow 4G, CPU four times slower) through
+  the DevTools Protocol.
+- A memory-leak check: add and delete a todo 40 times after a 20-round warm-up and compare the
+  garbage-collected JavaScript heap.
+- Optional Chrome performance traces (`PERF_TRACE=1`) for DevTools' Performance panel.
+
+**Many users, against our own service** (`pnpm perf:load [smoke|load|stress]`, `packages/load-tests/`):
+k6 places orders through `POST /orders` and times each one until `GET /orders/:id` reads
+confirmed, through Kafka, Postgres and MongoDB. Thresholds fail the run; k6 streams its metrics
+to Prometheus, where the **Load tests (k6)** Grafana dashboard shows them next to the service's own
+processing time. Load is only ever aimed at the order service, never at a public demo site.
+
+Both record their numbers in the run history. `aiqa perf` and the dashboard compare each metric's
+latest value with the median of its previous runs and flag regressions.
+
+What the stress profile found on the laptop (19 Nov 2026): the service accepts orders at any rate
+(`POST /orders` p95 8 ms) but confirms only about 35 a second, because it handles Kafka messages one
+at a time. Beyond that a queue builds and end-to-end time climbs to tens of seconds. The load
+profile (20 a second) holds every threshold.
 
 ## Where the specs are
 
@@ -72,6 +106,7 @@ packages/playwright-framework/tests/
   visual/     screenshot comparison with built-in toHaveScreenshot
   ai/         locator generation from an aria snapshot
   audits/     Lighthouse (its own `lighthouse` project)
+  performance/ Web Vitals, page weight, slow-phone run, memory leak check (`perf` project, PW_PERF=1)
   seed.spec.ts  starting point for the Playwright test agents
 packages/api-framework/tests/
   restful-booker/  auth, CRUD chaining, filtering, data-driven cases, schema-driven test data

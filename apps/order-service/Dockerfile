@@ -15,6 +15,7 @@ COPY packages/cli/package.json packages/cli/
 COPY packages/data-framework/package.json packages/data-framework/
 COPY packages/playwright-framework/package.json packages/playwright-framework/
 COPY packages/api-framework/package.json packages/api-framework/
+COPY packages/load-tests/package.json packages/load-tests/
 COPY apps/order-service/package.json apps/order-service/
 RUN pnpm install --frozen-lockfile --filter @aiqa/order-service --ignore-scripts
 

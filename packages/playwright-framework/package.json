@@ -16,7 +16,8 @@
     "test:ui-mode": "playwright test --ui",
     "snapshots:update": "playwright test tests/visual --project=chromium --update-snapshots",
     "report:allure": "allure generate ./allure-results --output ./allure-report",
-    "report:allure:open": "allure open ./allure-report"
+    "report:allure:open": "allure open ./allure-report",
+    "test:perf": "cross-env PW_PERF=1 AIQA_HISTORY=perf playwright test --project=perf --workers=1"
   },
   "dependencies": {
     "@aiqa/ai-engine": "workspace:*",
@@ -26,7 +27,8 @@
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
     "allure-playwright": "catalog:",
-    "lighthouse": "catalog:"
+    "lighthouse": "catalog:",
+    "web-vitals": "catalog:"
   },
   "devDependencies": {
     "allure": "catalog:",

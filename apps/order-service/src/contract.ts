@@ -25,3 +25,10 @@ export const placedOrder = z
   });
 
 export type PlacedOrder = z.infer<typeof placedOrder>;
+
+/** What `PUT /products/:sku` accepts: creates the product or replaces its name, price and stock. */
+export const productUpsert = z.object({
+  name: z.string().min(1),
+  priceCents: z.number().int().min(1),
+  stock: z.number().int().nonnegative(),
+});

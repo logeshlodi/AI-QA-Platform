@@ -17,6 +17,11 @@ const LABS = [
 ];
 // Lighthouse audits launch their own browser with a debugging port, so they get a dedicated project.
 const AUDITS = '**/audits/**';
+// Performance specs read DevTools data (throttling, heap), so they run on Chromium only, in their own
+// project, and only on request (PW_PERF=1, set by `pnpm test:perf`, which also passes --workers=1):
+// measured alongside the rest of the suite, tests would slow each other down.
+const PERF = '**/performance/**';
+const perf = process.env.PW_PERF === '1';
 const ready = ['setup', 'auth'];
 
 // PW_CHANNEL=chrome (or msedge) runs the "chromium" project in an installed browser
@@ -65,19 +70,19 @@ export default defineConfig<Options>({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], channel },
       dependencies: ready,
-      testIgnore: AUDITS,
+      testIgnore: [AUDITS, PERF],
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
       dependencies: ready,
-      testIgnore: [...LABS, AUDITS],
+      testIgnore: [...LABS, AUDITS, PERF],
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
       dependencies: ready,
-      testIgnore: [...LABS, AUDITS],
+      testIgnore: [...LABS, AUDITS, PERF],
     },
     {
       name: 'lighthouse',
@@ -87,6 +92,18 @@ export default defineConfig<Options>({
       timeout: 120_000,
       retries: 0,
     },
+    ...(perf
+      ? [
+          {
+            name: 'perf',
+            use: { ...devices['Desktop Chrome'], channel },
+            dependencies: ready,
+            testMatch: PERF,
+            // A retry would hide a slow run; budgets have headroom for network noise instead.
+            retries: 0,
+          },
+        ]
+      : []),
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, dependencies: ready, testMatch: '**/smoke/**' },
     {
       name: 'mobile-safari',

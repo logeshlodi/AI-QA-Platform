@@ -3,5 +3,7 @@ providers:
   - name: aiqa
     folder: AI-QA-Platform
     type: file
+    # Re-read the folder every 10 seconds, so a new or edited dashboard file appears without a restart.
+    updateIntervalSeconds: 10
     options:
       path: /var/lib/grafana/dashboards

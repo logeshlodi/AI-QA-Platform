@@ -10,3 +10,5 @@ allure-report
 **/.claude/agents/**
 **/.mcp.json
 lighthouse-report
+# k6 summaries written by `pnpm perf:load`
+packages/load-tests/results

@@ -87,6 +87,34 @@ stages:
           - publish: .aiqa/dashboard
             artifact: ui-dashboard
 
+      - job: perf
+        displayName: Browser performance (Web Vitals, page weight, memory)
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+          - script: pnpm test:perf
+            displayName: Performance specs (Chromium, one at a time)
+          - script: pnpm -s aiqa perf --all
+            displayName: Metrics against their usual level
+            condition: always()
+            continueOnError: true
+          - template: infrastructure/azure-devops/publish.yml
+            parameters: { package: playwright-framework, name: perf }
+
+      - job: load
+        displayName: Load test (k6 smoke against the order service)
+        timeoutInMinutes: 20
+        steps:
+          - template: infrastructure/azure-devops/setup.yml
+            parameters: { browsers: false }
+          - script: pnpm stack:up && pnpm perf:load smoke
+            displayName: Start the stack and run the k6 smoke profile
+          - script: pnpm stack:down
+            displayName: Stop the stack
+            condition: always()
+          - publish: packages/load-tests/results
+            artifact: k6-summary
+            condition: always()
+
       - job: data
         displayName: Postgres, MongoDB and Kafka suites
         timeoutInMinutes: 30

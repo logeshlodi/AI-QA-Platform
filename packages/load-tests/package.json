@@ -1,0 +1,15 @@
+{
+  "name": "@aiqa/load-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "k6 load tests of the order service, recorded in the run history",
+  "main": "./src/run.ts",
+  "types": "./src/run.ts",
+  "scripts": {
+    "start": "tsx src/run.ts"
+  },
+  "dependencies": {
+    "@aiqa/reporting-engine": "workspace:*",
+    "tsx": "catalog:"
+  }
+}

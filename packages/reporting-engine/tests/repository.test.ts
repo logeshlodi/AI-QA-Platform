@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -45,6 +46,17 @@ describe.each(stores)('%s run repository', (_name, make, available) => {
     stored.run.gitSha = 'abc123';
     repo.saveRun(stored);
     expect(repo.listRuns()).toEqual([stored]);
+    repo.close();
+  });
+
+  it.skipIf(!available)('keeps the performance metrics a test recorded', () => {
+    const repo = make();
+    const stored = run({ a: ['passed'], b: ['passed'] });
+    stored.results[0]!.metrics = { lcp_ms: 412.5, cls: 0.02 };
+    repo.saveRun(stored);
+    const [loaded] = repo.listRuns();
+    expect(loaded?.results.find((r) => r.testId === 'a')?.metrics).toEqual({ lcp_ms: 412.5, cls: 0.02 });
+    expect(loaded?.results.find((r) => r.testId === 'b')?.metrics).toBeUndefined();
     repo.close();
   });
 
@@ -139,6 +151,37 @@ describe('openRunHistory (read-only)', () => {
       } finally {
         fs.chmodSync(dir, 0o755);
       }
+    },
+  );
+});
+
+describe('SqliteRunRepository upgrades', () => {
+  it.skipIf(!sqliteAvailable)(
+    'adds the metrics column to a database from before metrics, keeping its runs',
+    () => {
+      const file = path.join(tempDir(), 'old.db');
+      const { DatabaseSync } = createRequire(__filename)('node:sqlite') as {
+        DatabaseSync: new (file: string) => { exec(sql: string): void; close(): void };
+      };
+      const old = new DatabaseSync(file);
+      old.exec(`CREATE TABLE test_run (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
+        git_sha TEXT, branch TEXT, environment TEXT NOT NULL, project TEXT NOT NULL);
+      CREATE TABLE test_result (run_id TEXT NOT NULL, test_id TEXT NOT NULL, retry INTEGER NOT NULL,
+        title TEXT NOT NULL, file TEXT NOT NULL, status TEXT NOT NULL, duration_ms INTEGER NOT NULL,
+        error_message TEXT, failure_category TEXT, project TEXT NOT NULL DEFAULT '', PRIMARY KEY (run_id, test_id, retry));
+      INSERT INTO test_run VALUES ('old-run', '2026-10-01T00:00:00.000Z', '2026-10-01T00:01:00.000Z', NULL, NULL, 'local', 'ui');
+      INSERT INTO test_result VALUES ('old-run', 'a', 0, 'test a', 'tests/a.spec.ts', 'passed', 1000, NULL, NULL, 'chromium');`);
+      old.close();
+
+      const repo = new SqliteRunRepository(file);
+      const fresh = run({ a: ['passed'] });
+      fresh.results[0]!.metrics = { lcp_ms: 400 };
+      repo.saveRun(fresh);
+      const runs = repo.listRuns();
+      expect(runs.map((r) => r.run.id)).toEqual(['old-run', fresh.run.id]);
+      expect(runs[0]?.results[0]?.metrics).toBeUndefined();
+      expect(runs[1]?.results[0]?.metrics).toEqual({ lcp_ms: 400 });
+      repo.close();
     },
   );
 });

@@ -1,4 +1,13 @@
-import { detectFlaky, outcomesOf, slowest, summarize, type RunSummary, type TestOutcome } from './analysis';
+import {
+  detectFlaky,
+  metricTrends,
+  outcomesOf,
+  slowest,
+  summarize,
+  type MetricTrend,
+  type RunSummary,
+  type TestOutcome,
+} from './analysis';
 import type { StoredRun } from './types';
 
 /** Every string that reaches the page goes through this: titles and error text are untrusted. */
@@ -87,6 +96,50 @@ const status = (key: string): string => {
   const [icon, word, cls] = STATUS[key] ?? ['?', key, 'muted'];
   return `<span class="status ${cls}"><span class="icon" aria-hidden="true">${icon}</span>${esc(word)}</span>`;
 };
+
+const VERDICT: Record<MetricTrend['verdict'], [icon: string, word: string, cls: string]> = {
+  regressed: ['▲', 'Regressed', 'critical'],
+  improved: ['▼', 'Improved', 'good'],
+  steady: ['=', 'Steady', 'muted'],
+  new: ['•', 'New', 'muted'],
+};
+const verdict = (key: MetricTrend['verdict']): string => {
+  const [icon, word, cls] = VERDICT[key];
+  return `<span class="status ${cls}"><span class="icon" aria-hidden="true">${icon}</span>${esc(word)}</span>`;
+};
+
+/** Formats a metric by the unit in its name: `_ms`, `_bytes`, or a plain number. */
+export function formatMetric(metric: string, value: number): string {
+  if (metric.endsWith('_ms'))
+    return value >= 10_000 ? `${(value / 1000).toFixed(1)} s` : `${Math.round(value)} ms`;
+  if (metric.endsWith('_bytes')) {
+    const abs = Math.abs(value);
+    return abs >= 1024 * 1024
+      ? `${(value / 1024 / 1024).toFixed(2)} MB`
+      : abs >= 1024
+        ? `${(value / 1024).toFixed(1)} KB`
+        : `${Math.round(value)} B`;
+  }
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 1000) / 1000);
+}
+
+/** A tiny trend line for a table cell: no axes, the last value marked. */
+function sparkline(values: number[], label: string): string {
+  if (values.length < 2) return '';
+  const W = 96;
+  const H = 24;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const x = (i: number) => pad + (i * (W - 2 * pad)) / (values.length - 1);
+  const y = (v: number) => (max === min ? H / 2 : pad + (1 - (v - min) / (max - min)) * (H - 2 * pad));
+  const d = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const last = values.length - 1;
+  return (
+    `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">` +
+    `<path class="line" d="${d}"/><circle class="dot" cx="${x(last).toFixed(1)}" cy="${y(values[last] as number).toFixed(1)}" r="3"/></svg>`
+  );
+}
 
 const table = (head: string[], rows: string[][], empty: string): string =>
   rows.length === 0
@@ -194,6 +247,24 @@ export function renderDashboard(history: StoredRun[], options: DashboardOptions 
     ]),
     'No tests recorded.',
   );
+  const trends = metricTrends(runs);
+  const perf = table(
+    ['Test', 'Metric', 'Latest', 'Usual', 'Change', 'Trend', 'Verdict'],
+    trends.map((t) => [
+      test(t),
+      `<code>${esc(t.metric)}</code>`,
+      esc(formatMetric(t.metric, t.latest)),
+      t.baseline === undefined ? '–' : esc(formatMetric(t.metric, t.baseline)),
+      t.change === undefined
+        ? '–'
+        : Number.isFinite(t.change)
+          ? `${t.change > 0 ? '+' : ''}${Math.round(t.change * 100)}%`
+          : 'from 0',
+      sparkline(t.values, `${t.metric}: ${t.values.length} runs`),
+      verdict(t.verdict),
+    ]),
+    'No performance metrics recorded.',
+  );
   const log = table(
     [
       'Started (UTC)',
@@ -245,6 +316,9 @@ export function renderDashboard(history: StoredRun[], options: DashboardOptions 
         `<section><h2>Flaky tests <small>passed only on retry, or flipped between runs at least twice</small></h2>${flaky}</section>` +
         `<section><h2>Failures in the latest runs</h2>${failures}</section>` +
         `<section><h2>Slowest tests in the latest runs</h2>${slow}</section>` +
+        (trends.length > 0
+          ? `<section><h2>Performance trends <small>latest value against the median of up to 10 previous runs; lower is better, ±20% is steady, a verdict needs 3 earlier runs</small></h2>${perf}</section>`
+          : '') +
         `<section><h2>Run log</h2>${log}</section>`;
 
   return `<!doctype html>
@@ -278,6 +352,7 @@ th { font-size: 12px; color: var(--text-2); font-weight: 600; white-space: nowra
 code { font: 12px ui-monospace, Consolas, monospace; word-break: break-word; }
 .status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .icon { display: inline-grid; place-items: center; width: 18px; height: 18px; line-height: 1; flex: none; border-radius: 50%; font-size: 11px; font-weight: 700; color: #fff; background: var(--text-2); }
+.spark { display: block; } .spark .dot { stroke-width: 1.5; }
 .good .icon { background: var(--good); } .warning .icon { background: var(--warning); color: #0b0b0b; } .critical .icon { background: var(--critical); }
 #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); padding: 6px 8px; border-radius: 4px; font-size: 12px; display: none; max-width: 320px; z-index: 1; }
 </style></head>
