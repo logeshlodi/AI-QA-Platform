@@ -49,6 +49,12 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
   image whose browsers belong to 1.65.0. Every job, the Dockerfile, and the Azure DevOps and Jenkins
   shards now install browsers for the installed Playwright version, and the quality job warns
   (`scripts/check-playwright-image.mjs`) when an image tag lags behind.
+- **The data job's summary step failed** (`EACCES: mkdir .aiqa/history/runs`): the test container
+  runs as root, so the history it wrote was root-owned, and the reader, failing to open it, tried to
+  create a new store. Readers now open history read-only and never create anything; the run store
+  no longer uses SQLite's WAL mode (WAL databases cannot be read without write access); the job hands
+  the files back to the runner user; summary steps can no longer fail a job. Reproduced and checked
+  as a non-root user in the Linux workspace.
 - Not yet seen green on GitHub: these fixes run on the next push.
 
 ## Not run yet

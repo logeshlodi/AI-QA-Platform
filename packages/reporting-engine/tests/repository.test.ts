@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createRunRepository,
+  openRunHistory,
   JsonRunRepository,
   MemoryRunRepository,
   SqliteRunRepository,
@@ -106,4 +107,38 @@ describe('createRunRepository', () => {
     fs.writeFileSync(path.join(dir, 'runs', '0000_broken.json'), '{ not json');
     expect(repo.listRuns()).toHaveLength(1);
   });
+});
+
+describe('openRunHistory (read-only)', () => {
+  it('reads an empty list from a folder that does not exist, and creates nothing', () => {
+    const dir = path.join(tempDir(), 'missing');
+    expect(openRunHistory(dir).listRuns()).toEqual([]);
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it('reads JSON history without writing to it', () => {
+    const dir = tempDir();
+    new JsonRunRepository(dir).saveRun(run({ a: ['passed'] }));
+    expect(openRunHistory(dir).listRuns()).toHaveLength(1);
+  });
+
+  it.skipIf(!sqliteAvailable || process.getuid?.() === 0)(
+    'reads SQLite history from a folder it cannot write to, and refuses to write',
+    () => {
+      const dir = tempDir();
+      const writer = new SqliteRunRepository(path.join(dir, 'history.db'));
+      writer.saveRun(run({ a: ['passed'], b: ['failed'] }));
+      writer.close();
+      fs.chmodSync(dir, 0o555); // what a root-owned folder looks like to the CI runner user
+      try {
+        const reader = openRunHistory(dir);
+        expect(reader.kind).toBe('sqlite');
+        expect(reader.listRuns()[0]?.results).toHaveLength(2);
+        expect(() => reader.saveRun(run({ c: ['passed'] }))).toThrow();
+        reader.close();
+      } finally {
+        fs.chmodSync(dir, 0o755);
+      }
+    },
+  );
 });

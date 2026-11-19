@@ -40,13 +40,22 @@ export class SqliteRunRepository implements RunRepository {
   readonly kind = 'sqlite';
   private readonly db: Database;
 
-  constructor(file: string) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
+  /** `readOnly` opens an existing database without creating or changing anything (for readers). */
+  constructor(file: string, options: { readOnly?: boolean } = {}) {
     const sqlite = createRequire(__filename)('node:sqlite') as {
-      DatabaseSync: new (file: string) => Database;
+      DatabaseSync: new (file: string, options?: { readOnly?: boolean }) => Database;
     };
+    if (options.readOnly) {
+      this.db = new sqlite.DatabaseSync(file, { readOnly: true });
+      return;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
     this.db = new sqlite.DatabaseSync(file);
-    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
+    // Rollback journal, not WAL: a WAL database cannot be read without write access to its folder
+    // (readers must create a shared-memory file), and history is often read by another user, e.g.
+    // the CI runner reading what a root container wrote. One writer (the reporter) needs no WAL.
+    // Setting it also converts a database created in WAL mode by an earlier version.
+    this.db.exec('PRAGMA journal_mode = DELETE; PRAGMA busy_timeout = 5000;');
     this.db.exec(RUN_SCHEMA);
     // A database created before the reporter existed has test_result without `project`.
     const columns = this.db.prepare('PRAGMA table_info(test_result)').all();

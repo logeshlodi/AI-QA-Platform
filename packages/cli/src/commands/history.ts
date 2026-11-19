@@ -1,16 +1,10 @@
-import {
-  createRunRepository,
-  detectFlaky,
-  HISTORY_DIR,
-  summarize,
-  type StoredRun,
-} from '@aiqa/reporting-engine';
+import { detectFlaky, HISTORY_DIR, openRunHistory, summarize, type StoredRun } from '@aiqa/reporting-engine';
 
 const pad = (value: string | number, width: number): string => String(value).padEnd(width);
 const when = (iso: string): string => iso.replace('T', ' ').slice(0, 16);
 
 export function loadRuns(dir = HISTORY_DIR, limit = 50): StoredRun[] {
-  const repo = createRunRepository(dir);
+  const repo = openRunHistory(dir); // read-only: works on history this user does not own
   try {
     return repo.listRuns(limit);
   } finally {

@@ -1,6 +1,7 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { JsonRunRepository } from './json';
-import type { RunRepository } from './repository';
+import { MemoryRunRepository, type RunRepository } from './repository';
 import { SqliteRunRepository } from './sqlite';
 
 export type RunStoreKind = 'auto' | 'sqlite' | 'json';
@@ -14,4 +15,23 @@ export function createRunRepository(directory: string, kind: RunStoreKind = 'aut
     if (kind === 'sqlite') throw error;
     return new JsonRunRepository(directory);
   }
+}
+
+/**
+ * Opens existing history for reading only: never creates a folder, database or file. Readers
+ * (the CLI, CI summaries) may not own the folder: a Docker container running as root can have
+ * written it. Whatever store is there is read; no history at all reads as an empty list.
+ */
+export function openRunHistory(directory: string): RunRepository {
+  const db = path.join(directory, 'history.db');
+  if (fs.existsSync(db)) {
+    try {
+      return new SqliteRunRepository(db, { readOnly: true });
+    } catch {
+      // This Node has no node:sqlite: fall through to the JSON files, if any.
+    }
+  }
+  if (fs.existsSync(path.join(directory, 'runs')))
+    return new JsonRunRepository(directory, { readOnly: true });
+  return new MemoryRunRepository();
 }

@@ -44,6 +44,7 @@ jobs:
       - run: pnpm test:api
       - name: Summary
         if: always()
+        continue-on-error: true # a reporting glitch must never fail the tests' job
         run: |
           { echo '### API runs'; echo '```'; pnpm -s aiqa history --suite api --limit 5; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
@@ -75,8 +76,13 @@ jobs:
         run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
       - if: always()
         run: pnpm stack:down
+      # The test container runs as root, so what it wrote (history, reports) is root-owned.
+      - name: Give the test output back to the runner user
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" .aiqa packages/data-framework 2>/dev/null || true
       - name: Summary
         if: always()
+        continue-on-error: true # a reporting glitch must never fail the tests' job
         run: |
           { echo '### Data suite runs'; echo '```'; pnpm -s aiqa history --suite data --limit 5; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
@@ -197,6 +203,7 @@ jobs:
       - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --config merge.config.ts ../../all-blob-reports
       - name: Summary
         if: always()
+        continue-on-error: true # a reporting glitch must never fail the tests' job
         run: |
           {
             echo '### UI runs'; echo '```'; pnpm -s aiqa history --suite ui --limit 5; echo '```'

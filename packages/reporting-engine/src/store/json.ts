@@ -10,9 +10,10 @@ export class JsonRunRepository implements RunRepository {
   readonly kind = 'json';
   private readonly directory: string;
 
-  constructor(directory: string) {
+  /** `readOnly` never creates the folder; a missing folder simply has no runs. */
+  constructor(directory: string, options: { readOnly?: boolean } = {}) {
     this.directory = path.join(directory, 'runs');
-    fs.mkdirSync(this.directory, { recursive: true });
+    if (!options.readOnly) fs.mkdirSync(this.directory, { recursive: true });
   }
 
   saveRun(run: StoredRun): void {
@@ -29,6 +30,7 @@ export class JsonRunRepository implements RunRepository {
   }
 
   listRuns(limit = 50): StoredRun[] {
+    if (!fs.existsSync(this.directory)) return [];
     return fs
       .readdirSync(this.directory)
       .filter((file) => file.endsWith('.json'))
