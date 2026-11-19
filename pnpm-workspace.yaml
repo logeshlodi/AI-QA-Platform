@@ -9,7 +9,7 @@ ignoredBuiltDependencies:
 # Versions are pinned once here; packages refer to them as "catalog:".
 catalog:
   # Test runner and Playwright plugins
-  '@playwright/test': 1.65.0
+  '@playwright/test': 1.65.1
   'allure-playwright': 3.14.0
   'allure': 3.33.0
   '@axe-core/playwright': 4.14.0
