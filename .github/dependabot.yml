@@ -29,7 +29,8 @@ updates:
         update-types: [minor, patch]
 
   - package-ecosystem: github-actions
-    directory: /
+    # Workflows and the shared setup action (it pins actions of its own).
+    directories: ['/', '/.github/actions/*']
     schedule: { interval: weekly, day: monday }
     commit-message: { prefix: ci }
     groups:

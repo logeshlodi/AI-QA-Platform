@@ -52,6 +52,9 @@ stages:
         steps:
           - template: infrastructure/azure-devops/setup.yml
             parameters: { browsers: false }
+          # Matching browsers for the installed @playwright/test, in case the image tag lags behind it.
+          - script: pnpm browsers
+            displayName: Install Playwright browsers
           - script: >
               pnpm --filter @aiqa/playwright-framework exec playwright test
               --shard=$(System.JobPositionInPhase)/$(System.TotalJobsInPhase) --grep-invert @audit

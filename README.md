@@ -169,7 +169,14 @@ docker compose -f infrastructure/docker/docker-compose.yml run --rm snapshots   
 
 GitHub Actions (`.github/workflows/ci.yml`) runs type-check, lint and unit tests, the API specs,
 the UI specs in three shards with a merged report, smoke in real Chrome and Edge, and the
-Lighthouse audit, and the data suites on the Docker stack. The API job and the shard-merge job
+Lighthouse audit, and the data suites on the Docker stack. Every job uses one shared setup action
+(`.github/actions/setup`): Node, pnpm, a cached install, and Playwright browsers matched to the
+installed Playwright version and cached per version, so a Playwright update never needs a workflow
+change. Each run page shows a summary with the recent runs and the flaky list.
+
+Dependabot pull requests can merge themselves once CI is green (patch and minor only): set the
+repository variable `DEPENDABOT_AUTOMERGE` to `true` (Settings > Secrets and variables > Actions >
+Variables). See `.github/workflows/dependabot-automerge.yml`. The API job and the shard-merge job
 record history in the Actions cache and upload the dashboard as an artifact (`api-dashboard`,
 `ui-dashboard`).
 

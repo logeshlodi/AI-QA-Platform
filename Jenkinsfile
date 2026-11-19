@@ -43,6 +43,7 @@ pipeline {
           stage('Shard') {
             steps {
               sh 'npm install -g pnpm@10 && pnpm install --frozen-lockfile'
+              sh 'pnpm browsers' // matching browsers if the image tag lags @playwright/test
               sh 'pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${SHARD}/3 --grep-invert @audit'
             }
             post {

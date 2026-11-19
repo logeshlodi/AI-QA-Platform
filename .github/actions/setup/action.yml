@@ -1,0 +1,41 @@
+name: Setup
+description: >-
+  Node 22 and pnpm 10 with a cached store, a frozen install, and optionally Playwright browsers.
+  Browsers are installed for the Playwright version in the lockfile, so a Playwright update needs no
+  workflow change; their download is cached per version.
+inputs:
+  browsers:
+    description: Space-separated browsers for `playwright install`, e.g. "chromium firefox webkit" or "chromium chrome". Empty for none.
+    default: ''
+  system-deps:
+    description: Install the browsers' system libraries too (not needed inside the Playwright image).
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+      with: { version: 10 }
+    - uses: actions/setup-node@v7
+      with: { node-version: 22, cache: pnpm }
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - name: Read the Playwright version
+      id: pw
+      if: inputs.browsers != ''
+      shell: bash
+      run: echo "version=$(pnpm --filter @aiqa/playwright-framework exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+    - name: Cache Playwright browsers
+      if: inputs.browsers != ''
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ inputs.browsers }}
+    - name: Install Playwright browsers (${{ inputs.browsers }})
+      if: inputs.browsers != ''
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+        DEPS: ${{ inputs.system-deps == 'true' && '--with-deps' || '' }}
+      # Downloads only what the cache or image does not already have for this Playwright version.
+      run: pnpm --filter @aiqa/playwright-framework exec playwright install $DEPS $BROWSERS

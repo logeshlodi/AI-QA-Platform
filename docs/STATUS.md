@@ -40,6 +40,17 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## CI fixes on 19 Nov
+
+- **Chrome and Edge smoke jobs failed** on `main` and on every Dependabot pull request: the job
+  installed only Chrome or Edge, but the setup and login projects that run first use Playwright's
+  bundled Chromium. Both are installed now.
+- **The Playwright 1.65.1 pull request also failed the visual job**, which runs in the `v1.65.0`
+  image whose browsers belong to 1.65.0. Every job, the Dockerfile, and the Azure DevOps and Jenkins
+  shards now install browsers for the installed Playwright version, and the quality job warns
+  (`scripts/check-playwright-image.mjs`) when an image tag lags behind.
+- Not yet seen green on GitHub: these fixes run on the next push.
+
 ## Not run yet
 
 - **Azure DevOps and Jenkins.** `azure-pipelines.yml` and the `Jenkinsfile` mirror the GitHub workflow

@@ -1,5 +1,6 @@
 # Official Playwright image: browsers and their system libraries are preinstalled.
-# Keep this tag equal to the @playwright/test version in pnpm-workspace.yaml.
+# Keep this tag equal to @playwright/test in pnpm-workspace.yaml; CI warns when it lags
+# (scripts/check-playwright-image.mjs). A lagging tag still works: see the browser install below.
 FROM mcr.microsoft.com/playwright:v1.65.0-noble
 
 WORKDIR /work
@@ -19,6 +20,9 @@ COPY packages/playwright-framework/package.json packages/playwright-framework/
 COPY packages/api-framework/package.json packages/api-framework/
 COPY apps/order-service/package.json apps/order-service/
 RUN pnpm install --frozen-lockfile --ignore-scripts
+# The image ships the browsers of its own tag. If @playwright/test is newer (a Dependabot update),
+# this adds the matching ones; when the versions agree it does nothing.
+RUN pnpm --filter @aiqa/playwright-framework exec playwright install chromium firefox webkit
 
 COPY . .
 ENV CI=true

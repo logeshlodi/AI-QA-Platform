@@ -37,6 +37,7 @@ export function formatHistory(runs: StoredRun[], suite?: string, limit = 15): st
 }
 
 export function formatFlaky(runs: StoredRun[]): string {
+  if (runs.length === 0) return 'No runs recorded yet, so nothing to judge.';
   const flaky = detectFlaky(runs);
   if (flaky.length === 0) return `No flaky tests in the last ${Math.min(runs.length, 20)} runs.`;
   return flaky

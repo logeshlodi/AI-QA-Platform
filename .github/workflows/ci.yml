@@ -7,32 +7,32 @@ on:
 
 concurrency: { group: 'ci-${{ github.ref }}', cancel-in-progress: true }
 
+# Read-only by default; nothing in CI writes to the repository.
+permissions: { contents: read }
+
 jobs:
   quality:
     name: Type-check, lint, unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:unit
+      - run: pnpm exec prettier --check .
+      # Warns when a Playwright Docker image tag lags @playwright/test (Dependabot cannot bump both).
+      - run: node scripts/check-playwright-image.mjs
 
   api:
     name: API specs
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       # History survives between CI runs in the Actions cache: restore the newest, save a new one.
       - uses: actions/cache@v6
         with:
@@ -42,6 +42,10 @@ jobs:
             aiqa-history-api-${{ github.ref_name }}-
             aiqa-history-api-main-
       - run: pnpm test:api
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### API runs'; echo '```'; pnpm -s aiqa history --suite api --limit 5; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: api-report, path: packages/api-framework/playwright-report, retention-days: 14 }
@@ -56,17 +60,25 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-data-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-data-${{ github.ref_name }}-
+            aiqa-history-data-main-
       # One command: build the order service, start Postgres, MongoDB, Kafka, run the suites in a container.
       - run: pnpm stack:test
-      - if: failure()
+      - name: Order service logs
+        if: failure()
         run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
       - if: always()
         run: pnpm stack:down
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### Data suite runs'; echo '```'; pnpm -s aiqa history --suite data --limit 5; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: data-report, path: packages/data-framework/playwright-report, retention-days: 14 }
@@ -75,32 +87,35 @@ jobs:
     name: Smoke in real ${{ matrix.channel }}
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix: { channel: [chrome, msedge] }
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps ${{ matrix.channel }}
+      # chromium as well: the setup and login projects that run before the smoke specs use the bundled browser.
+      - uses: ./.github/actions/setup
+        with: { browsers: 'chromium ${{ matrix.channel }}' }
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test --project=${{ matrix.channel }}
         env: { PW_BRANDED_BROWSERS: '${{ matrix.channel }}' }
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          {
+            name: 'branded-${{ matrix.channel }}-results',
+            path: packages/playwright-framework/test-results,
+            retention-days: 7,
+          }
 
   lighthouse:
     name: Lighthouse audit
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium }
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test --project=lighthouse
       - uses: actions/upload-artifact@v7
         if: always()
@@ -115,16 +130,16 @@ jobs:
     name: Visual comparison (Linux baselines)
     needs: quality
     runs-on: ubuntu-latest
-    # Same image that created the baselines (docker compose ... run --rm snapshots), so rendering matches.
+    timeout-minutes: 15
+    # Same image that created the baselines (docker compose ... run --rm snapshots), so fonts and
+    # rendering match. If @playwright/test is newer than the tag, the setup step adds the matching
+    # browser, so a Playwright update does not break this job; bump the tag when the quality job warns.
     container: { image: 'mcr.microsoft.com/playwright:v1.65.0-noble', options: --ipc=host }
     env: { PW_VISUAL: '1', HOME: /root }
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium, system-deps: 'false' }
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test tests/visual --project=chromium
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -134,17 +149,14 @@ jobs:
     name: UI specs (shard ${{ matrix.shard }}/3)
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix: { shard: [1, 2, 3] }
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aiqa/playwright-framework exec playwright install --with-deps chromium firefox webkit
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium firefox webkit }
       - run: pnpm --filter @aiqa/playwright-framework exec playwright test --shard=${{ matrix.shard }}/3 --grep-invert @audit
       - uses: actions/upload-artifact@v7
         if: always()
@@ -168,16 +180,12 @@ jobs:
     if: always()
     needs: ui
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - uses: actions/download-artifact@v8
         with: { path: all-blob-reports, pattern: blob-report-*, merge-multiple: true }
-      # History survives between CI runs in the Actions cache: restore the newest, save a new one.
       - uses: actions/cache@v6
         with:
           path: .aiqa/history
@@ -187,6 +195,13 @@ jobs:
             aiqa-history-ui-main-
       # merge.config.ts adds the history reporter, so the three shards are recorded as one run.
       - run: pnpm --filter @aiqa/playwright-framework exec playwright merge-reports --config merge.config.ts ../../all-blob-reports
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### UI runs'; echo '```'; pnpm -s aiqa history --suite ui --limit 5; echo '```'
+            echo '### Flaky tests'; echo '```'; pnpm -s aiqa flaky; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           { name: ui-html-report, path: packages/playwright-framework/playwright-report, retention-days: 14 }
