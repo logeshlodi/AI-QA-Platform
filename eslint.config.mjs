@@ -52,7 +52,7 @@ export default tseslint.config(
       'playwright/consistent-spacing-between-blocks': 'off',
       'playwright/expect-expect': [
         'warn',
-        { assertFunctionNames: ['expect', 'expectSchema', 'expectToMatch'] },
+        { assertFunctionNames: ['expect', 'expectSchema', 'expectToMatch', 'expectRefused'] },
       ],
     },
   },

@@ -22,6 +22,7 @@
     "@opentelemetry/sdk-trace": "catalog:",
     "@opentelemetry/semantic-conventions": "catalog:",
     "@platformatic/kafka": "catalog:",
+    "jose": "catalog:",
     "mongodb": "catalog:",
     "pg": "catalog:",
     "tsx": "catalog:",

@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@aiqa/order-service/config': service('config.ts'),
       '@aiqa/order-service/events': service('events.ts'),
+      '@aiqa/data-framework/auth': path.resolve(__dirname, '../data-framework/src/auth.ts'),
     },
   },
   test: {

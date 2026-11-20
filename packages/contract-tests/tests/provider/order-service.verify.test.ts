@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { providerWithMetadata, Verifier } from '@pact-foundation/pact';
 import { beforeAll, describe, it } from 'vitest';
+import { clientToken, CLIENTS } from '@aiqa/data-framework/auth';
 import { TOPICS } from '@aiqa/order-service/config';
 import { confirmedEvent, rejectedEvent } from '@aiqa/order-service/events';
 import { exampleOrder, PACT_PRODUCT, STATES } from '../../src/examples';
@@ -16,10 +17,15 @@ import { exampleOrder, PACT_PRODUCT, STATES } from '../../src/examples';
 const SERVICE = process.env.ORDER_SERVICE_URL ?? 'http://localhost:8088';
 const pactFile = (consumer: string) => path.resolve(__dirname, `../../pacts/${consumer}-order-service.json`);
 
+/** A catalog-admin token when the service asks for one (its OpenAPI document says so), else none. */
+let adminToken: string | undefined;
+
 async function call(method: string, route: string, body?: unknown): Promise<Response> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (adminToken && method === 'PUT') headers.authorization = `Bearer ${adminToken}`;
   return fetch(new URL(route, SERVICE), {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
@@ -64,6 +70,10 @@ describe('order-service honours the storefront contract (HTTP)', () => {
     const health = await fetch(new URL('/health', SERVICE)).catch(() => undefined);
     if (!health?.ok)
       throw new Error(`the order service is not ready at ${SERVICE}: start it with pnpm stack:up`);
+    const document = (await (await fetch(new URL('/openapi.json', SERVICE))).json()) as {
+      components?: { securitySchemes?: object };
+    };
+    if (document.components?.securitySchemes) adminToken = await clientToken(CLIENTS.catalogAdmin);
   });
 
   it('every interaction, replayed against the running service', async () => {
@@ -72,6 +82,11 @@ describe('order-service honours the storefront contract (HTTP)', () => {
       providerBaseUrl: SERVICE,
       pactUrls: [pactFile('storefront')],
       logLevel: 'warn',
+      // The pact holds an example token; the real service needs a real one. Swap it in on the way through.
+      requestFilter: (req: { headers: Record<string, unknown> }, _res: unknown, next: () => void) => {
+        if (adminToken && req.headers.authorization) req.headers.authorization = `Bearer ${adminToken}`;
+        next();
+      },
       stateHandlers: {
         [STATES.productInStock]: putContractProduct,
         [STATES.orderConfirmed]: (params) => confirmedOrder(orderIdFrom(params)),

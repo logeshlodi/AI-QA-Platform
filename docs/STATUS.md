@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint and the contracts sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint and the security sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,46 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Security sprint (20 Nov)
+
+All run on the Windows laptop with the Docker stack, now including Keycloak 26.7.
+
+| Check                                                     | Result                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm security:licences`                                  | 580 packages, all on the open-source allow-list except one named exception: `sentry` (FSL-1.1, source-available), pulled in by Lighthouse                                                                                       |
+| `pnpm security:audit`                                     | No high or critical advisories; the two known moderate ones (glob through Allure, minimatch through typescript-eslint)                                                                                                          |
+| `pnpm security:osv` (OSV-Scanner 2.5.1)                   | 703 packages, no issues; the same two findings filtered by `osv-scanner.toml`, with reasons, until 20 Feb 2027                                                                                                                  |
+| Auth unit tests (`apps/order-service/tests/auth.test.ts`) | 11 passed, including alg `none`, algorithm confusion (HS256 keyed with the public key) and a token edited after signing                                                                                                         |
+| Auth spec against Keycloak (`tests/http/auth.spec.ts`)    | 9 passed with real tokens: 201/200 with the role, 401 with no token (bare challenge), Basic credentials, garbage, wrong audience, expiry, tampered claims and `alg: none`; 403 without the role                                 |
+| Data suites (`pnpm test:data`)                            | 51 passed (37 before: 9 auth, 4 limits, 1 headers)                                                                                                                                                                              |
+| Pact (`pnpm test:contract`)                               | 7 consumer tests; provider check passed with a real token swapped in for the pact's example                                                                                                                                     |
+| `pnpm security:zap` (authenticated)                       | Run 1: 159 requests, 118 rules passed, no injection findings, 3 warnings (one a real bug). Run 2: the header warnings gone, a second 500 found. Run 3, after both fixes: 160 requests, 120 rules passed, 0 warnings, 0 failures |
+
+What the ZAP scan found:
+
+1. **A 500 on `PUT /products/{sku}`.** Prices and stock above 2,147,483,647 (Postgres INTEGER) passed
+   validation and failed in the database. The 500 also echoed the database's error message.
+2. **The same gap on the Kafka path was worse.** An order with such a price was accepted over HTTP
+   (202), then failed inside the consumer, which stops the service without committing the message. On
+   restart it read the same message and stopped again: one anonymous `POST /orders` took order
+   processing down. Reproduced on the stack before the fix.
+3. **Two missing hardening headers**, `X-Content-Type-Options` and `Cross-Origin-Resource-Policy`.
+4. **The re-scan found a second 500**: a NUL character (0x00) in a product name, which Postgres text
+   cannot store. The new error logging named it at once (`invalid byte sequence for encoding "UTF8"`).
+   A NUL in an order line's SKU would have stopped the Kafka path the same way as item 2.
+
+Fixed: every amount is capped at the column's range in the zod contract, product names refuse control
+characters (and stop at 200 characters), order-line SKUs follow the same pattern as the URL (so a bad value gets 400 over HTTP and goes to
+the dead-letter topic over Kafka), 500s say "internal error" and log the real
+message, and every response carries `nosniff` and `same-origin`. After the rebuild the service
+recovered by itself: the stuck order went to the dead-letter topic and the partition carried on.
+`tests/http/limits.spec.ts` keeps it fixed, including an order queued behind the bad one on the same
+partition, which must still be confirmed.
+
+Still true by design: any other error that a message causes every time (not a validation error)
+still stops its partition rather than skip the message. Sending such messages to the dead-letter topic
+needs a rule for telling permanent errors from passing ones; not built.
 
 ## Contracts and clean-up sprint (20 Nov)
 

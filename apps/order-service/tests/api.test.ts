@@ -3,6 +3,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { describe, expect, it } from 'vitest';
 import { openApiDocument } from '../src/api';
+import { MAX_DB_INTEGER, placedOrder, productUpsert } from '../src/contract';
 import {
   confirmedEvent,
   deadLetterEvent,
@@ -24,11 +25,15 @@ function responseSchema(path: keyof Doc['paths'], method: string, status: string
   return response.content['application/json'].schema;
 }
 
+// One validator for the file: building it compiles the OpenAPI 3.1 meta-schema, which takes seconds
+// on a busy machine. Each test then only validates.
+const openApi = new Validator();
+
 const ajv = addFormats(new Ajv2020({ allErrors: true, strict: false }));
 
 describe('the OpenAPI document', () => {
-  it('is a valid OpenAPI 3.1 document', async () => {
-    const result = await new Validator().validate(structuredClone(doc));
+  it('is a valid OpenAPI 3.1 document', { timeout: 30_000 }, async () => {
+    const result = await openApi.validate(structuredClone(doc));
     expect(result.errors ?? []).toEqual([]);
     expect(result.valid).toBe(true);
   });
@@ -73,6 +78,77 @@ describe('the OpenAPI document', () => {
     expect(check(order)).toBe(true);
     expect(check({ ...order, lines: [{ ...line, quantity: 100 }] })).toBe(false);
     expect(check({ ...order, currency: 'EUR' })).toBe(false);
+  });
+});
+
+describe('amounts the database can hold', () => {
+  const tooBig = MAX_DB_INTEGER + 1;
+  const line = { sku: 'SKU-1', quantity: 1, unitPriceCents: 500 };
+  const order = {
+    id: crypto.randomUUID(),
+    customerId: crypto.randomUUID(),
+    currency: 'USD' as const,
+    totalCents: 500,
+    lines: [line],
+  };
+
+  // Regression: a price over the INTEGER column's range passed validation, then failed in Postgres.
+  // Over HTTP that was a 500; over Kafka it stopped the service on that message, again on every restart.
+  it('refuses prices, stock and totals above the column range', () => {
+    expect(productUpsert.safeParse({ name: 'x', priceCents: tooBig, stock: 1 }).success).toBe(false);
+    expect(productUpsert.safeParse({ name: 'x', priceCents: 1, stock: tooBig }).success).toBe(false);
+    expect(
+      placedOrder.safeParse({ ...order, totalCents: tooBig, lines: [{ ...line, unitPriceCents: tooBig }] })
+        .success,
+    ).toBe(false);
+    expect(
+      productUpsert.safeParse({ name: 'x', priceCents: MAX_DB_INTEGER, stock: MAX_DB_INTEGER }).success,
+    ).toBe(true);
+  });
+
+  // Regression: a NUL in a product name passed validation and failed in Postgres (a 500, found by ZAP).
+  it('refuses control characters in names and SKUs the path would not accept', () => {
+    expect(productUpsert.safeParse({ name: 'lamp\u0000', priceCents: 1, stock: 1 }).success).toBe(false);
+    expect(productUpsert.safeParse({ name: 'lamp\nshade', priceCents: 1, stock: 1 }).success).toBe(false);
+    expect(productUpsert.safeParse({ name: 'Lampe à poser, 40 cm', priceCents: 1, stock: 1 }).success).toBe(
+      true,
+    );
+    expect(placedOrder.safeParse({ ...order, lines: [{ ...line, sku: 'SKU\u00001' }] }).success).toBe(false);
+    expect(placedOrder.safeParse({ ...order, lines: [{ ...line, sku: '../../etc' }] }).success).toBe(false);
+  });
+
+  it('publishes the limit in the OpenAPI document', () => {
+    const body = doc.paths['/products/{sku}'].put.requestBody.content['application/json'].schema as {
+      properties: Record<string, { maximum?: number }>;
+    };
+    expect(body.properties.priceCents?.maximum).toBe(MAX_DB_INTEGER);
+    expect(body.properties.stock?.maximum).toBe(MAX_DB_INTEGER);
+  });
+});
+
+describe('the OpenAPI document with auth on', () => {
+  const issuer = 'http://localhost:8180/realms/aiqa';
+  const secured = openApiDocument({
+    auth: { issuer, audience: 'order-service', jwksUrl: `${issuer}/certs` },
+  });
+
+  it('is still valid OpenAPI 3.1, and says which operation needs a token', { timeout: 30_000 }, async () => {
+    const result = await openApi.validate(structuredClone(secured));
+    expect(result.errors ?? []).toEqual([]);
+    const put = secured.paths['/products/{sku}'].put as {
+      security?: unknown;
+      responses: Record<string, unknown>;
+    };
+    expect(put.security).toEqual([{ catalogAdmin: [] }]);
+    expect(Object.keys(put.responses).sort()).toEqual(['200', '201', '400', '401', '403']);
+    expect(secured.components?.securitySchemes.catalogAdmin.flows.clientCredentials.tokenUrl).toBe(
+      `${issuer}/protocol/openid-connect/token`,
+    );
+  });
+
+  it('leaves reading and ordering open', () => {
+    expect('security' in secured.paths['/orders'].post).toBe(false);
+    expect('security' in secured.paths['/orders/{id}'].get).toBe(false);
   });
 });
 

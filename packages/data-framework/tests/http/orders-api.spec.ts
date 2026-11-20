@@ -13,14 +13,14 @@ const body = ({ id, customerId, currency, totalCents, lines }: Order) => ({
 });
 
 test.describe('Order service HTTP API', { tag: '@http' }, () => {
-  test('PUT /products/:sku creates a product, then replaces it', async ({ service, db, seed }) => {
+  test('PUT /products/:sku creates a product, then replaces it', async ({ catalogAdmin, db, seed }) => {
     const [p] = freshProducts(seed, 1);
     try {
-      const created = await service.put(`/products/${p!.sku}`, {
+      const created = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: p!.name, priceCents: 1999, stock: 5 },
       });
       expect(created.status()).toBe(201);
-      const updated = await service.put(`/products/${p!.sku}`, {
+      const updated = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: p!.name, priceCents: 2499, stock: 7 },
       });
       expect(updated.status()).toBe(200);
@@ -31,9 +31,9 @@ test.describe('Order service HTTP API', { tag: '@http' }, () => {
     }
   });
 
-  test('PUT /products/:sku refuses a price of zero and names the problem', async ({ service, seed }) => {
+  test('PUT /products/:sku refuses a price of zero and names the problem', async ({ catalogAdmin, seed }) => {
     const [p] = freshProducts(seed, 1);
-    const response = await service.put(`/products/${p!.sku}`, {
+    const response = await catalogAdmin.put(`/products/${p!.sku}`, {
       data: { name: 'x', priceCents: 0, stock: 1 },
     });
     expect(response.status()).toBe(400);

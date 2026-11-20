@@ -35,6 +35,9 @@ npx pnpm stack:test             # one command: build, start, run the data suites
 npx pnpm stack:down             # stop the stack and delete its data
 npx pnpm test:contract          # Pact: consumer tests write the contracts, then the running service is checked
 
+npx pnpm security               # licence allow-list, pnpm audit, OSV-Scanner (Docker)
+npx pnpm security:zap           # OWASP ZAP attacks the order service's API, with a Keycloak token (needs stack:up)
+
 npx pnpm test:perf              # Web Vitals, page weight, slow-phone run, memory leak check (Chromium)
 npx pnpm perf:load              # k6 load test of the order service (needs stack:up); smoke | load | stress
 npx pnpm aiqa perf              # performance metrics against their usual level, regressions first
@@ -215,6 +218,19 @@ a confirmed order, too little stock, an unknown SKU, a duplicate delivery and fo
 Grafana at http://localhost:3000 shows the service while the suites run (orders by outcome,
 processing time p50 and p95); Prometheus is at http://localhost:9090.
 
+## Security
+
+The Docker stack includes Keycloak (http://localhost:8180, admin / admin) with a local test realm.
+Product writes (`PUT /products/{sku}`) need an OAuth 2.0 bearer token with the `catalog-admin`
+role; ordering and reading stay open. `data-framework/tests/http/auth.spec.ts` gets real tokens and
+checks every refusal: no token, Basic credentials, a valid token without the role (403), a token for
+another API, an expired token, claims edited after signing, and an unsigned `alg: none` token.
+
+`pnpm security` checks every dependency's licence against an open-source allow-list and looks for
+known vulnerabilities with `pnpm audit` and OSV-Scanner; accepted findings are in `osv-scanner.toml`
+with a reason and an expiry date. `pnpm security:zap` runs OWASP ZAP's API scan against the order
+service from its own OpenAPI document, logged in; injection-class findings fail it. CI runs both.
+
 ## Kubernetes and monitoring
 
 The whole stack also runs on a local [kind](https://kind.sigs.k8s.io) cluster from one Helm chart
@@ -280,6 +296,7 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 | 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done                    |
 | -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done                    |
 | -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done                    |
+| -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done                    |
 | 5     | 9 onward                | AI agents, chat app, web dashboard, learning content (`interview-learning`, `examples`, `templates`) | Scoped before it starts |
 
 Folders that belong to Phase 5 exist already with a README that says so. `docs/architecture.md`

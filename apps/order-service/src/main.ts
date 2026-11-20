@@ -12,6 +12,7 @@ import {
 } from '@platformatic/kafka';
 import { config, TOPICS } from './config';
 import { openApiDocument, type OrderAccepted, type OrderView, type ProductView } from './api';
+import { authConfigFromEnv, challenge, createAuthorizer } from './auth';
 import { placedOrder, productUpsert } from './contract';
 import { confirmedEvent, deadLetterEvent, rejectedEvent } from './events';
 import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
@@ -22,6 +23,10 @@ const kafka = { clientId: 'order-service', bootstrapBrokers: config.kafkaBrokers
 const producer = new Producer({ ...kafka, idempotent: true, serializers: stringSerializers });
 const consumer = new Consumer({ ...kafka, groupId: 'order-service', deserializers: stringDeserializers });
 let ready = false;
+
+// Product writes need a Keycloak token with the catalog-admin role when AUTH_ISSUER is set.
+const authConfig = authConfigFromEnv();
+const authorize = authConfig ? createAuthorizer(authConfig) : undefined;
 
 // One JSON object per line; traceId (when tracing is on) lets Grafana jump from a log line to its trace.
 const log = (message: string, extra: Record<string, unknown> = {}) =>
@@ -67,8 +72,21 @@ async function handle(raw: string | undefined, key: string | undefined): Promise
   log(`order ${outcome.kind}`, { orderId: order.id });
 }
 
-const json = (res: http.ServerResponse, status: number, body: unknown) => {
-  res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+// nosniff and same-origin on every response: the two hardening headers the ZAP scan asked for.
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'cross-origin-resource-policy': 'same-origin',
+};
+
+const json = (
+  res: http.ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) => {
+  res
+    .writeHead(status, { 'content-type': 'application/json', ...SECURITY_HEADERS, ...headers })
+    .end(JSON.stringify(body));
 };
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -94,7 +112,8 @@ const issues = (error: { issues: { message: string }[] }) => error.issues.map((i
 const server = http.createServer(async (req, res) => {
   try {
     if (req.url === '/health') return json(res, ready ? 200 : 503, { ready });
-    if (req.method === 'GET' && req.url === '/openapi.json') return json(res, 200, openApiDocument());
+    if (req.method === 'GET' && req.url === '/openapi.json')
+      return json(res, 200, openApiDocument({ auth: authConfig }));
 
     // HTTP front door for orders (used by the load tests): checked against the same contract as the
     // Kafka path, then published to orders.placed. 202: accepted, the outcome follows asynchronously
@@ -112,6 +131,17 @@ const server = http.createServer(async (req, res) => {
     // authentication; a real one would put this behind an admin role.
     const product = /^\/products\/([A-Za-z0-9._-]{1,64})$/.exec(req.url ?? '');
     if (req.method === 'PUT' && product) {
+      if (authorize) {
+        const decision = await authorize(req.headers.authorization, 'catalog-admin');
+        if (!decision.ok) {
+          return json(
+            res,
+            decision.status,
+            { error: decision.description },
+            { 'www-authenticate': challenge(decision) },
+          );
+        }
+      }
       const parsed = productUpsert.safeParse(await readJson(req));
       if (!parsed.success) return json(res, 400, { error: issues(parsed.error) });
       const { name, priceCents, stock } = parsed.data;
@@ -158,8 +188,11 @@ const server = http.createServer(async (req, res) => {
     }
     return json(res, 404, { error: 'not found' });
   } catch (error) {
-    const status = (error as { status?: number }).status ?? 500;
-    return json(res, status, { error: (error as Error).message });
+    const status = (error as { status?: number }).status;
+    if (status) return json(res, status, { error: (error as Error).message }); // ours, e.g. 413
+    // Anything else is a fault: log it with the trace id, and tell the caller nothing about the internals.
+    log('request failed', { method: req.method, url: req.url, error: (error as Error).message });
+    return json(res, 500, { error: 'internal error' });
   }
 });
 

@@ -1,0 +1,16 @@
+# Known vulnerabilities OSV-Scanner should not fail on, each with the reason and a date to look again.
+# `pnpm security:osv` and the CI security job read this file. An entry past its date fails the scan again.
+
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2027-02-20
+reason = """glob 9-14.0.1, only through the Allure CLI (packages/playwright-framework > allure > glob), \
+which reads this repository's own report files at build time; nothing untrusted reaches it. \
+Clears when Allure moves to glob 14.0.2 or later."""
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-02-20
+reason = """minimatch 7-11.0.0, only through typescript-eslint, which matches this repository's own \
+source paths at lint time; nothing untrusted reaches it. Clears when typescript-eslint moves to \
+minimatch 11.0.1 or later."""

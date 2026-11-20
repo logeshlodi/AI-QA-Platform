@@ -12,7 +12,7 @@ import {
 } from '../../src/examples';
 import { OrderRefusedError, StorefrontClient } from '../../src/storefront-client';
 
-const { eachLike, equal, integer, nullValue, string, uuid } = MatchersV3;
+const { eachLike, equal, integer, nullValue, regex, string, uuid } = MatchersV3;
 
 // Consumer side of the storefront -> order-service contract. Each test runs the real StorefrontClient
 // against Pact's mock server, which answers the way the contract says the order service will. The
@@ -98,7 +98,9 @@ describe('storefront -> order-service', () => {
       });
   });
 
-  it('updates a product it already sells', async () => {
+  // Catalogue changes need an OAuth bearer token. The contract records that one is sent, not its value:
+  // the provider check swaps in a real Keycloak token (see the request filter on the provider side).
+  it('updates a product it already sells, with a bearer token', async () => {
     const update = { ...PACT_PRODUCT, priceCents: 1300 };
     await pact
       .addInteraction()
@@ -106,7 +108,10 @@ describe('storefront -> order-service', () => {
       .uponReceiving('a price change for an existing product')
       .withRequest('PUT', `/products/${PACT_SKU}`, (b) =>
         b
-          .headers({ 'content-type': 'application/json' })
+          .headers({
+            'content-type': 'application/json',
+            authorization: regex(/^Bearer [A-Za-z0-9._~+/-]+=*$/, 'Bearer example-access-token'),
+          })
           .jsonBody({ name: update.name, priceCents: update.priceCents, stock: update.stock }),
       )
       .willRespondWith(200, (b) =>
@@ -118,7 +123,8 @@ describe('storefront -> order-service', () => {
         }),
       )
       .executeTest(async (server) => {
-        expect(await new StorefrontClient(server.url).saveProduct(update)).toEqual(update);
+        const client = new StorefrontClient(server.url, async () => 'example-access-token');
+        expect(await client.saveProduct(update)).toEqual(update);
       });
   });
 });

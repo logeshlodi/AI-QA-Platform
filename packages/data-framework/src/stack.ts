@@ -9,6 +9,8 @@ export const stack = {
   kafkaBrokers: (process.env.KAFKA_BROKERS ?? 'localhost:9092').split(','),
   serviceUrl: process.env.ORDER_SERVICE_URL ?? 'http://localhost:8088',
   metricsUrl: process.env.ORDER_METRICS_URL ?? 'http://localhost:9464/metrics',
+  /** Keycloak's token endpoint for the local test realm (client credentials). */
+  tokenUrl: process.env.AUTH_TOKEN_URL ?? 'http://localhost:8180/realms/aiqa/protocol/openid-connect/token',
 };
 
 export const TOPICS = {

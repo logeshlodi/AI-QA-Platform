@@ -31,26 +31,38 @@ test.describe('Order service against its OpenAPI document', { tag: '@contract' }
     ]);
   });
 
+  test('every answer carries nosniff and same-origin (from the ZAP scan)', async ({ service }) => {
+    for (const response of [
+      await service.get('/health'),
+      await service.get('/openapi.json'),
+      await service.get(`/orders/${crypto.randomUUID()}`),
+      await service.post('/orders', { data: {} }),
+    ]) {
+      expect(response.headers()['x-content-type-options']).toBe('nosniff');
+      expect(response.headers()['cross-origin-resource-policy']).toBe('same-origin');
+    }
+  });
+
   test('GET /health', async ({ service, contract }) => {
     await expectToMatch(contract, 'GET', '/health', await service.get('/health'));
   });
 
-  test('PUT /products/{sku}: created, replaced, refused', async ({ service, contract, db, seed }) => {
+  test('PUT /products/{sku}: created, replaced, refused', async ({ catalogAdmin, contract, db, seed }) => {
     const [p] = freshProducts(seed, 1);
     try {
-      const created = await service.put(`/products/${p!.sku}`, {
+      const created = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: p!.name, priceCents: 1500, stock: 3 },
       });
       expect(created.status()).toBe(201);
       await expectToMatch(contract, 'PUT', '/products/{sku}', created);
 
-      const replaced = await service.put(`/products/${p!.sku}`, {
+      const replaced = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: p!.name, priceCents: 1600, stock: 4 },
       });
       expect(replaced.status()).toBe(200);
       await expectToMatch(contract, 'PUT', '/products/{sku}', replaced);
 
-      const refused = await service.put(`/products/${p!.sku}`, {
+      const refused = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: '', priceCents: 0, stock: -1 },
       });
       expect(refused.status()).toBe(400);
@@ -126,10 +138,15 @@ test.describe('Order service against its OpenAPI document', { tag: '@contract' }
   });
 
   // The checker must be able to fail, or every check above proves nothing.
-  test('the checker reports a response that breaks the contract', async ({ service, contract, seed, db }) => {
+  test('the checker reports a response that breaks the contract', async ({
+    catalogAdmin,
+    contract,
+    seed,
+    db,
+  }) => {
     const [p] = freshProducts(seed, 1);
     try {
-      const created = await service.put(`/products/${p!.sku}`, {
+      const created = await catalogAdmin.put(`/products/${p!.sku}`, {
         data: { name: p!.name, priceCents: 900, stock: 1 },
       });
       // A product response checked as if it answered GET /orders/{id}: wrong status for that operation.

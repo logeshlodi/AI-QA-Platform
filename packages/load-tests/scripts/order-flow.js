@@ -4,6 +4,8 @@
 // Runs in k6's own Docker image (pnpm perf:load). Load the order service only, never a public site.
 //
 // PROFILE=smoke (default) | load | stress   ORDER_SERVICE_URL=http://order-service:8080
+// AUTH_TOKEN_URL: when set (the Docker stack has Keycloak), setup() gets a catalog-admin token for the
+// product writes. Placing and reading orders need none, so the load itself is unauthenticated.
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -80,15 +82,29 @@ export const options = {
 const PRODUCTS = 20;
 const json = { headers: { 'Content-Type': 'application/json' } };
 
+/** A catalog-admin token from the local test realm (OAuth 2.0 client credentials), or none. */
+function adminHeaders() {
+  const tokenUrl = __ENV.AUTH_TOKEN_URL;
+  if (!tokenUrl) return json.headers;
+  const res = http.post(tokenUrl, {
+    grant_type: 'client_credentials',
+    client_id: 'catalog-admin-cli',
+    client_secret: 'dev-only-catalog-admin-cli-secret', // the realm's fixed, published, dev-only secret
+  });
+  if (res.status !== 200) throw new Error(`no token from ${tokenUrl}: ${res.status} ${res.body}`);
+  return { ...json.headers, Authorization: `Bearer ${res.json('access_token')}` };
+}
+
 /** Runs once before the load: stocks the shop with plenty of everything, so no order fails on stock. */
 export function setup() {
+  const headers = adminHeaders();
   const products = [];
   for (let i = 1; i <= PRODUCTS; i++) {
     const product = { sku: `LOAD-${String(i).padStart(3, '0')}`, priceCents: 500 + i * 125 };
     const res = http.put(
       `${BASE}/products/${product.sku}`,
       JSON.stringify({ name: `Load test product ${i}`, priceCents: product.priceCents, stock: 100_000_000 }),
-      { ...json, tags: { name: 'PUT /products/:sku' } },
+      { headers, tags: { name: 'PUT /products/:sku' } },
     );
     if (res.status !== 200 && res.status !== 201)
       throw new Error(`stocking ${product.sku} failed: ${res.status} ${res.body}`);

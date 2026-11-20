@@ -2,6 +2,7 @@ import { test as base, expect, type APIRequestContext } from '@playwright/test';
 import { aProduct, type Product } from '@aiqa/test-data-engine';
 import { MongoClient, type Db } from 'mongodb';
 import pg from 'pg';
+import { clientToken, CLIENTS } from './auth';
 import { KafkaBus } from './bus';
 import { ContractChecker, type OpenApiDocument } from './openapi';
 import { stack, TOPICS } from './stack';
@@ -12,10 +13,14 @@ interface WorkerFixtures {
   bus: KafkaBus;
   /** The service's own OpenAPI document (GET /openapi.json), ready to check responses against. */
   contract: ContractChecker;
+  /** Whether the service asks for tokens on product writes (its OpenAPI document says so). */
+  authEnabled: boolean;
 }
 
 interface TestFixtures {
   service: APIRequestContext;
+  /** The service as a catalog-admin client: a Keycloak token on every request when auth is on. */
+  catalogAdmin: APIRequestContext;
   /** Puts products in the catalogue for this test only, with unique SKUs, and removes them after. */
   stockProducts: (products: Product[]) => Promise<Product[]>;
   /** A seed for this test's data, recorded on the test so a failure can be replayed with AIQA_SEED. */
@@ -59,6 +64,23 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: 'worker' },
   ],
+  authEnabled: [
+    async ({ contract }, use) => {
+      await use('securitySchemes' in ((contract.document as { components?: object }).components ?? {}));
+    },
+    { scope: 'worker' },
+  ],
+  catalogAdmin: async ({ playwright, authEnabled }, use) => {
+    const headers = authEnabled
+      ? { authorization: `Bearer ${await clientToken(CLIENTS.catalogAdmin)}` }
+      : undefined;
+    const request = await playwright.request.newContext({
+      baseURL: stack.serviceUrl,
+      extraHTTPHeaders: headers,
+    });
+    await use(request);
+    await request.dispose();
+  },
   service: async ({ playwright }, use) => {
     const request = await playwright.request.newContext({ baseURL: stack.serviceUrl });
     await use(request);

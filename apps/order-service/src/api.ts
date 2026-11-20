@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { placedOrder, productUpsert } from './contract';
+import type { AuthConfig } from './auth';
+import { placedOrder, productUpsert, SKU_PATTERN } from './contract';
 
 /**
  * The HTTP API's response shapes and its OpenAPI document. The document is built from the same zod
@@ -33,8 +34,6 @@ export type OrderView = z.infer<typeof orderView>;
 export type OrderAccepted = z.infer<typeof orderAccepted>;
 export type ProductView = z.infer<typeof productView>;
 
-export const SKU_PATTERN = '^[A-Za-z0-9._-]{1,64}$';
-
 type Io = 'input' | 'output';
 /** zod to JSON Schema 2020-12, which is what OpenAPI 3.1 uses; the top-level $schema key is dropped. */
 function schema(type: z.ZodType, io: Io = 'output'): Record<string, unknown> {
@@ -50,7 +49,19 @@ const json = (type: z.ZodType, description: string, io: Io = 'output') => ({
 
 const error = (description: string) => json(apiError, description);
 
-export function openApiDocument(serverUrl?: string) {
+export interface DocumentOptions {
+  serverUrl?: string;
+  /** When product writes need a token, the document says so and lists the 401 and 403 answers. */
+  auth?: AuthConfig;
+}
+
+export function openApiDocument({ serverUrl, auth }: DocumentOptions = {}) {
+  const refusals = auth
+    ? {
+        '401': error('No token, or a token that is invalid, expired, or for another audience'),
+        '403': error('A valid token without the catalog-admin role'),
+      }
+    : {};
   return {
     openapi: '3.1.0',
     info: {
@@ -96,6 +107,7 @@ export function openApiDocument(serverUrl?: string) {
         put: {
           operationId: 'upsertProduct',
           summary: 'Create a product, or replace its name, price and stock',
+          ...(auth ? { security: [{ catalogAdmin: [] }] } : {}),
           parameters: [
             { name: 'sku', in: 'path', required: true, schema: { type: 'string', pattern: SKU_PATTERN } },
           ],
@@ -104,9 +116,26 @@ export function openApiDocument(serverUrl?: string) {
             '200': json(productView, 'Replaced'),
             '201': json(productView, 'Created'),
             '400': error('Not a valid product'),
+            ...refusals,
           },
         },
       },
     },
+    ...(auth
+      ? {
+          components: {
+            securitySchemes: {
+              catalogAdmin: {
+                type: 'oauth2',
+                description:
+                  'A Keycloak access token for this service (audience order-service) with the catalog-admin realm role.',
+                flows: {
+                  clientCredentials: { tokenUrl: `${auth.issuer}/protocol/openid-connect/token`, scopes: {} },
+                },
+              },
+            },
+          },
+        }
+      : {}),
   };
 }

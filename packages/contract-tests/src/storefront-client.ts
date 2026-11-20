@@ -40,7 +40,14 @@ export class OrderRefusedError extends Error {
 }
 
 export class StorefrontClient {
-  constructor(private readonly baseUrl: string) {}
+  /**
+   * `accessToken` supplies a bearer token for the calls that change the catalogue (an OAuth client
+   * credentials token in production). Reading and ordering need none.
+   */
+  constructor(
+    private readonly baseUrl: string,
+    private readonly accessToken?: () => Promise<string>,
+  ) {}
 
   /** Places an order. Resolves with its id once the service has accepted it for processing. */
   async placeOrder(order: NewOrder): Promise<{ orderId: string }> {
@@ -69,18 +76,19 @@ export class StorefrontClient {
 
   /** Sets a product's name, price and stock. */
   async saveProduct({ sku, ...fields }: Product): Promise<Product> {
-    const response = await this.send('PUT', `/products/${encodeURIComponent(sku)}`, fields);
+    const token = this.accessToken ? await this.accessToken() : undefined;
+    const response = await this.send('PUT', `/products/${encodeURIComponent(sku)}`, fields, token);
     if (response.status !== 200 && response.status !== 201) await this.expectStatus(response, 200);
     return (await response.json()) as Product;
   }
 
-  private send(method: string, path: string, body?: unknown): Promise<Response> {
+  private send(method: string, path: string, body?: unknown, token?: string): Promise<Response> {
+    const headers: Record<string, string> = { accept: 'application/json' };
+    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (token) headers.authorization = `Bearer ${token}`;
     return fetch(new URL(path, this.baseUrl), {
       method,
-      headers:
-        body === undefined
-          ? { accept: 'application/json' }
-          : { accept: 'application/json', 'content-type': 'application/json' },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   }

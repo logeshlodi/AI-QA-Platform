@@ -5,6 +5,7 @@
 #   npx pnpm stack:down   stop and delete the data
 # Grafana: http://localhost:3000 (anonymous viewer). Prometheus: http://localhost:9090.
 # Pushgateway (test metrics): http://localhost:9091; set AIQA_PUSHGATEWAY to it to send local runs.
+# Keycloak (tokens for PUT /products): http://localhost:8180, admin / admin; realm in keycloak/.
 name: aiqa-stack
 
 services:
@@ -55,18 +56,49 @@ services:
       timeout: 10s
       retries: 30
 
+  # OAuth 2.0 / OpenID Connect for the product API: a local test realm with service clients only.
+  # The issuer is fixed to http://localhost:8180 however a token is requested (from your machine or from
+  # inside the network), so a token's `iss` always matches what the order service expects.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+      KC_HEALTH_ENABLED: 'true'
+    volumes: ['./keycloak/aiqa-realm.json:/opt/keycloak/data/import/aiqa-realm.json:ro']
+    ports: ['8180:8080']
+    healthcheck:
+      # The image has no curl: ask the management port for readiness with bash alone (/dev/tcp, read).
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r status <&3 && [[ $$status == *' 200 '* ]]",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
   order-service:
     build: { context: ../.., dockerfile: apps/order-service/Dockerfile }
     environment:
       DATABASE_URL: postgres://aiqa:aiqa@postgres:5432/shop
       MONGO_URL: mongodb://mongo:27017
       KAFKA_BROKERS: kafka:19092
+      # Product writes need a token with the catalog-admin role. Keys come from inside the network.
+      AUTH_ISSUER: http://localhost:8180/realms/aiqa
+      AUTH_JWKS_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/certs
     # Host port 8088, not 8080: Jenkins and many dev tools already listen on 8080.
     ports: ['8088:8080', '9464:9464']
     depends_on:
       postgres: { condition: service_healthy }
       mongo: { condition: service_healthy }
       kafka: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
     healthcheck:
       test:
         [
@@ -118,6 +150,8 @@ services:
     environment:
       ORDER_SERVICE_URL: http://order-service:8080
       PROFILE: smoke
+      # setup() creates products, which needs a catalog-admin token.
+      AUTH_TOKEN_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/token
       K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
       K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),max
     # Root, so it can write the summary into a folder owned by whoever runs the tests.
@@ -142,6 +176,7 @@ services:
       ORDER_SERVICE_URL: http://order-service:8080
       ORDER_METRICS_URL: http://order-service:9464/metrics
       AIQA_PUSHGATEWAY: http://pushgateway:9091
+      AUTH_TOKEN_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/token
     volumes:
       # Runs are added to your local history, so they appear on the dashboard (pnpm report:dashboard).
       - ../../.aiqa:/work/.aiqa

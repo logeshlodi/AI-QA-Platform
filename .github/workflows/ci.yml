@@ -25,6 +25,20 @@ jobs:
       # Warns when a Playwright Docker image tag lags @playwright/test (Dependabot cannot bump both).
       - run: node scripts/check-playwright-image.mjs
 
+  security:
+    name: Security (licences, dependency audit, OSV-Scanner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Every dependency's licence against the open-source allow-list (scripts/check-licences.mjs).
+      - run: pnpm security:licences
+      # Known advisories at high or critical; the two moderate ones are explained in osv-scanner.toml.
+      - run: pnpm security:audit
+      # The lockfile against the OSV database; ignored findings carry a reason and an expiry date.
+      - run: pnpm security:osv
+
   api:
     name: API specs
     needs: quality
@@ -111,6 +125,23 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: pacts, path: packages/contract-tests/pacts, retention-days: 30 }
+
+  dast:
+    name: ZAP API scan of the order service (authenticated)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Our own service only: ZAP attacks every operation in its OpenAPI document, with a Keycloak token.
+      - run: pnpm stack:up
+      - run: pnpm security:zap
+      - if: always()
+        run: pnpm stack:down
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: zap-report, path: .aiqa/zap, retention-days: 14 }
 
   branded:
     name: Smoke in real ${{ matrix.channel }}

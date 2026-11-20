@@ -1,0 +1,192 @@
+{
+  "realm": "aiqa",
+  "enabled": true,
+  "displayName": "AI-QA-Platform (local test realm)",
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      {
+        "name": "catalog-admin",
+        "description": "May create products and change their name, price and stock"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "catalog-admin-cli",
+      "name": "catalog-admin-cli",
+      "description": "Catalogue upkeep: has catalog-admin. Used by the data suites, the Pact provider check and k6.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-catalog-admin-cli-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "order-service",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {}
+    },
+    {
+      "clientId": "storefront",
+      "name": "storefront",
+      "description": "A valid client of the order service without catalog-admin: its product writes get 403.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-storefront-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "order-service",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {}
+    },
+    {
+      "clientId": "catalog-admin-short-lived",
+      "name": "catalog-admin-short-lived",
+      "description": "Has catalog-admin, but its tokens expire after 2 seconds: the expired-token test.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-catalog-admin-short-lived-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "order-service",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {
+        "access.token.lifespan": "2"
+      }
+    },
+    {
+      "clientId": "other-api-client",
+      "name": "other-api-client",
+      "description": "Has catalog-admin, but its tokens are for another API (audience other-api): the wrong-audience test.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-other-api-client-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-other-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "other-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {}
+    },
+    {
+      "clientId": "zap-scanner",
+      "name": "zap-scanner",
+      "description": "Has catalog-admin, tokens valid for an hour: the authenticated ZAP scan.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-zap-scanner-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-order-service",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "order-service",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {
+        "access.token.lifespan": "3600"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-catalog-admin-cli",
+      "enabled": true,
+      "serviceAccountClientId": "catalog-admin-cli",
+      "realmRoles": ["catalog-admin"]
+    },
+    {
+      "username": "service-account-catalog-admin-short-lived",
+      "enabled": true,
+      "serviceAccountClientId": "catalog-admin-short-lived",
+      "realmRoles": ["catalog-admin"]
+    },
+    {
+      "username": "service-account-other-api-client",
+      "enabled": true,
+      "serviceAccountClientId": "other-api-client",
+      "realmRoles": ["catalog-admin"]
+    },
+    {
+      "username": "service-account-zap-scanner",
+      "enabled": true,
+      "serviceAccountClientId": "zap-scanner",
+      "realmRoles": ["catalog-admin"]
+    },
+    {
+      "username": "service-account-storefront",
+      "enabled": true,
+      "serviceAccountClientId": "storefront",
+      "realmRoles": []
+    }
+  ]
+}
