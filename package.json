@@ -47,7 +47,11 @@
     "k8s:status": "node scripts/k8s.mjs status",
     "k8s:down": "node scripts/k8s.mjs down",
     "lab": "pnpm --filter @aiqa/examples lab",
-    "test:labs": "pnpm --filter @aiqa/examples test:solutions"
+    "test:labs": "pnpm --filter @aiqa/examples test:solutions",
+    "mcp": "tsx packages/mcp-server/src/bin.ts",
+    "test:agents": "vitest run packages/ai-agents packages/mcp-server",
+    "agents:eval": "tsx packages/cli/src/bin.ts agents eval triage",
+    "mcp:smoke": "node packages/mcp-server/scripts/smoke.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

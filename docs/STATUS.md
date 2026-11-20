@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Agents and the chat app are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprint 9 (agent runtime, Triage agent, MCP server) is built and has run; the other agents, the web apps and the docs site are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,24 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Sprint 9: agent runtime, Triage agent, MCP server (20 Nov)
+
+Run on the Windows laptop, local model `qwen2.5-coder:7b` on CPU through Ollama.
+
+| Check                                                              | Result                                                                                                                                                                  |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit tests (`pnpm test:unit`)                                      | 227 passed (27 new: runtime budget, approval, tool errors, schema failure, model choice, run log, triage rules and context, the MCP server through an in-memory client) |
+| Triage eval, rules then model (`AI_ENABLED=true pnpm agents:eval`) | **28 of 30 (93%), gate 80% passed**, 8 min 45 s. Rules placed 23 of 23 correctly; the model placed 5 of 7, about 150 s each, without calling a tool                     |
+| Triage eval, rules only (`pnpm aiqa agents eval triage`)           | 23 of 30 (77%): every rule answer right, 7 left as "unknown"                                                                                                            |
+| MCP server over stdio (`pnpm mcp:smoke`)                           | 7 tools listed; `list_runs`, `make_test_data` and `triage_failures` answered from the laptop's run history, started with the same command `.mcp.json` gives Claude Code |
+| Type-check, lint, Prettier                                         | Clean; lint 0 errors, the same 4 warnings                                                                                                                               |
+
+The model's two misses: it called "target page closed" (a missing `await` in the test) an environment
+problem, and an HTML page returned instead of JSON a test bug. Both are in `src/triage/cases.ts`.
+
+Open: the 30 eval labels are mine; review them, since the gate is meant to match your judgement. Not
+yet checked from inside Claude Code itself, and not yet measured with `qwen3:8b` or a hosted model.
 
 ## Learning sprint (20 Nov)
 

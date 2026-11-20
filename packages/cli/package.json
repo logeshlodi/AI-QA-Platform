@@ -2,10 +2,11 @@
   "name": "@aiqa/cli",
   "version": "0.1.0",
   "private": true,
-  "description": "aiqa: generate page objects and specs, read run history, print test data, practise interview questions",
+  "description": "aiqa: generate page objects and specs, read run history, print test data, run agents, practise interview questions",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
+    "@aiqa/ai-agents": "workspace:*",
     "@aiqa/ai-engine": "workspace:*",
     "@aiqa/interview-learning": "workspace:*",
     "@aiqa/reporting-engine": "workspace:*",

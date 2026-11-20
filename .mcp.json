@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aiqa": {
+      "command": "node",
+      "args": ["node_modules/tsx/dist/cli.mjs", "packages/mcp-server/src/bin.ts"]
+    }
+  }
+}

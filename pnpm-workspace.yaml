@@ -32,6 +32,13 @@ catalog:
   'fast-xml-parser': 5.12.1
   '@faker-js/faker': 10.6.0
 
+  # Agents (packages/ai-agents) and the platform's MCP server (packages/mcp-server)
+  'ai': 7.0.177
+  'ai-sdk-ollama': 4.6.3
+  '@ai-sdk/openai-compatible': 3.0.93
+  '@modelcontextprotocol/server': 2.4.0
+  '@modelcontextprotocol/client': 2.4.0
+
   # Runtime utilities
   'pino': 10.4.0
   'dotenv': 18.0.10

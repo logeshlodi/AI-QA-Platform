@@ -21,6 +21,13 @@ export const envSchema = z.object({
   OLLAMA_MODEL: z.string().min(1).default('qwen2.5-coder:7b'),
   // Generous by default: the first call loads the model into memory, which is slow on a CPU.
   OLLAMA_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),
+  // Agents (packages/ai-agents). "auto" = Ollama when AI_ENABLED, otherwise rules only.
+  // "openai-compatible" reaches any hosted or local server that speaks the OpenAI chat API.
+  AGENT_PROVIDER: z.enum(['auto', 'off', 'ollama', 'openai-compatible']).default('auto'),
+  AGENT_MODEL: z.string().min(1).optional(),
+  AGENT_BASE_URL: z.url().optional(),
+  AGENT_API_KEY: z.string().min(1).optional(),
+  AGENT_MAX_TOOL_CALLS: z.coerce.number().int().min(0).max(30).default(6),
 });
 
 export type Env = z.infer<typeof envSchema>;

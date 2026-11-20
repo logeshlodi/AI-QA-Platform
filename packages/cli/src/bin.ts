@@ -7,6 +7,17 @@ import { metricTrends } from '@aiqa/reporting-engine';
 import { formatFlaky, formatHistory, formatPerf, loadRuns } from './commands/history';
 import { formatFiles, renderPage, writeFiles } from './commands/new-page';
 import { formatList, runQuiz } from './commands/quiz';
+import { formatAgentLog, formatTriage } from './commands/agents';
+import {
+  buildTriageContexts,
+  chooseModel,
+  formatEval,
+  JsonlRunLog,
+  runTriageEval,
+  triage,
+  TRIAGE_GATE,
+} from '@aiqa/ai-agents';
+import { loadEnv } from '@aiqa/shared';
 import {
   formatCoverage,
   LEVELS,
@@ -38,7 +49,9 @@ async function ariaSnapshotOf(url: string): Promise<string> {
 
 const program = new Command()
   .name('aiqa')
-  .description('AI-QA-Platform tools: generate tests, read run history, make test data, practise interviews');
+  .description(
+    'AI-QA-Platform tools: generate tests, read run history, make test data, run agents, practise interviews',
+  );
 
 program
   .command('new')
@@ -144,6 +157,66 @@ program
       await runQuiz(pick); // practice, not a gate: the exit code stays 0 whatever the score
     },
   );
+
+const agents = program.command('agents').description('run the AI agents and read their log');
+
+agents
+  .command('triage')
+  .description('why each failed test of a run failed: product, test, flaky or environment')
+  .option('--run <id>', 'a recorded run id (default: the latest run of the suite)')
+  .option('--suite <suite>', 'the suite whose latest run to triage', 'ui')
+  .option('--limit <n>', 'at most this many tests', positiveInt, 10)
+  .action(async (opts: { run?: string; suite: string; limit: number }) => {
+    const runs = loadRuns();
+    const latest = runs
+      .filter((r) => r.run.suite === opts.suite)
+      .sort((a, b) => a.run.startedAt.localeCompare(b.run.startedAt))
+      .at(-1);
+    const runId = opts.run ?? latest?.run.id;
+    if (!runId) return console.log(`No recorded "${opts.suite}" run. Run "pnpm test:${opts.suite}" first.`);
+    const model = chooseModel(loadEnv());
+    const log = new JsonlRunLog();
+    const items = [];
+    for (const ctx of buildTriageContexts(runs, runId).slice(0, opts.limit)) {
+      items.push({
+        ctx,
+        verdict: await triage(ctx, { model, log, maxToolCalls: loadEnv().AGENT_MAX_TOOL_CALLS }),
+      });
+    }
+    console.log(formatTriage(items, model.label));
+  });
+
+agents
+  .command('eval')
+  .description('score an agent against its labelled cases (exit code 1 below the sprint gate)')
+  .addArgument(new Argument('<agent>', 'which agent').choices(['triage']))
+  .option('--model-only', 'switch the rules off and measure the model alone')
+  .option('--only <ids>', 'comma-separated case ids')
+  .action(async (_agent: string, opts: { modelOnly?: boolean; only?: string }) => {
+    const model = chooseModel(loadEnv());
+    if (opts.modelOnly && !model.model) {
+      throw new Error(
+        '--model-only needs a model: set AI_ENABLED=true or AGENT_PROVIDER (see .env.example).',
+      );
+    }
+    const report = await runTriageEval({
+      model,
+      skipRules: opts.modelOnly,
+      log: new JsonlRunLog(),
+      only: opts.only?.split(',').map((s) => s.trim()),
+    });
+    const mode = opts.modelOnly ? 'model only' : model.model ? 'rules, then model' : 'rules only';
+    console.log(formatEval(`triage (${mode}, ${model.label})`, report));
+    console.log(`
+Gate: ${Math.round(TRIAGE_GATE * 100)}% ${report.accuracy >= TRIAGE_GATE ? 'passed' : 'not reached'}`);
+    if (report.accuracy < TRIAGE_GATE) process.exitCode = 1;
+  });
+
+agents
+  .command('log')
+  .description('the agent run log, newest first')
+  .option('--limit <n>', 'how many runs', positiveInt, 20)
+  .action((opts: { limit: number }) => console.log(formatAgentLog(new JsonlRunLog().read(opts.limit))));
 
 program.parseAsync().catch((error: unknown) => {
   console.error((error as Error).message);

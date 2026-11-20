@@ -61,6 +61,8 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard        | Vitest                |
 | `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records     | Vitest                |
 | `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data, quiz          | Vitest                |
+| `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and the Triage agent                           | Vitest, mock models   |
+| `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                 | Vitest, MCP client    |
 | `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
 | `packages/interview-learning`   | 43 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
@@ -196,6 +198,21 @@ from a list it is given. `AI_ENABLED=true npx pnpm test:ai` runs all five agains
 agents, created with `npx playwright init-agents --loop=claude`. They start from `tests/seed.spec.ts`
 (a logged-in SauceDemo session on this project's fixtures) and write plans to `specs/`.
 See `packages/playwright-framework/specs/README.md` for other tools (VS Code, Copilot, Codex).
+
+## Agents and the MCP server
+
+Phase 5 has started: [ADR 0014](docs/adr/0014-agents-rules-first-on-the-ai-sdk.md) sets the rules.
+
+```bash
+npx pnpm aiqa agents triage --suite api          # why each failed test of the latest run failed
+npx pnpm aiqa agents eval triage                 # score Triage on its 30 labelled failures
+npx pnpm aiqa agents log                         # every agent run: tools called, answer, model, time
+npx pnpm mcp                                     # the platform's MCP server on stdio
+```
+
+Agents answer from rules when no model is configured. Set `AI_ENABLED=true` for the local Ollama model,
+or `AGENT_PROVIDER=openai-compatible` with `AGENT_BASE_URL`, `AGENT_MODEL` and `AGENT_API_KEY` in `.env`
+for a hosted one. Claude Code picks up the MCP server from `.mcp.json` as `aiqa`.
 
 ## Run history and the dashboard
 

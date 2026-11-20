@@ -48,6 +48,23 @@ The provider is Ollama on the same machine, behind the `LlmProvider` interface; 
 `AI_ENABLED=true`. Page text sent to a model is untrusted input: a page can contain words aimed at the
 model.
 
+## Agents and the MCP server
+
+An agent is a model that may call tools in a loop until it answers. `packages/ai-agents` runs agents
+on the AI SDK with the guard rails outside the model ([ADR 0014](../adr/0014-agents-rules-first-on-the-ai-sdk.md)):
+a budget of tool calls, approval before any tool that writes, tool errors fed back as data, a schema on
+the answer, and one log line per run in `.aiqa/agents/runs.jsonl`.
+
+The **Triage agent** says why a failed test failed. Rules decide first (passed on retry, a network
+error, many tests failing the same way, a stale locator); the model gets the rest, with two tools that
+read the test's history and the run's other failures. Its 30 labelled cases are in
+`src/triage/cases.ts`: rules alone place 23, all correctly; the model has to place enough of the other
+seven for the 80% gate.
+
+`packages/mcp-server` serves the platform's data as MCP tools (runs, failures, flaky tests, perf
+trends, heal audit, test data, triage), so Claude Code or any MCP client can ask "why did last night's
+run fail?" and get an answer from the run history, not from memory.
+
 ## Ideas worth being able to explain
 
 - **When not to heal.** A button that moved is a test-maintenance problem; a button that disappeared may
@@ -64,4 +81,8 @@ model.
 npx pnpm test:ui tests/healing
 npx pnpm test:unit                                    # the engines, with a fake model
 npx cross-env AI_ENABLED=true pnpm test:ai            # the real local model (slow on a CPU)
+npx pnpm aiqa agents triage --suite api               # triage the latest recorded run
+npx cross-env AI_ENABLED=true pnpm agents:eval         # score Triage on its 30 cases with your model
+npx pnpm aiqa agents log                              # what the agents did
+npx pnpm mcp                                          # the MCP server on stdio (Claude Code starts it from .mcp.json)
 ```
