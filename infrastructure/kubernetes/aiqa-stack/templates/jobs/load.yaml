@@ -1,0 +1,58 @@
+{{- if eq .Values.job.name "load" }}
+# The k6 load test against the order service. Rendered by `pnpm k8s:test load [profile]`, which
+# passes the script with --set-file and records the summary in the run history afterwards.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aiqa-load-{{ .Values.job.id }}
+  labels: { app: aiqa-tests, suite: load }
+data:
+  order-flow.js: |-
+{{ required "set k6.script with --set-file" .Values.k6.script | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aiqa-load-{{ .Values.job.id }}
+  labels:
+    app: aiqa-tests
+    suite: load
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  {{- include "aiqa.jobSpec" . | nindent 2 }}
+  template:
+    metadata: { labels: { app: aiqa-tests, suite: load } }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      containers:
+        - name: k6
+          image: {{ .Values.images.k6 }}
+          # Root, to write the summary into the results folder.
+          securityContext: { runAsUser: 0 }
+          args:
+            - run
+            - --summary-export=/results/k8s/load-{{ .Values.job.id }}/summary.json
+            - -o
+            - experimental-prometheus-rw
+            - /scripts/order-flow.js
+          env:
+            - { name: ORDER_SERVICE_URL, value: 'http://order-service:8080' }
+            - { name: PROFILE, value: {{ .Values.job.profile | quote }} }
+            - { name: K6_PROMETHEUS_RW_SERVER_URL, value: 'http://prometheus:9090/api/v1/write' }
+            - { name: K6_PROMETHEUS_RW_TREND_STATS, value: 'p(50),p(95),p(99),max' }
+          resources:
+            requests: { cpu: 500m, memory: 256Mi }
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: results, mountPath: /results }
+      initContainers:
+        # k6 does not create the folder for --summary-export.
+        - name: results-folder
+          image: {{ .Values.images.busybox }}
+          command: ['mkdir', '-p', '/results/k8s/load-{{ .Values.job.id }}']
+          volumeMounts: [{ name: results, mountPath: /results }]
+      volumes:
+        - { name: scripts, configMap: { name: aiqa-load-{{ .Values.job.id }} } }
+        {{- include "aiqa.resultsVolume" . | nindent 8 }}
+{{- end }}

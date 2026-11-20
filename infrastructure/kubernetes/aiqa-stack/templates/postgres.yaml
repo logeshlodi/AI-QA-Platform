@@ -1,0 +1,33 @@
+# Postgres: orders, lines and stock. Test data only, so it lives in an emptyDir and starts empty
+# with every new pod, like the Docker Compose stack after `stack:down`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.images.postgres }}
+          env:
+            - { name: POSTGRES_USER, value: aiqa }
+            - { name: POSTGRES_PASSWORD, value: aiqa }
+            - { name: POSTGRES_DB, value: shop }
+          ports: [{ containerPort: 5432 }]
+          readinessProbe:
+            exec: { command: ['pg_isready', '-U', 'aiqa', '-d', 'shop'] }
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+      volumes: [{ name: data, emptyDir: {} }]
+---
+{{ include "aiqa.service" (dict "name" "postgres" "port" 5432 "nodePort" .Values.nodePorts.postgres) }}

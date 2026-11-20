@@ -1,0 +1,34 @@
+{{- if eq .Values.job.name "ui" }}
+# The UI suite, with browsers on the shared Playwright server (PW_WS_ENDPOINT).
+# Rendered by `pnpm k8s:test ui`; job.args picks the projects (default: Chromium).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aiqa-ui-{{ .Values.job.id }}
+  labels:
+    app: aiqa-tests
+    suite: ui
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  {{- include "aiqa.jobSpec" . | nindent 2 }}
+  template:
+    metadata: { labels: { app: aiqa-tests, suite: ui } }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      containers:
+        - name: tests
+          image: {{ .Values.images.tests }}
+          imagePullPolicy: IfNotPresent
+          workingDir: /work/packages/playwright-framework
+          command: ['sh', '-c', 'npx playwright test {{ .Values.job.args }}']
+          env:
+            - { name: AIQA_HISTORY, value: ui }
+            - { name: PW_WS_ENDPOINT, value: 'ws://playwright-server:3000/' }
+            {{- include "aiqa.testEnv" . | nindent 12 }}
+          resources:
+            requests: { cpu: 500m, memory: 512Mi }
+          volumeMounts: [{ name: results, mountPath: /work/.aiqa }]
+      volumes:
+        {{- include "aiqa.resultsVolume" . | nindent 8 }}
+{{- end }}

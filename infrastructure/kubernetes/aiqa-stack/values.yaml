@@ -1,0 +1,61 @@
+# Images. The two aiqa/* images are built locally and loaded into kind by `pnpm k8s:up`, which sets
+# their tags to the image digest so a rebuilt image rolls out.
+images:
+  orderService: aiqa/order-service:dev
+  tests: aiqa/tests:dev
+  postgres: postgres:17-alpine
+  mongo: mongo:8.0
+  kafka: apache/kafka:4.3.2
+  prometheus: prom/prometheus:v3.16.0
+  pushgateway: prom/pushgateway:v1.11.4
+  grafana: grafana/grafana:13.2.6
+  k6: grafana/k6:2.4.0
+  loki: grafana/loki:3.7.10
+  tempo: grafana/tempo:3.1.1
+  alloy: grafana/alloy:v1.22.0
+  busybox: busybox:1.37
+
+# Ports published on the kind node; the kind config maps each to the same port on localhost.
+# 30xxx, so they never clash with the Docker Compose stack on the default ports.
+nodePorts:
+  orderService: 30088
+  orderMetrics: 30464
+  postgres: 30432
+  mongo: 30017
+  kafka: 30092
+  prometheus: 30090
+  pushgateway: 30091
+  grafana: 30300
+  playwright: 30333
+
+orderService:
+  # PARALLEL_PARTITIONS: handle Kafka partitions in parallel (false: one message at a time).
+  parallelPartitions: true
+
+# Logs (Alloy collects every pod's logs into Loki) and traces (the order service sends OpenTelemetry
+# spans to Tempo). Both appear in Grafana, linked: a log line to its trace and back.
+observability:
+  logs: true
+  traces: true
+
+playwrightServer:
+  # A shared browser server (`playwright run-server`) that UI test Jobs connect to. It runs in the
+  # tests image, so its Playwright version always equals the tests'.
+  enabled: true
+
+# Where test Jobs write reports and run history on the node; the kind config mounts the repository's
+# .aiqa folder there, so results land on your machine.
+resultsHostPath: /aiqa-data
+
+# Test Jobs: rendered only when job.name is set (see scripts/k8s.mjs), never by `helm install`.
+job:
+  name: ''
+  id: ''
+  # Extra arguments for the Playwright command (ui Job).
+  args: '--project=chromium'
+  # k6 profile (load Job): smoke | load | stress
+  profile: smoke
+
+# The k6 script, passed with --set-file k6.script=packages/load-tests/scripts/order-flow.js.
+k6:
+  script: ''

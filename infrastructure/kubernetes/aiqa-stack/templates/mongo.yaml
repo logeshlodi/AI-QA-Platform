@@ -1,0 +1,29 @@
+# MongoDB: the order audit trail. emptyDir, like Postgres.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  labels:
+    app: mongo
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: mongo } }
+  template:
+    metadata: { labels: { app: mongo } }
+    spec:
+      containers:
+        - name: mongo
+          image: {{ .Values.images.mongo }}
+          ports: [{ containerPort: 27017 }]
+          readinessProbe:
+            exec: { command: ['mongosh', '--quiet', '--eval', 'db.adminCommand("ping").ok'] }
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts: [{ name: data, mountPath: /data/db }]
+      volumes: [{ name: data, emptyDir: {} }]
+---
+{{ include "aiqa.service" (dict "name" "mongo" "port" 27017 "nodePort" .Values.nodePorts.mongo) }}

@@ -34,7 +34,11 @@
     "stack:down": "docker compose -f infrastructure/docker/stack.compose.yml down -v",
     "stack:test": "docker compose -f infrastructure/docker/stack.compose.yml --profile test up --build --abort-on-container-exit --exit-code-from data-tests",
     "test:perf": "pnpm --filter @aiqa/playwright-framework test:perf",
-    "perf:load": "pnpm --filter @aiqa/load-tests start"
+    "perf:load": "pnpm --filter @aiqa/load-tests start",
+    "k8s:up": "node scripts/k8s.mjs up",
+    "k8s:test": "node scripts/k8s.mjs test",
+    "k8s:status": "node scripts/k8s.mjs status",
+    "k8s:down": "node scripts/k8s.mjs down"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

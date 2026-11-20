@@ -12,3 +12,5 @@ allure-report
 lighthouse-report
 # k6 summaries written by `pnpm perf:load`
 packages/load-tests/results
+# Helm templates are Go templates, not YAML until rendered: `helm lint` checks them
+infrastructure/kubernetes/aiqa-stack/templates

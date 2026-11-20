@@ -1,3 +1,5 @@
+// First: tracing patches pg and mongodb as they load.
+import { currentTraceId, inMessageSpan, shutdownTracing, traceHeaders } from './tracing';
 import http from 'node:http';
 import {
   Admin,
@@ -19,11 +21,13 @@ const producer = new Producer({ ...kafka, idempotent: true, serializers: stringS
 const consumer = new Consumer({ ...kafka, groupId: 'order-service', deserializers: stringDeserializers });
 let ready = false;
 
+// One JSON object per line; traceId (when tracing is on) lets Grafana jump from a log line to its trace.
 const log = (message: string, extra: Record<string, unknown> = {}) =>
-  console.log(JSON.stringify({ at: new Date().toISOString(), message, ...extra }));
+  console.log(JSON.stringify({ at: new Date().toISOString(), message, traceId: currentTraceId(), ...extra }));
 
+// The current trace travels with the message, so the consumer's work joins the same trace.
 const publish = (topic: string, key: string, value: unknown) =>
-  producer.send({ messages: [{ topic, key, value: JSON.stringify(value) }] });
+  producer.send({ messages: [{ topic, key, value: JSON.stringify(value), headers: traceHeaders() }] });
 
 /** One message from orders.placed, start to finish. */
 async function handle(raw: string | undefined, key: string | undefined): Promise<void> {
@@ -199,7 +203,17 @@ const commitHandled = async () => {
 
 const workers = new PartitionWorkers<PlacedMessage>(
   async (message) => {
-    await handle(message.value ?? undefined, message.key || undefined);
+    await inMessageSpan(
+      `${message.topic} process`,
+      message.headers,
+      {
+        'messaging.system': 'kafka',
+        'messaging.destination.name': message.topic,
+        'messaging.destination.partition.id': String(message.partition),
+        'messaging.kafka.offset': String(message.offset),
+      },
+      () => handle(message.value ?? undefined, message.key || undefined),
+    );
     lastHandled.set(message.partition, message);
     if (Date.now() - (lastCommitAt.get(message.partition) ?? 0) >= 1000) {
       lastCommitAt.set(message.partition, Date.now());
@@ -234,7 +248,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     await commitHandled();
     await consumer.close(true).catch(() => undefined);
     await producer.close().catch(() => undefined);
-    await Promise.allSettled([pool.end(), mongo.close(), shutdownMetrics()]);
+    await Promise.allSettled([pool.end(), mongo.close(), shutdownMetrics(), shutdownTracing()]);
     server.close(() => process.exit(0));
   });
 }

@@ -1,0 +1,34 @@
+# Logs and traces: only in the Kubernetes stack (Docker Compose runs neither Loki nor Tempo).
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      # The order service logs JSON with a traceId: a link from the log line to the trace in Tempo.
+      derivedFields:
+        - name: TraceID
+          datasourceUid: tempo
+          matcherRegex: '"traceId":"(\w+)"'
+          url: '$${__value.raw}'
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      # From a span to the log lines of the same trace.
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        customQuery: true
+        query: '{app="order-service"} |= "$${__trace.traceId}"'
+      # Service graph and span metrics, which Tempo writes to Prometheus.
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true

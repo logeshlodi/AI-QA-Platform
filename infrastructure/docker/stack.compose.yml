@@ -4,6 +4,7 @@
 #   npx pnpm stack:test   one command: build, start, run the suites in a container, stop
 #   npx pnpm stack:down   stop and delete the data
 # Grafana: http://localhost:3000 (anonymous viewer). Prometheus: http://localhost:9090.
+# Pushgateway (test metrics): http://localhost:9091; set AIQA_PUSHGATEWAY to it to send local runs.
 name: aiqa-stack
 
 services:
@@ -85,9 +86,15 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --web.enable-remote-write-receiver
-    volumes: ['../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro']
+    volumes: ['../kubernetes/aiqa-stack/files/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro']
     ports: ['9090:9090']
     depends_on: [order-service]
+
+  # Test runs push pass rates, durations and performance numbers here (AIQA_PUSHGATEWAY);
+  # Prometheus scrapes it for Grafana's "Test runs" dashboard.
+  pushgateway:
+    image: prom/pushgateway:v1.11.4
+    ports: ['9091:9091']
 
   grafana:
     image: grafana/grafana:13.2.6
@@ -96,8 +103,8 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_AUTH_DISABLE_LOGIN_FORM: 'false'
     volumes:
-      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../kubernetes/aiqa-stack/files/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../kubernetes/aiqa-stack/files/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ['3000:3000']
     depends_on: [prometheus]
 
@@ -134,6 +141,7 @@ services:
       KAFKA_BROKERS: kafka:19092
       ORDER_SERVICE_URL: http://order-service:8080
       ORDER_METRICS_URL: http://order-service:9464/metrics
+      AIQA_PUSHGATEWAY: http://pushgateway:9091
     volumes:
       # Runs are added to your local history, so they appear on the dashboard (pnpm report:dashboard).
       - ../../.aiqa:/work/.aiqa

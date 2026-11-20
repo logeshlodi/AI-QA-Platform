@@ -5,8 +5,9 @@ import path from 'node:path';
 import type { FullConfig, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 import { classifyByRules } from '@aiqa/ai-engine';
 import { renderDashboard } from './dashboard';
+import { pushRunMetrics } from './push';
 import { createRunRepository, type RunStoreKind } from './store/factory';
-import type { ResultRecord } from './types';
+import type { ResultRecord, StoredRun } from './types';
 
 export interface HistoryReporterOptions {
   /** Name shown on the dashboard: "ui", "api". Default "tests". */
@@ -18,6 +19,8 @@ export interface HistoryReporterOptions {
   /** How many recent runs the dashboard reads. Default 50. */
   keepRuns?: number;
   store?: RunStoreKind;
+  /** Pushgateway to send the run's metrics to. Default: the AIQA_PUSHGATEWAY environment variable. */
+  pushgateway?: string;
 }
 
 const ANSI = /\u001b\[[0-9;]*m/g;
@@ -91,13 +94,14 @@ export default class HistoryReporter implements Reporter {
     });
   }
 
-  onEnd(): void {
+  async onEnd(): Promise<void> {
+    let saved: { run: StoredRun; history: StoredRun[] } | undefined;
     try {
       const historyDir = this.options.historyDir ?? path.join(process.cwd(), '.aiqa', 'history');
       const dashboardDir = this.options.dashboardDir ?? path.join(path.dirname(historyDir), 'dashboard');
       const repository = createRunRepository(historyDir, this.options.store);
       try {
-        repository.saveRun({
+        const run: StoredRun = {
           run: {
             id: this.runId,
             suite: this.options.suite ?? 'tests',
@@ -108,18 +112,21 @@ export default class HistoryReporter implements Reporter {
             branch: process.env.GITHUB_REF_NAME ?? git('rev-parse', '--abbrev-ref', 'HEAD'),
           },
           results: this.results,
-        });
+        };
+        repository.saveRun(run);
+        const history = repository.listRuns(this.options.keepRuns ?? 50);
         fs.mkdirSync(dashboardDir, { recursive: true });
-        fs.writeFileSync(
-          path.join(dashboardDir, 'index.html'),
-          renderDashboard(repository.listRuns(this.options.keepRuns ?? 50)),
-        );
+        fs.writeFileSync(path.join(dashboardDir, 'index.html'), renderDashboard(history));
+        saved = { run, history };
       } finally {
         repository.close();
       }
     } catch (error) {
       console.warn(`[history-reporter] run history was not saved: ${(error as Error).message}`);
     }
+    // AIQA_PUSHGATEWAY=http://host:9091 also sends the run to Prometheus for Grafana (test monitoring).
+    const gateway = this.options.pushgateway ?? process.env.AIQA_PUSHGATEWAY;
+    if (gateway && saved) await pushRunMetrics(gateway, saved.run, saved.history);
   }
 
   printsToStdio(): boolean {

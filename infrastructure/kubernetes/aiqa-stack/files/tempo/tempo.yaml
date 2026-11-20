@@ -1,0 +1,44 @@
+# Tempo 3 in monolithic mode (one process, no Kafka), local storage.
+# Based on example/docker-compose/single-binary/tempo.yaml from Tempo v3.1.1.
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# Span metrics and the service graph, written to Prometheus: request rates, errors and latency per
+# span, and the order service's calls to Postgres and MongoDB as a graph in Grafana.
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [span-metrics, service-graphs]
+
+usage_report:
+  reporting_enabled: false

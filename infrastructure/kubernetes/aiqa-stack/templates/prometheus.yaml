@@ -1,0 +1,47 @@
+# Prometheus with the same configuration as Docker Compose (files/prometheus/prometheus.yml), and the
+# remote-write receiver k6 pushes its metrics to.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |-
+{{ .Files.Get "files/prometheus/prometheus.yml" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: prometheus } }
+  template:
+    metadata:
+      labels: { app: prometheus }
+      # A changed configuration restarts Prometheus on `helm upgrade`.
+      annotations: { checksum/config: {{ .Files.Get "files/prometheus/prometheus.yml" | sha256sum }} }
+    spec:
+      containers:
+        - name: prometheus
+          image: {{ .Values.images.prometheus }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-remote-write-receiver
+          ports: [{ containerPort: 9090 }]
+          readinessProbe:
+            httpGet: { path: /-/ready, port: 9090 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/prometheus }
+            - { name: data, mountPath: /prometheus }
+      volumes:
+        - { name: config, configMap: { name: prometheus-config } }
+        - { name: data, emptyDir: {} }
+---
+{{ include "aiqa.service" (dict "name" "prometheus" "port" 9090 "nodePort" .Values.nodePorts.prometheus) }}

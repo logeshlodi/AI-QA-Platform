@@ -1,0 +1,112 @@
+{{- if .Values.observability.logs }}
+# Loki: log storage. Alloy (alloy.yaml) feeds it; Grafana queries it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+data:
+  loki.yaml: |-
+{{ .Files.Get "files/loki/loki.yaml" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels:
+    app: loki
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: loki } }
+  template:
+    metadata:
+      labels: { app: loki }
+      annotations: { checksum/config: {{ .Files.Get "files/loki/loki.yaml" | sha256sum }} }
+    spec:
+      securityContext: { fsGroup: 10001 }
+      containers:
+        - name: loki
+          image: {{ .Values.images.loki }}
+          args: ['-config.file=/etc/loki/loki.yaml']
+          ports: [{ containerPort: 3100 }]
+          readinessProbe:
+            httpGet: { path: /ready, port: 3100 }
+            initialDelaySeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/loki }
+            - { name: data, mountPath: /loki }
+      volumes:
+        - { name: config, configMap: { name: loki-config } }
+        - { name: data, emptyDir: {} }
+---
+{{ include "aiqa.service" (dict "name" "loki" "port" 3100) }}
+---
+# Grafana Alloy: tails the logs of every pod in this namespace through the Kubernetes API, so it needs
+# read access to pods and their logs here, and nothing else.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy-logs
+rules:
+  - apiGroups: ['']
+    resources: [pods, pods/log]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy-logs
+subjects: [{ kind: ServiceAccount, name: alloy, namespace: {{ .Release.Namespace }} }]
+roleRef: { kind: Role, name: alloy-logs, apiGroup: rbac.authorization.k8s.io }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+data:
+  config.alloy: |-
+{{ .Files.Get "files/alloy/config.alloy" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  labels:
+    app: alloy
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: alloy } }
+  template:
+    metadata:
+      labels: { app: alloy }
+      annotations: { checksum/config: {{ .Files.Get "files/alloy/config.alloy" | sha256sum }} }
+    spec:
+      serviceAccountName: alloy
+      containers:
+        - name: alloy
+          image: {{ .Values.images.alloy }}
+          args: ['run', '/etc/alloy/config.alloy', '--storage.path=/var/lib/alloy/data', '--server.http.listen-addr=0.0.0.0:12345']
+          env:
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          ports: [{ containerPort: 12345 }]
+          readinessProbe:
+            httpGet: { path: /-/ready, port: 12345 }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alloy }
+            - { name: data, mountPath: /var/lib/alloy/data }
+      volumes:
+        - { name: config, configMap: { name: alloy-config } }
+        - { name: data, emptyDir: {} }
+{{- end }}

@@ -1,0 +1,45 @@
+// Grafana Alloy: reads the logs of every pod in the namespace through the Kubernetes API and sends
+// them to Loki, labelled by app, pod, container and (for test Jobs) suite.
+
+discovery.kubernetes "pods" {
+  role = "pod"
+  namespaces {
+    names = [sys.env("NAMESPACE")]
+  }
+}
+
+discovery.relabel "pods" {
+  targets = discovery.kubernetes.pods.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app"]
+    target_label  = "app"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_suite"]
+    target_label  = "suite"
+  }
+}
+
+loki.source.kubernetes "pods" {
+  targets    = discovery.relabel.pods.output
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

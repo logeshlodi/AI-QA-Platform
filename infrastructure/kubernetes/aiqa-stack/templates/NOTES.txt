@@ -1,0 +1,9 @@
+The AI-QA-Platform stack is installed in namespace {{ .Release.Namespace }}.
+
+  Order service  http://localhost:{{ .Values.nodePorts.orderService }}   (metrics :{{ .Values.nodePorts.orderMetrics }})
+  Grafana        http://localhost:{{ .Values.nodePorts.grafana }}
+  Prometheus     http://localhost:{{ .Values.nodePorts.prometheus }}
+  Pushgateway    http://localhost:{{ .Values.nodePorts.pushgateway }}
+  Playwright     ws://localhost:{{ .Values.nodePorts.playwright }}/
+
+Run the suites in the cluster:  pnpm k8s:test data | ui | load [smoke|load|stress]

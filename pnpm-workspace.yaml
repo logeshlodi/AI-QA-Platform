@@ -42,6 +42,18 @@ catalog:
   '@opentelemetry/api': 1.10.0
   '@opentelemetry/sdk-metrics': 3.1.1
   '@opentelemetry/exporter-prometheus': 0.301.2
+  # Tracing (order service -> Tempo). SDK 3: @opentelemetry/sdk-trace replaces the deprecated
+  # sdk-trace-node; contrib instrumentations 0.78 match instrumentation 0.301.
+  '@opentelemetry/context-async-hooks': 3.1.1
+  '@opentelemetry/core': 3.1.1
+  '@opentelemetry/exporter-trace-otlp-http': 0.301.2
+  '@opentelemetry/instrumentation': 0.301.2
+  '@opentelemetry/instrumentation-http': 0.301.2
+  '@opentelemetry/instrumentation-mongodb': 0.78.0
+  '@opentelemetry/instrumentation-pg': 0.78.0
+  '@opentelemetry/resources': 3.1.1
+  '@opentelemetry/sdk-trace': 3.1.1
+  '@opentelemetry/semantic-conventions': 1.45.0
 
   # Language, unit tests, quality gates
   # typescript-eslint supports TypeScript up to 6.0; 7.0 also has no programmatic API yet.

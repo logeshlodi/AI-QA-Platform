@@ -1,0 +1,24 @@
+# Test runs push their results here (AIQA_PUSHGATEWAY); Prometheus scrapes it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pushgateway
+  labels:
+    app: pushgateway
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: pushgateway } }
+  template:
+    metadata: { labels: { app: pushgateway } }
+    spec:
+      containers:
+        - name: pushgateway
+          image: {{ .Values.images.pushgateway }}
+          ports: [{ containerPort: 9091 }]
+          readinessProbe:
+            httpGet: { path: /-/ready, port: 9091 }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+---
+{{ include "aiqa.service" (dict "name" "pushgateway" "port" 9091 "nodePort" .Values.nodePorts.pushgateway) }}

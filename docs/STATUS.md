@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan are built and have run on the laptop. Sprint 9 onward (agents, chat app, Kubernetes, learning content) is not started.
+Sprints 1 to 8 of the plan, the performance sprint and the Kubernetes and monitoring sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,41 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Kubernetes and monitoring sprint (20 Nov)
+
+All run on the Windows laptop: Docker Desktop (WSL 2, cgroup v1), kind 0.33 (Kubernetes 1.37),
+Helm 4.3, kubectl 1.36.
+
+| Check                                               | Result                                                                                                                                                                       |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm k8s:up`                                       | Cluster created, both images built and loaded, chart installed; all 11 pods ready                                                                                            |
+| `pnpm k8s:test data`                                | 30 passed, inside the cluster                                                                                                                                                |
+| `pnpm k8s:test ui` (Chromium on the browser server) | First run 112 passed, 4 failed (service-worker specs, see below). After the fix: 116 passed, 2 skipped on purpose                                                            |
+| `pnpm k8s:test load smoke`                          | 120 of 120 checks, 60 orders all confirmed, end-to-end p95 35 ms; recorded in the run history                                                                                |
+| Test results in Prometheus                          | `aiqa_run_pass_rate` present for `data`, `ui` and `load` (100 each)                                                                                                          |
+| Traces in Tempo                                     | One trace per order: `POST`, then `orders.placed process` (Kafka consumer, parent taken from the message headers), the Postgres transaction and the two MongoDB audit writes |
+| Logs in Loki                                        | Every pod's logs, labelled `app`, `pod`, `container`, `suite`                                                                                                                |
+| Tempo service graph                                 | `traces_service_graph_request_total` in Prometheus                                                                                                                           |
+| Grafana "Test runs" dashboard                       | Provisioned and loading its nine panels                                                                                                                                      |
+| Type-check, lint, format, unit tests                | Clean; 0 errors and the same 4 warnings; formatted; 168 unit tests passed                                                                                                    |
+| Docker stack config after the files moved           | `docker compose config` valid; every mounted file found                                                                                                                      |
+
+What came up:
+
+1. **kind would not start on this laptop.** Docker Desktop's WSL 2 kernel still uses cgroup v1, and
+   the kubelet in Kubernetes 1.35 and later refuses cgroup v1 by default. `pnpm k8s:up` detects
+   it and sets `failCgroupV1: false` for the kind node, with a warning. The lasting fix is to move
+   WSL to cgroup v2 (`infrastructure/kubernetes/README.md` shows how); that is a Windows setting,
+   left to the owner of the machine.
+2. **Specs that start their own local server failed on the remote browser.** The service-worker
+   specs serve a page on `127.0.0.1` inside the test Job, but the browser runs in another pod, where
+   that address is the browser's own. `connectOptions.exposeNetwork: '<loopback>'` makes Playwright
+   tunnel the browser's localhost traffic back to the test runner, and all four passed.
+3. **Helm mangled Windows paths in `--set-file`** (backslashes are escapes in `--set` values), so
+   the k6 script was not found. The script path now goes in with forward slashes.
+4. **OpenTelemetry JS 3 replaced `sdk-trace-node`** with `@opentelemetry/sdk-trace`, and
+   `BatchSpanProcessor` now takes an options object (`{ exporter }`). The type-check caught it.
 
 ## Performance sprint (19 to 20 Nov)
 
@@ -156,6 +191,10 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
 - **The Playwright test agents** are initialised (`.claude/agents`, `.mcp.json`, `tests/seed.spec.ts`,
   which passes). No plan or test has been generated with them yet.
 - **Firefox and WebKit run journeys and smoke only**; the labs run on Chromium by design.
+- **No CI job runs the cluster yet.** Everything Kubernetes has run on the laptop only; a manual or
+  nightly GitHub job with kind is possible but not built.
+- **The UI Job runs Chromium only.** The browser server runs one Playwright version and serves any
+  browser it has installed, but only the `chromium` project has run against it.
 
 ## Known gaps and honest notes
 
@@ -180,6 +219,9 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
 - **Node 23.3 is no longer supported here.** Its `node:sqlite` needs a flag (the stores fall back to
   JSON files), it is outside what Vitest 5 and ESLint 10 support, and `@platformatic/kafka` needs
   22.22+ or 24.6+. Use Node 24 LTS (`nvm use 24.22.3` on the laptop).
+- **The cluster keeps no data.** Postgres, MongoDB, Kafka, Prometheus, Loki and Tempo use
+  `emptyDir`, so `pnpm k8s:down` (or a pod restart) starts them empty. Test reports and k6
+  summaries are kept: they are written to `.aiqa/k8s/` on the laptop through a kind mount.
 - **k6's Prometheus remote-write output is deprecated** (planned for removal in k6 3, with
   OpenTelemetry as the replacement). It works in k6 2.4; moving to OpenTelemetry means reading
   histograms instead of ready-made percentiles in Grafana.

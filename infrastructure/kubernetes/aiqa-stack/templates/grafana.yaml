@@ -1,0 +1,67 @@
+# Grafana with the same data sources and dashboards as Docker Compose (files/grafana).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+data:
+  datasources.yml: |-
+{{ .Files.Get "files/grafana/provisioning/datasources/prometheus.yml" | indent 4 }}
+  {{- if or .Values.observability.logs .Values.observability.traces }}
+  logs-and-traces.yml: |-
+{{ .Files.Get "files/grafana/kubernetes/datasources.yml" | indent 4 }}
+  {{- end }}
+  dashboards.yml: |-
+{{ .Files.Get "files/grafana/provisioning/dashboards/dashboards.yml" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+data:
+{{ (.Files.Glob "files/grafana/dashboards/*.json").AsConfig | indent 2 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: grafana } }
+  template:
+    metadata:
+      labels: { app: grafana }
+      annotations:
+        checksum/dashboards: {{ (.Files.Glob "files/grafana/dashboards/*.json").AsConfig | sha256sum }}
+    spec:
+      containers:
+        - name: grafana
+          image: {{ .Values.images.grafana }}
+          env:
+            - { name: GF_AUTH_ANONYMOUS_ENABLED, value: 'true' }
+            - { name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer }
+          ports: [{ containerPort: 3000 }]
+          readinessProbe:
+            httpGet: { path: /api/health, port: 3000 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts:
+            - { name: datasources, mountPath: /etc/grafana/provisioning/datasources }
+            - { name: providers, mountPath: /etc/grafana/provisioning/dashboards }
+            - { name: dashboards, mountPath: /var/lib/grafana/dashboards }
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-provisioning
+            items:
+              - { key: datasources.yml, path: datasources.yml }
+              {{- if or .Values.observability.logs .Values.observability.traces }}
+              - { key: logs-and-traces.yml, path: logs-and-traces.yml }
+              {{- end }}
+        - name: providers
+          configMap: { name: grafana-provisioning, items: [{ key: dashboards.yml, path: dashboards.yml }] }
+        - { name: dashboards, configMap: { name: grafana-dashboards } }
+---
+{{ include "aiqa.service" (dict "name" "grafana" "port" 3000 "nodePort" .Values.nodePorts.grafana) }}

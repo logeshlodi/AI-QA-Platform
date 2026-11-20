@@ -1,0 +1,35 @@
+{{- if .Values.playwrightServer.enabled }}
+# A shared Playwright browser server. UI test Jobs connect with PW_WS_ENDPOINT instead of launching
+# browsers themselves. It runs from the tests image, so client and server Playwright versions match.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playwright-server
+  labels:
+    app: playwright-server
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: playwright-server } }
+  template:
+    metadata: { labels: { app: playwright-server } }
+    spec:
+      containers:
+        - name: playwright-server
+          image: {{ .Values.images.tests }}
+          imagePullPolicy: IfNotPresent
+          workingDir: /work/packages/playwright-framework
+          command: ['npx', 'playwright', 'run-server', '--port', '3000', '--host', '0.0.0.0']
+          ports: [{ containerPort: 3000 }]
+          readinessProbe:
+            tcpSocket: { port: 3000 }
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+          # Browsers need more shared memory than a container's default 64 MB.
+          volumeMounts: [{ name: dshm, mountPath: /dev/shm }]
+      volumes:
+        - name: dshm
+          emptyDir: { medium: Memory, sizeLimit: 1Gi }
+---
+{{ include "aiqa.service" (dict "name" "playwright-server" "port" 3000 "nodePort" .Values.nodePorts.playwright) }}
+{{- end }}

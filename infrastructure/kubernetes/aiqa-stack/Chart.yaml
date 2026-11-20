@@ -1,0 +1,9 @@
+apiVersion: v2
+name: aiqa-stack
+description: >-
+  The AI-QA-Platform test stack on Kubernetes: the order service with Postgres, MongoDB and Kafka,
+  Prometheus, Grafana and a Pushgateway for test metrics, a shared Playwright browser server, and
+  test Jobs (data, UI, k6) rendered on demand.
+type: application
+version: 0.1.0
+appVersion: '0.1.0'

@@ -212,6 +212,27 @@ a confirmed order, too little stock, an unknown SKU, a duplicate delivery and fo
 Grafana at http://localhost:3000 shows the service while the suites run (orders by outcome,
 processing time p50 and p95); Prometheus is at http://localhost:9090.
 
+## Kubernetes and monitoring
+
+The whole stack also runs on a local [kind](https://kind.sigs.k8s.io) cluster from one Helm chart
+(`infrastructure/kubernetes/aiqa-stack`), with the suites running as Kubernetes Jobs:
+
+```bash
+pnpm k8s:up                 # create the cluster, build and load the images, install the chart
+pnpm k8s:test data          # data suites as a Job
+pnpm k8s:test ui            # UI specs as a Job, browsers on the shared Playwright server
+pnpm k8s:test load smoke    # k6 as a Job (smoke, load or stress)
+pnpm k8s:status
+pnpm k8s:down
+```
+
+UI Jobs do not launch browsers: they connect to one shared `playwright run-server` in the cluster.
+Every Job pushes its results to Prometheus, and Grafana (http://localhost:30300) shows the tests
+next to the service: pass rate, duration, flaky tests, the slowest tests and performance trends.
+Loki holds the logs of every pod and Tempo the order service's traces, linked both ways. Needs
+Docker Desktop, `kind`, `kubectl` and `helm`; see `infrastructure/kubernetes/README.md` and
+`infrastructure/monitoring/README.md`.
+
 ## Docker and CI
 
 ```bash
@@ -244,6 +265,8 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 | `PW_BRANDED_BROWSERS=chrome,msedge`                                                    | Add smoke runs in real Chrome and Edge (`pnpm test:chrome`, `pnpm test:edge`) |
 | `LH_MIN_PERFORMANCE`, `LH_MIN_ACCESSIBILITY`, `LH_MIN_BEST_PRACTICES`, `LH_MIN_SEO`    | Lighthouse score floors for `pnpm test:lighthouse`                            |
 | `HEAL_MODE`, `HEAL_THRESHOLD`, `AI_ENABLED`, `OLLAMA_URL`, `OLLAMA_MODEL`, `LOG_LEVEL` | See `.env.example`                                                            |
+| `PW_WS_ENDPOINT=ws://localhost:30333/`                                                 | Run the browsers on a Playwright browser server instead of locally            |
+| `AIQA_PUSHGATEWAY=http://localhost:30091`                                              | Push each run's results to Prometheus for the Grafana "Test runs" dashboard   |
 
 ## Status
 

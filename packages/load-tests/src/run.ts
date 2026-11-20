@@ -6,8 +6,10 @@ import {
   createRunRepository,
   DASHBOARD_DIR,
   HISTORY_DIR,
+  pushRunMetrics,
   renderDashboard,
   type ResultRecord,
+  type StoredRun,
 } from '@aiqa/reporting-engine';
 
 /**
@@ -51,9 +53,18 @@ export function keyMetrics(summary: K6Summary): Record<string, number> {
   >;
 }
 
-function record(profile: string, exitCode: number, startedAt: Date): void {
-  const summary = fs.existsSync(SUMMARY)
-    ? (JSON.parse(fs.readFileSync(SUMMARY, 'utf8')) as K6Summary)
+/**
+ * Records one k6 run in the run history (suite "load"), regenerates the dashboard and, when
+ * AIQA_PUSHGATEWAY is set, pushes the run's metrics for Grafana.
+ */
+export async function record(
+  profile: string,
+  exitCode: number,
+  startedAt: Date,
+  summaryFile = SUMMARY,
+): Promise<void> {
+  const summary = fs.existsSync(summaryFile)
+    ? (JSON.parse(fs.readFileSync(summaryFile, 'utf8')) as K6Summary)
     : undefined;
   const runId = randomUUID();
   const passed = exitCode === 0;
@@ -74,29 +85,40 @@ function record(profile: string, exitCode: number, startedAt: Date): void {
     failureCategory: passed ? undefined : exitCode === 99 ? 'performance' : 'infrastructure',
     metrics: summary ? keyMetrics(summary) : undefined,
   };
+  const run: StoredRun = {
+    run: {
+      id: runId,
+      suite: 'load',
+      startedAt: startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      environment: process.env.CI ? 'ci' : 'local',
+      gitSha: process.env.GITHUB_SHA,
+      branch: process.env.GITHUB_REF_NAME,
+    },
+    results: [result],
+  };
   const repo = createRunRepository(HISTORY_DIR);
+  let history: StoredRun[];
   try {
-    repo.saveRun({
-      run: {
-        id: runId,
-        suite: 'load',
-        startedAt: startedAt.toISOString(),
-        finishedAt: new Date().toISOString(),
-        environment: process.env.CI ? 'ci' : 'local',
-        gitSha: process.env.GITHUB_SHA,
-        branch: process.env.GITHUB_REF_NAME,
-      },
-      results: [result],
-    });
+    repo.saveRun(run);
+    history = repo.listRuns(50);
     fs.mkdirSync(DASHBOARD_DIR, { recursive: true });
-    fs.writeFileSync(path.join(DASHBOARD_DIR, 'index.html'), renderDashboard(repo.listRuns(50)));
+    fs.writeFileSync(path.join(DASHBOARD_DIR, 'index.html'), renderDashboard(history));
   } finally {
     repo.close();
   }
   if (result.metrics) console.log(`Recorded in the run history: ${JSON.stringify(result.metrics)}`);
+  if (process.env.AIQA_PUSHGATEWAY) await pushRunMetrics(process.env.AIQA_PUSHGATEWAY, run, history);
 }
 
-function main(): void {
+async function main(): Promise<void> {
+  // Record only, for a k6 run that happened elsewhere (a Kubernetes Job):
+  //   run.ts --record <profile> <exit code> <summary.json> <started-at ISO>
+  if (process.argv[2] === '--record') {
+    const [profile = 'smoke', code = '1', file = SUMMARY, started] = process.argv.slice(3);
+    await record(profile, Number(code), started ? new Date(started) : new Date(), file);
+    return;
+  }
   const profile = process.argv[2] ?? process.env.K6_PROFILE ?? 'smoke';
   if (!PROFILES.includes(profile))
     throw new Error(`Unknown profile "${profile}". Use one of: ${PROFILES.join(', ')}`);
@@ -110,8 +132,13 @@ function main(): void {
   );
   if (k6.error) throw new Error(`Could not start docker: ${k6.error.message}. Is Docker running?`);
   const exitCode = k6.status ?? 1;
-  record(profile, exitCode, startedAt);
+  await record(profile, exitCode, startedAt);
   process.exitCode = exitCode;
 }
 
-if (require.main === module) main();
+if (require.main === module) {
+  main().catch((error: unknown) => {
+    console.error((error as Error).message);
+    process.exitCode = 1;
+  });
+}

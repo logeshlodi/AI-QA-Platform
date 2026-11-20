@@ -1,0 +1,14 @@
+# Shared by Docker Compose (infrastructure/docker/stack.compose.yml) and the Helm chart: both name
+# their services order-service and pushgateway.
+global:
+  scrape_interval: 5s
+scrape_configs:
+  - job_name: order-service
+    static_configs:
+      - targets: ['order-service:9464']
+  # Test runs push their results here (AIQA_PUSHGATEWAY); honor_labels keeps the suite label they
+  # pushed instead of replacing it with the gateway's own.
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']

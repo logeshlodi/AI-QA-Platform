@@ -61,6 +61,13 @@ export default defineConfig<Options>({
     video: 'retain-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 30_000,
+    // PW_WS_ENDPOINT=ws://host:port/ runs the browsers on a shared Playwright browser server
+    // (`playwright run-server`, as in the Kubernetes setup) instead of launching them here.
+    // The server must run the same Playwright version as this package. exposeNetwork tunnels the
+    // remote browser's localhost traffic back to this machine, so specs that start a local server work.
+    ...(process.env.PW_WS_ENDPOINT
+      ? { connectOptions: { wsEndpoint: process.env.PW_WS_ENDPOINT, exposeNetwork: '<loopback>' } }
+      : {}),
   },
   projects: [
     // Runs first: health-checks every target, then saves a logged-in session.
