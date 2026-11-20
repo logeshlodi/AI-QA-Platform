@@ -1,0 +1,18 @@
+{
+  "name": "@aiqa/contract-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consumer-driven contracts (Pact) for the order service: a storefront over HTTP and a notifications service over Kafka",
+  "scripts": {
+    "test": "vitest run --project consumer && vitest run --project provider",
+    "test:consumer": "vitest run --project consumer",
+    "test:provider": "vitest run --project provider"
+  },
+  "dependencies": {
+    "@aiqa/order-service": "workspace:*",
+    "@pact-foundation/pact": "catalog:"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
+  }
+}

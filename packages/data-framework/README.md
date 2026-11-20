@@ -10,6 +10,7 @@ Or do both in containers with one command: `npx pnpm stack:test`.
 | `tests/mongodb`  | The unique index that makes audit writes idempotent; every audit document against a zod schema                                             |
 | `tests/kafka`    | Topic layout; same key, same partition, same order                                                                                         |
 | `tests/flows`    | Kafka in, Postgres and MongoDB, Kafka out: confirmed, rejected for stock, unknown SKU, duplicate delivery, four dead-letter cases, metrics |
+| `tests/http`     | The HTTP API: products, orders, refusals; every response checked against the service's own OpenAPI document (`src/openapi.ts`)             |
 
 Patterns worth reading: test data from `@aiqa/test-data-engine` with a seed recorded on each test
 (`AIQA_SEED` replays it); a worker-wide Kafka "tap" that reads output topics from the beginning so a

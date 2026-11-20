@@ -3,12 +3,15 @@ import { aProduct, type Product } from '@aiqa/test-data-engine';
 import { MongoClient, type Db } from 'mongodb';
 import pg from 'pg';
 import { KafkaBus } from './bus';
+import { ContractChecker, type OpenApiDocument } from './openapi';
 import { stack, TOPICS } from './stack';
 
 interface WorkerFixtures {
   db: pg.Pool;
   mongo: Db;
   bus: KafkaBus;
+  /** The service's own OpenAPI document (GET /openapi.json), ready to check responses against. */
+  contract: ContractChecker;
 }
 
 interface TestFixtures {
@@ -44,6 +47,17 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await bus.disconnect();
     },
     { scope: 'worker', timeout: 60_000 },
+  ],
+  contract: [
+    async ({ playwright }, use) => {
+      const request = await playwright.request.newContext({ baseURL: stack.serviceUrl });
+      const response = await request.get('/openapi.json');
+      if (!response.ok()) throw new Error(`GET /openapi.json answered ${response.status()}`);
+      const document = (await response.json()) as OpenApiDocument;
+      await request.dispose();
+      await use(new ContractChecker(document));
+    },
+    { scope: 'worker' },
   ],
   service: async ({ playwright }, use) => {
     const request = await playwright.request.newContext({ baseURL: stack.serviceUrl });

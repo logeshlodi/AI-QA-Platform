@@ -28,6 +28,9 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/pg": "catalog:"
+    "@seriousme/openapi-schema-validator": "catalog:",
+    "@types/pg": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:"
   }
 }

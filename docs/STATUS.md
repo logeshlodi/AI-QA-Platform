@@ -1,29 +1,29 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint and the Kubernetes and monitoring sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint and the contracts sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
 
 ## What was run, and the result
 
-| Check                                                                    | Where                                     | Result                                                                                                                |
-| ------------------------------------------------------------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Type-check (`pnpm typecheck`)                                            | Windows laptop and Linux workspace        | Clean                                                                                                                 |
-| Lint (`pnpm lint`)                                                       | Windows laptop and Linux workspace        | 0 errors, 4 warnings                                                                                                  |
-| Unit tests (`pnpm test:unit`)                                            | Linux workspace, Node 22                  | 132 passed                                                                                                            |
-| Unit tests (`pnpm test:unit`)                                            | Windows laptop, Node 24.22                | 135 passed, none skipped (the six SQLite store contracts now run; they skipped on Node 23.3)                          |
-| API specs (`pnpm test:api`)                                              | Windows laptop, live APIs                 | 18 passed, twice, both recorded in the run history                                                                    |
-| UI specs (`pnpm test:ui`)                                                | Windows laptop, live sites                | 143 tests: 141 passed, 2 skipped on purpose (19 Nov); 1 Firefox flake on 15 Nov                                       |
-| Live model tests (`pnpm test:ai`)                                        | Windows laptop, `qwen2.5-coder:7b`        | 4 passed: failure analysis, bug report, locator generation, test data                                                 |
-| Generated-data API spec with `AI_ENABLED=true`                           | Windows laptop, live API                  | Passed; the booking was written by the model, accepted and read back unchanged                                        |
-| Data suites (`pnpm test:data`) against the Docker stack                  | Windows laptop, Docker Desktop            | 24 passed after one fix (metrics exporter bound to localhost)                                                         |
-| One command (`pnpm stack:test`): build, start, test in a container, stop | Windows laptop, Docker Desktop            | 24 passed, exit code 0                                                                                                |
-| Prometheus and Grafana                                                   | Windows laptop, Docker Desktop            | Target up; counters matched the run (2 confirmed, 2 rejected, 4 dead-lettered, 1 duplicate); dashboard checked by eye |
-| `aiqa new page --url` generator                                          | Windows laptop, live SauceDemo login page | Page object (5 role locators) and spec written; the generated spec passed. Files removed after the check              |
-| Run-history dashboard                                                    | Windows laptop                            | Built from the three recorded runs, branch and commit captured; checked by eye                                        |
-| Smoke in Chrome and Edge                                                 | Windows laptop                            | 4 passed in each                                                                                                      |
-| Lighthouse audit (`pnpm test:lighthouse`)                                | Windows laptop                            | Passed against the score floors                                                                                       |
-| Linux visual baseline (Docker `snapshots`)                               | Windows laptop, Docker Desktop            | Created `login-form-chromium-linux.png`                                                                               |
-| GitHub Actions                                                           | GitHub                                    | Green on the initial commit and on the pnpm update; later pushes not checked from here                                |
+| Check                                                                    | Where                                     | Result                                                                                                                                 |
+| ------------------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Type-check (`pnpm typecheck`)                                            | Windows laptop and Linux workspace        | Clean                                                                                                                                  |
+| Lint (`pnpm lint`)                                                       | Windows laptop and Linux workspace        | 0 errors, 4 warnings                                                                                                                   |
+| Unit tests (`pnpm test:unit`)                                            | Linux workspace, Node 22                  | 132 passed                                                                                                                             |
+| Unit tests (`pnpm test:unit`)                                            | Windows laptop, Node 24.22                | 135 passed, none skipped (the six SQLite store contracts now run; they skipped on Node 23.3)                                           |
+| API specs (`pnpm test:api`)                                              | Windows laptop, live APIs                 | 18 passed, twice, both recorded in the run history                                                                                     |
+| UI specs (`pnpm test:ui`)                                                | Windows laptop, live sites                | 143 tests: 141 passed, 2 skipped on purpose (19 Nov); 1 Firefox flake on 15 Nov                                                        |
+| Live model tests (`pnpm test:ai`)                                        | Windows laptop, `qwen2.5-coder:7b`        | 4 passed: failure analysis, bug report, locator generation, test data                                                                  |
+| Generated-data API spec with `AI_ENABLED=true`                           | Windows laptop, live API                  | Passed; the booking was written by the model, accepted and read back unchanged                                                         |
+| Data suites (`pnpm test:data`) against the Docker stack                  | Windows laptop, Docker Desktop            | 24 passed after one fix (metrics exporter bound to localhost)                                                                          |
+| One command (`pnpm stack:test`): build, start, test in a container, stop | Windows laptop, Docker Desktop            | 24 passed, exit code 0                                                                                                                 |
+| Prometheus and Grafana                                                   | Windows laptop, Docker Desktop            | Target up; counters matched the run (2 confirmed, 2 rejected, 4 dead-lettered, 1 duplicate); dashboard checked by eye                  |
+| `aiqa new page --url` generator                                          | Windows laptop, live SauceDemo login page | Page object (5 role locators) and spec written; the generated spec passed. Files removed after the check                               |
+| Run-history dashboard                                                    | Windows laptop                            | Built from the three recorded runs, branch and commit captured; checked by eye                                                         |
+| Smoke in Chrome and Edge                                                 | Windows laptop                            | 4 passed in each                                                                                                                       |
+| Lighthouse audit (`pnpm test:lighthouse`)                                | Windows laptop                            | Passed against the score floors                                                                                                        |
+| Linux visual baseline (Docker `snapshots`)                               | Windows laptop, Docker Desktop            | Created `login-form-chromium-linux.png`                                                                                                |
+| GitHub Actions                                                           | GitHub                                    | Run #38 (20 Nov) green in every job: unit, API, 3 UI shards, Chrome and Edge, Lighthouse, visual, browser performance, k6, data suites |
 
 On 15 Nov the Firefox checkout journey timed out on the Finish click during the full
 four-worker run. The same spec then passed three times in a row on its own, so it is recorded as a
@@ -39,6 +39,28 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Contracts and clean-up sprint (20 Nov)
+
+All run on the Windows laptop, Node 24.22.3, Docker Desktop.
+
+| Check                                                             | Result                                                                                                                                                                |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Order service unit tests (`apps/order-service/tests/api.test.ts`) | The generated document is valid OpenAPI 3.1 and lists every route; its schemas reject a wrong status, a bad uuid, empty lines and a missing field                     |
+| Data suites with the OpenAPI checks (`pnpm test:data`)            | 37 passed (30 before, 7 new): every response the HTTP API can give matched the document the running service publishes, and a deliberately wrong check failed          |
+| Pact consumer tests                                               | 7 passed: 5 storefront HTTP interactions, 2 notifications Kafka events                                                                                                |
+| Pact provider check (`pnpm test:contract`)                        | Every interaction verified against the running service and the service's event builders; passed again on a second run (the fixed order ids are handled as duplicates) |
+| The provider check can fail                                       | With `totalCents` published as a string, the message check failed with `$.totalCents -> Expected '2500' (String) to be an integer`                                    |
+| Type-check, lint, format, unit tests                              | Clean; 0 errors and the same 4 warnings; formatted; 173 unit tests passed                                                                                             |
+| GitHub Actions run #38                                            | Every job green, including Chrome and Edge, Lighthouse and visual, which had not been confirmed before                                                                |
+
+Clean-up: the stale copy of the workflow in `infrastructure/github-actions/` is replaced by a README
+that points to `.github/workflows`; the README has a roadmap; `docs/architecture.md` and eleven
+decision records in `docs/adr/` explain the design.
+
+One thing to know: Pact's native core reports anonymous usage unless `PACT_DO_NOT_TRACK=true`, and
+its `@scarf/scarf` dependency has an install script that reports installs. The first is set in the
+Vitest config and the CI job; the second is in `ignoredBuiltDependencies`, so pnpm never runs it.
 
 ## Kubernetes and monitoring sprint (20 Nov)
 
@@ -185,9 +207,10 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
 
 ## Not run yet
 
-- **Azure DevOps.** `azure-pipelines.yml` mirrors the GitHub workflow but has not run: it needs an
-  Azure DevOps organisation (the free tier is enough). The root `Jenkinsfile` (Linux Jenkins with
-  Docker) has not run either; the Windows one has.
+- **Azure DevOps.** Set up on the "Learn DevOps" project with a self-hosted agent on the laptop
+  (Windows pipeline) and a request for Microsoft's free hosted grant. The result of its runs has not
+  been confirmed from here. The root `Jenkinsfile` (Linux Jenkins with Docker) has not run; the
+  Windows one has.
 - **The Playwright test agents** are initialised (`.claude/agents`, `.mcp.json`, `tests/seed.spec.ts`,
   which passes). No plan or test has been generated with them yet.
 - **Firefox and WebKit run journeys and smoke only**; the labs run on Chromium by design.

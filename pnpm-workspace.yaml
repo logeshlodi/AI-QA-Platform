@@ -5,6 +5,8 @@ packages:
 # The `pnpm` dev dependency's install script only self-installs a global copy; not wanted here.
 ignoredBuiltDependencies:
   - pnpm
+  # Pact's usage-analytics package phones home from its install script; never run it.
+  - '@scarf/scarf'
 
 # Versions are pinned once here; packages refer to them as "catalog:".
 catalog:
@@ -19,6 +21,12 @@ catalog:
 
   # API testing and test data
   'zod': 4.6.7
+
+  # Contract testing: OpenAPI checks (JSON Schema 2020-12) and consumer-driven contracts
+  'ajv': 8.20.0
+  'ajv-formats': 3.0.1
+  '@seriousme/openapi-schema-validator': 2.12.0
+  '@pact-foundation/pact': 17.1.4
   'fast-xml-parser': 5.12.1
   '@faker-js/faker': 10.6.0
 

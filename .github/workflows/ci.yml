@@ -89,6 +89,29 @@ jobs:
         if: always()
         with: { name: data-report, path: packages/data-framework/playwright-report, retention-days: 14 }
 
+  contracts:
+    name: Contracts (Pact consumer and provider)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # The storefront's HTTP contract is replayed against the real service; the notifications
+      # contract is checked against the service's own event builders.
+      - run: pnpm stack:up
+      - run: pnpm test:contract
+        env: { PACT_DO_NOT_TRACK: 'true' }
+      - name: Order service logs
+        if: failure()
+        run: docker compose -f infrastructure/docker/stack.compose.yml logs order-service
+      - if: always()
+        run: pnpm stack:down
+      # No Pact Broker here: the contracts travel as an artifact, to read or to verify elsewhere.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: pacts, path: packages/contract-tests/pacts, retention-days: 30 }
+
   branded:
     name: Smoke in real ${{ matrix.channel }}
     needs: quality

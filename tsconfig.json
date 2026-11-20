@@ -10,7 +10,8 @@
       "@aiqa/cli": ["./packages/cli/src/index.ts"],
       "@aiqa/playwright-framework": ["./packages/playwright-framework/src/index.ts"],
       "@aiqa/api-framework": ["./packages/api-framework/src/index.ts"],
-      "@aiqa/data-framework": ["./packages/data-framework/src/index.ts"]
+      "@aiqa/data-framework": ["./packages/data-framework/src/index.ts"],
+      "@aiqa/order-service/*": ["./apps/order-service/src/*"]
     }
   },
   "include": [

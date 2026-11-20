@@ -11,7 +11,9 @@ import {
   type MessagesStream,
 } from '@platformatic/kafka';
 import { config, TOPICS } from './config';
+import { openApiDocument, type OrderAccepted, type OrderView, type ProductView } from './api';
 import { placedOrder, productUpsert } from './contract';
+import { confirmedEvent, deadLetterEvent, rejectedEvent } from './events';
 import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
 import { ordersProcessed, processingSeconds, shutdownMetrics } from './metrics';
 import { PartitionWorkers } from './partitions';
@@ -41,7 +43,7 @@ async function handle(raw: string | undefined, key: string | undefined): Promise
   const parsed = placedOrder.safeParse(json);
   if (!parsed.success) {
     const reason = json === undefined ? 'not JSON' : parsed.error.issues.map((i) => i.message).join('; ');
-    await publish(TOPICS.deadLetter, key ?? 'unknown', { reason, payload: raw ?? null });
+    await publish(TOPICS.deadLetter, key ?? 'unknown', deadLetterEvent(reason, raw));
     ordersProcessed.add(1, { outcome: 'invalid' });
     log('order rejected to DLQ', { key, reason });
     return;
@@ -56,10 +58,10 @@ async function handle(raw: string | undefined, key: string | undefined): Promise
   }
   if (outcome.kind === 'confirmed') {
     await recordAudit({ orderId: order.id, event: 'confirmed' });
-    await publish(TOPICS.confirmed, order.id, { orderId: order.id, totalCents: order.totalCents });
+    await publish(TOPICS.confirmed, order.id, confirmedEvent(order));
   } else {
     await recordAudit({ orderId: order.id, event: 'rejected', detail: outcome.reason });
-    await publish(TOPICS.rejected, order.id, { orderId: order.id, reason: outcome.reason });
+    await publish(TOPICS.rejected, order.id, rejectedEvent(order, outcome.reason));
   }
   processingSeconds.record((performance.now() - started) / 1000, { outcome: outcome.kind });
   log(`order ${outcome.kind}`, { orderId: order.id });
@@ -92,6 +94,7 @@ const issues = (error: { issues: { message: string }[] }) => error.issues.map((i
 const server = http.createServer(async (req, res) => {
   try {
     if (req.url === '/health') return json(res, ready ? 200 : 503, { ready });
+    if (req.method === 'GET' && req.url === '/openapi.json') return json(res, 200, openApiDocument());
 
     // HTTP front door for orders (used by the load tests): checked against the same contract as the
     // Kafka path, then published to orders.placed. 202: accepted, the outcome follows asynchronously
@@ -102,7 +105,7 @@ const server = http.createServer(async (req, res) => {
       const parsed = placedOrder.safeParse(await readJson(req));
       if (!parsed.success) return json(res, 400, { error: issues(parsed.error) });
       await publish(TOPICS.placed, parsed.data.id, parsed.data);
-      return json(res, 202, { orderId: parsed.data.id, status: 'accepted' });
+      return json(res, 202, { orderId: parsed.data.id, status: 'accepted' } satisfies OrderAccepted);
     }
 
     // Catalogue upkeep: create a product or replace its name, price and stock. A demo service with no
@@ -112,13 +115,19 @@ const server = http.createServer(async (req, res) => {
       const parsed = productUpsert.safeParse(await readJson(req));
       if (!parsed.success) return json(res, 400, { error: issues(parsed.error) });
       const { name, priceCents, stock } = parsed.data;
+      const sku = product[1]!; // the pattern's only group, so always present
       const saved = await pool.query(
         `INSERT INTO products (sku, name, price_cents, stock) VALUES ($1, $2, $3, $4)
          ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name, price_cents = EXCLUDED.price_cents, stock = EXCLUDED.stock
          RETURNING (xmax = 0) AS created`,
-        [product[1], name, priceCents, stock],
+        [sku, name, priceCents, stock],
       );
-      return json(res, saved.rows[0].created ? 201 : 200, { sku: product[1], name, priceCents, stock });
+      return json(res, saved.rows[0].created ? 201 : 200, {
+        sku,
+        name,
+        priceCents,
+        stock,
+      } satisfies ProductView);
     }
 
     const match = /^\/orders\/([0-9a-f-]{36})$/i.exec(req.url ?? '');
@@ -145,7 +154,7 @@ const server = http.createServer(async (req, res) => {
           quantity: l.quantity,
           unitPriceCents: l.unit_price_cents,
         })),
-      });
+      } satisfies OrderView);
     }
     return json(res, 404, { error: 'not found' });
   } catch (error) {

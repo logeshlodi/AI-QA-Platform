@@ -21,3 +21,9 @@ orders.placed (Kafka) -> validate -> Postgres: order + lines, reserve stock (one
 - `GET /health`, `GET /orders/:id` on port 8080 inside the stack (published as 8088 on your machine); OpenTelemetry metrics in Prometheus format on 9464 `/metrics`.
 
 Runs in the Docker stack: `npx pnpm stack:up` (see the root README).
+
+## HTTP API and contracts
+
+`GET /openapi.json` serves the API's OpenAPI 3.1 document, built from the zod schemas the service
+validates requests with (`src/api.ts`), so it cannot drift from the code. The Kafka events are built
+only in `src/events.ts`; the Pact provider check (`packages/contract-tests`) calls the same functions.

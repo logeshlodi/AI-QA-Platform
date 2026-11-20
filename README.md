@@ -3,11 +3,12 @@
 [![CI](https://github.com/logeshlodi/AI-QA-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/logeshlodi/AI-QA-Platform/actions/workflows/ci.yml)
 
 An AI-assisted Playwright + TypeScript automation platform, built as a pnpm monorepo and tested
-against live public demo applications. It covers Sprints 1 to 8 of the plan:
-cross-browser UI tests, API tests, a self-healing engine with an audit trail, an optional
-local-model layer, run history with trends and flaky-test detection, seeded test data, a code
-generator, Postgres/MongoDB/Kafka suites against a real service on Docker Compose, metrics in
-Grafana, browser performance checks and k6 load tests with trends, and the same pipeline for GitHub Actions, Azure DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
+against live public demo applications. It has cross-browser UI tests, API tests, a self-healing
+engine with an audit trail, an optional local-model layer, run history with trends and flaky-test
+detection, seeded test data, a code generator, Postgres/MongoDB/Kafka suites against a real service,
+browser performance checks and k6 load tests, the whole stack on Kubernetes with the tests running as
+Jobs, test results, logs and traces in Grafana, and the same pipeline for GitHub Actions, Azure
+DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
 
 ## Quick start (Windows `cmd`, macOS, Linux)
 
@@ -32,6 +33,7 @@ npx pnpm stack:up               # Postgres, MongoDB, Kafka, the order service, P
 npx pnpm test:data              # the data and messaging suites against that stack
 npx pnpm stack:test             # one command: build, start, run the data suites in a container, stop
 npx pnpm stack:down             # stop the stack and delete its data
+npx pnpm test:contract          # Pact: consumer tests write the contracts, then the running service is checked
 
 npx pnpm test:perf              # Web Vitals, page weight, slow-phone run, memory leak check (Chromium)
 npx pnpm perf:load              # k6 load test of the order service (needs stack:up); smoke | load | stress
@@ -46,19 +48,20 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 
 ## Packages
 
-| Package                         | What it owns                                                                                                     | Tests                 |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `packages/shared`               | Typed env config (zod), demo-target registry, logger, error types                                                | Vitest                |
-| `packages/ai-engine`            | `LlmProvider` interface, Ollama adapter, prompt templates, and five tasks (see "Optional: a local model")        | Vitest, fake provider |
-| `packages/self-healing-engine`  | Fingerprints, four rule strategies plus a model tie-breaker, scoring, stores (memory, JSON, SQLite), heal report | Vitest                |
-| `packages/playwright-framework` | Fixtures, page objects, components, flows, checks, the Playwright healing adapter, all UI specs                  | Playwright            |
-| `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                          | Playwright            |
-| `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard      | Vitest                |
-| `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records   | Vitest                |
-| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data              | Vitest                |
-| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                        | Playwright, Docker    |
-| `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                             | Vitest, k6 in Docker  |
-| `apps/order-service`            | The system under test for the data suites: Kafka in, Postgres and MongoDB writes, Kafka out, OpenTelemetry       | Data suites           |
+| Package                         | What it owns                                                                                                       | Tests                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| `packages/shared`               | Typed env config (zod), demo-target registry, logger, error types                                                  | Vitest                |
+| `packages/ai-engine`            | `LlmProvider` interface, Ollama adapter, prompt templates, and five tasks (see "Optional: a local model")          | Vitest, fake provider |
+| `packages/self-healing-engine`  | Fingerprints, four rule strategies plus a model tie-breaker, scoring, stores (memory, JSON, SQLite), heal report   | Vitest                |
+| `packages/playwright-framework` | Fixtures, page objects, components, flows, checks, the Playwright healing adapter, all UI specs                    | Playwright            |
+| `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                            | Playwright            |
+| `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard        | Vitest                |
+| `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records     | Vitest                |
+| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data                | Vitest                |
+| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
+| `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
+| `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
+| `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB writes, Kafka out; OpenAPI at `/openapi.json`; OpenTelemetry | Data suites           |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
 import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
@@ -241,8 +244,9 @@ docker compose -f infrastructure/docker/docker-compose.yml run --rm snapshots   
 ```
 
 GitHub Actions (`.github/workflows/ci.yml`) runs type-check, lint and unit tests, the API specs,
-the UI specs in three shards with a merged report, smoke in real Chrome and Edge, and the
-Lighthouse audit, and the data suites on the Docker stack. Every job uses one shared setup action
+the UI specs in three shards with a merged report, smoke in real Chrome and Edge, the Lighthouse
+audit, the visual check against Linux baselines, browser performance, a k6 smoke test, the data
+suites on the Docker stack, and the Pact contracts (kept as an artifact). Every job uses one shared setup action
 (`.github/actions/setup`): Node, pnpm, a cached install, and Playwright browsers matched to the
 installed Playwright version and cached per version, so a Playwright update never needs a workflow
 change. Each run page shows a summary with the recent runs and the flaky list.
@@ -267,6 +271,19 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 | `HEAL_MODE`, `HEAL_THRESHOLD`, `AI_ENABLED`, `OLLAMA_URL`, `OLLAMA_MODEL`, `LOG_LEVEL` | See `.env.example`                                                            |
 | `PW_WS_ENDPOINT=ws://localhost:30333/`                                                 | Run the browsers on a Playwright browser server instead of locally            |
 | `AIQA_PUSHGATEWAY=http://localhost:30091`                                              | Push each run's results to Prometheus for the Grafana "Test runs" dashboard   |
+
+## Roadmap
+
+| Phase | Sprints                 | What                                                                                                 | State                   |
+| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1-3   | 1-5                     | Working core: framework, locator and feature labs, API tests, self-healing, the AI layer             | Done                    |
+| 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done                    |
+| -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done                    |
+| -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done                    |
+| 5     | 9 onward                | AI agents, chat app, web dashboard, learning content (`interview-learning`, `examples`, `templates`) | Scoped before it starts |
+
+Folders that belong to Phase 5 exist already with a README that says so. `docs/architecture.md`
+explains how the parts fit together, and `docs/adr/` records the decisions behind them.
 
 ## Status
 

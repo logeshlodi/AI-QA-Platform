@@ -50,7 +50,10 @@ export default tseslint.config(
       'playwright/no-conditional-in-test': 'off',
       'playwright/prefer-to-have-count': 'off',
       'playwright/consistent-spacing-between-blocks': 'off',
-      'playwright/expect-expect': ['warn', { assertFunctionNames: ['expect', 'expectSchema'] }],
+      'playwright/expect-expect': [
+        'warn',
+        { assertFunctionNames: ['expect', 'expectSchema', 'expectToMatch'] },
+      ],
     },
   },
 );
