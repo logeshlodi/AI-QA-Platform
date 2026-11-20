@@ -49,6 +49,7 @@ export class Healer {
         testId: this.testInfo.testId,
         failedSelector: String(primary),
         healedSelector: decision.candidate?.element.cssPath,
+        suggestion: decision.candidate?.suggestion,
         strategy: decision.candidate?.strategy ?? 'none',
         score: decision.candidate?.score ?? decision.ranked[0]?.score ?? 0,
         outcome: decision.outcome,

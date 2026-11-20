@@ -9,3 +9,4 @@ export * from './store/repository';
 export * from './store/json';
 export * from './store/sqlite';
 export * from './store/factory';
+export * from './patch';

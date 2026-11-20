@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS locator_fingerprint (
 );
 CREATE TABLE IF NOT EXISTS heal_event (
   id INTEGER PRIMARY KEY, test_id TEXT NOT NULL, locator_key TEXT NOT NULL,
-  failed_selector TEXT NOT NULL, healed_selector TEXT, strategy TEXT NOT NULL,
+  failed_selector TEXT NOT NULL, healed_selector TEXT, suggestion TEXT, strategy TEXT NOT NULL,
   score REAL NOT NULL, outcome TEXT NOT NULL, created_at TEXT NOT NULL
 );
 `;

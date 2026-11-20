@@ -34,6 +34,12 @@ export class SqliteHealRepository implements HealRepository {
     // WAL plus a busy timeout lets several Playwright workers write at once.
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
     this.db.exec(SCHEMA);
+    // Stores made before the suggestion column existed get it added once.
+    const columns = this.db
+      .prepare('PRAGMA table_info(heal_event)')
+      .all()
+      .map((c) => text(c.name));
+    if (!columns.includes('suggestion')) this.db.exec('ALTER TABLE heal_event ADD COLUMN suggestion TEXT');
   }
 
   getFingerprint(locatorKey: string): Fingerprint | undefined {
@@ -88,14 +94,15 @@ export class SqliteHealRepository implements HealRepository {
   recordEvent(e: HealEvent): void {
     this.db
       .prepare(
-        `INSERT INTO heal_event (test_id, locator_key, failed_selector, healed_selector, strategy, score, outcome, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO heal_event (test_id, locator_key, failed_selector, healed_selector, suggestion, strategy, score, outcome, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         e.testId,
         e.locatorKey,
         e.failedSelector,
         e.healedSelector ?? null,
+        e.suggestion ?? null,
         e.strategy,
         e.score,
         e.outcome,
@@ -112,6 +119,7 @@ export class SqliteHealRepository implements HealRepository {
         locatorKey: text(row.locator_key),
         failedSelector: text(row.failed_selector),
         healedSelector: typeof row.healed_selector === 'string' ? row.healed_selector : undefined,
+        suggestion: typeof row.suggestion === 'string' ? row.suggestion : undefined,
         strategy: text(row.strategy),
         score: Number(row.score),
         outcome: text(row.outcome) as HealEvent['outcome'],

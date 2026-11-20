@@ -206,6 +206,9 @@ Phase 5 has started: [ADR 0014](docs/adr/0014-agents-rules-first-on-the-ai-sdk.m
 ```bash
 npx pnpm aiqa agents triage --suite api          # why each failed test of the latest run failed
 npx pnpm aiqa agents eval triage                 # score Triage on its 30 labelled failures
+npx pnpm aiqa agents plan inventory --path /inventory.html --logged-in   # a test plan from the live page
+npx pnpm aiqa agents generate specs/inventory.plan.md --scenario 1       # a spec that must pass 3 runs
+npx pnpm aiqa agents heal-review --apply                                 # healed locators as patches, after your yes
 npx pnpm aiqa agents log                         # every agent run: tools called, answer, model, time
 npx pnpm mcp                                     # the platform's MCP server on stdio
 ```
@@ -309,7 +312,7 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 
 ## Learning path
 
-[`docs/learning`](docs/learning/README.md) turns the repository into a course: twelve stops, each with
+[`docs/learning`](docs/learning/README.md) turns the repository into a course: thirteen stops, each with
 a guide to read, a command to run, a lab to fix and a quiz to check yourself.
 
 ```bash

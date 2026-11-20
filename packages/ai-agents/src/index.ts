@@ -8,3 +8,6 @@ export * from './triage/rules';
 export * from './triage/agent';
 export * from './triage/cases';
 export * from './triage/eval';
+export * from './healing/agent';
+export * from './planner/agent';
+export * from './generator/agent';

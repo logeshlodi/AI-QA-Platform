@@ -55,6 +55,8 @@ export interface HealEvent {
   testId: string;
   failedSelector: string;
   healedSelector?: string;
+  /** The readable locator to use instead, e.g. page.getByRole('button', { name: 'Pay now' }). */
+  suggestion?: string;
   strategy: string;
   score: number;
   outcome: HealOutcome;

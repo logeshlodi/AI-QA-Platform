@@ -12,6 +12,7 @@ export interface TriageEvalOptions {
   log?: RunLog;
   /** Run only these case ids. */
   only?: string[];
+  timeoutMs?: number;
 }
 
 /** The Triage agent against its 30 labelled failures. Sprint 9's gate: 80% or better with a model. */

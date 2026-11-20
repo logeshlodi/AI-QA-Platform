@@ -21,6 +21,7 @@ export interface TriageOptions {
   maxToolCalls?: number;
   /** Ask the model even when a rule is sure. Used to measure the model on its own. Default false. */
   skipRules?: boolean;
+  timeoutMs?: number;
 }
 
 const NEXT_STEP: Record<TriageLabel, string> = {
@@ -123,6 +124,7 @@ export async function triage(ctx: TriageContext, options: TriageOptions = {}): P
         tools: toolsFor(ctx),
         output: answerSchema,
         maxToolCalls: options.maxToolCalls ?? 2,
+        timeoutMs: options.timeoutMs,
       });
       const verdict: TriageVerdict = {
         ...run.output,

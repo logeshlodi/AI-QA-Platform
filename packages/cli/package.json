@@ -10,6 +10,7 @@
     "@aiqa/ai-engine": "workspace:*",
     "@aiqa/interview-learning": "workspace:*",
     "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/test-data-engine": "workspace:*",
     "@playwright/test": "catalog:",
     "commander": "catalog:",

@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprint 9 (agent runtime, Triage agent, MCP server) is built and has run; the other agents, the web apps and the docs site are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server) and 10 (Planner, Generator, Healing review) are built and have run; the other agents, the web apps and the docs site are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,24 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Sprint 10: Planner, Generator and Healing review agents (20 Nov)
+
+Run on the Windows laptop, `qwen2.5-coder:7b` on CPU through Ollama, against SauceDemo.
+
+| Check                                                                          | Result                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Healing review, end to end (`pnpm test:ui tests/healing`)                      | 10 passed, 1 skipped (the model tie-break, AI off). New: a real heal event becomes a page-object patch, the patch applies, and the patched page object clicks the button on the changed page. **Gate, second half: passed** |
+| Planner (`aiqa agents plan inventory --path /inventory.html --logged-in`)      | `specs/inventory.plan.md`, 3 scenarios, 9 min 36 s. Scenarios 1 and 2 are sound; scenario 3 is labelled negative but is not one                                                                                             |
+| Generator, first run                                                           | Failed both attempts on the same two mistakes: the fixtures import one folder too shallow, and quote marks inside step titles. Moved out of `tests/` as designed                                                            |
+| Generator, after adding `repairSpec` (plain-code fixes for those two mistakes) | `tests/generated/main-happy-path.spec.ts` lint-clean and **passed 3 runs in a row on the first attempt**, 6 min 16 s. **Gate, first half: passed**                                                                          |
+| Unit tests                                                                     | All pass (33 in `ai-agents`, 42 in `self-healing-engine`, among them the heal-store migration and patch rules)                                                                                                              |
+| Type-check, lint, Prettier                                                     | Clean; lint 0 errors, the same 4 warnings                                                                                                                                                                                   |
+
+Review note on the generated spec: its second step says "add the first product" but adds the backpack,
+which is not first after sorting by price. The assertion still holds; a reviewer should rename the step
+or change the product. Playwright's own planner, generator and healer were not run: they need Claude
+Code and your go-ahead (see `docs/learning/11-test-agents.md`).
 
 ## Sprint 9: agent runtime, Triage agent, MCP server (20 Nov)
 

@@ -82,7 +82,7 @@ export async function runAgent<O>(options: AgentRunOptions<O>): Promise<AgentRun
     prepareStep: async () => (calls.length >= budget ? { activeTools: [] } : {}),
     output: Output.object({ schema: options.output }),
     temperature: 0,
-    abortSignal: AbortSignal.timeout(options.timeoutMs ?? 300_000),
+    abortSignal: AbortSignal.timeout(options.timeoutMs ?? 900_000),
   });
 
   return {

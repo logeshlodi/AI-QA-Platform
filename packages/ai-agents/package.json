@@ -9,6 +9,7 @@
     "@ai-sdk/openai-compatible": "catalog:",
     "@aiqa/ai-engine": "workspace:*",
     "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "ai": "catalog:",
     "ai-sdk-ollama": "catalog:",
