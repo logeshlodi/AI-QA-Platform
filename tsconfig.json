@@ -21,6 +21,7 @@
     "apps/*/tests",
     "packages/*/tests",
     "packages/*/*.ts",
+    "packages/examples/labs",
     "vitest.config.ts",
     "vitest.live.config.ts"
   ]

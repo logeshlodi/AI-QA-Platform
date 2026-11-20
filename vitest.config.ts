@@ -11,12 +11,13 @@ export default defineConfig({
       '@aiqa/self-healing-engine': pkg('self-healing-engine'),
       '@aiqa/reporting-engine': pkg('reporting-engine'),
       '@aiqa/test-data-engine': pkg('test-data-engine'),
+      '@aiqa/interview-learning': pkg('interview-learning'),
     },
   },
   test: {
     // Unit tests only. Browser and API specs are run by Playwright.
     include: [
-      'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,cli,load-tests}/tests/**/*.test.ts',
+      'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,interview-learning,cli,load-tests}/tests/**/*.test.ts',
       'apps/order-service/tests/**/*.test.ts',
     ],
     environment: 'node',

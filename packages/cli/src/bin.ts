@@ -6,6 +6,15 @@ import { ENTITIES, makeData, type Entity } from './commands/data';
 import { metricTrends } from '@aiqa/reporting-engine';
 import { formatFlaky, formatHistory, formatPerf, loadRuns } from './commands/history';
 import { formatFiles, renderPage, writeFiles } from './commands/new-page';
+import { formatList, runQuiz } from './commands/quiz';
+import {
+  formatCoverage,
+  LEVELS,
+  pickQuestions,
+  TOPICS,
+  type Level,
+  type Topic,
+} from '@aiqa/interview-learning';
 
 const FRAMEWORK = path.resolve(__dirname, '..', '..', 'playwright-framework');
 
@@ -29,7 +38,7 @@ async function ariaSnapshotOf(url: string): Promise<string> {
 
 const program = new Command()
   .name('aiqa')
-  .description('AI-QA-Platform tools: generate tests, read run history, make test data');
+  .description('AI-QA-Platform tools: generate tests, read run history, make test data, practise interviews');
 
 program
   .command('new')
@@ -109,6 +118,31 @@ program
   .option('--seed <n>', 'seed for reproducible data', positiveInt, 1)
   .action((entity: Entity, opts: { count: number; seed: number }) =>
     console.log(JSON.stringify(makeData(entity, opts.count, opts.seed), null, 2)),
+  );
+
+program
+  .command('quiz')
+  .description('interview questions from the learning path: answer, reveal the outline, mark yourself')
+  .addOption(new Option('--topic <topic>', 'only this topic').choices(TOPICS))
+  .addOption(new Option('--level <level>', 'only this level').choices(LEVELS))
+  .option('--count <n>', 'how many questions', positiveInt, 10)
+  .option('--seed <n>', 'seed for a repeatable selection', positiveInt)
+  .option('--list', 'print the questions with their answers, no prompts')
+  .option('--coverage', 'how many questions each topic has')
+  .action(
+    async (opts: {
+      topic?: Topic;
+      level?: Level;
+      count: number;
+      seed?: number;
+      list?: boolean;
+      coverage?: boolean;
+    }) => {
+      if (opts.coverage) return console.log(formatCoverage());
+      const pick = { topic: opts.topic, level: opts.level, count: opts.count, seed: opts.seed };
+      if (opts.list) return console.log(formatList(pickQuestions(pick)));
+      await runQuiz(pick); // practice, not a gate: the exit code stays 0 whatever the score
+    },
   );
 
 program.parseAsync().catch((error: unknown) => {

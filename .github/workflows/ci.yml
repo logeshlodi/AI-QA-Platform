@@ -265,6 +265,21 @@ jobs:
         if: failure()
         with: { name: visual-diff, path: packages/playwright-framework/test-results, retention-days: 7 }
 
+  labs:
+    name: Lab solutions
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium }
+      # Only the solutions: every exercise fails on purpose.
+      - run: pnpm test:labs
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with: { name: labs-report, path: packages/examples/playwright-report, retention-days: 7 }
+
   ui:
     name: UI specs (shard ${{ matrix.shard }}/3)
     needs: quality

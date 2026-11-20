@@ -1,0 +1,14 @@
+{
+  "name": "@aiqa/examples",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Break-it labs: specs with one planted mistake to find and fix, with verified solutions",
+  "scripts": {
+    "lab": "node run-lab.mjs",
+    "test:solutions": "playwright test --project=solution"
+  },
+  "dependencies": {
+    "@playwright/test": "catalog:",
+    "jose": "catalog:"
+  }
+}

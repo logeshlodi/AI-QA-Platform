@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint and the security sprint are built and have run on the laptop. Agents, the chat app and learning content are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Agents and the chat app are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,22 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Learning sprint (20 Nov)
+
+Run on the Windows laptop.
+
+| Check                                          | Result                                                                                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Lab solutions (`pnpm test:labs`)               | 13 passed (labs 01 to 07 against the public practice sites, lab 08 on local keys)                                            |
+| Lab exercises (`pnpm lab 01` to `pnpm lab 08`) | Each failed for the reason its README gives; lab 08 failed exactly its three attack cases (tampered, `alg: none`, wrong key) |
+| Question bank and quiz (`pnpm test:unit`)      | 200 passed (11 new): every path an answer cites exists, every lab it names exists, seeded selection repeats                  |
+| `pnpm aiqa quiz --coverage`                    | 43 questions, at least three on each of the 11 topics                                                                        |
+| Type-check, lint, Prettier                     | Clean; lint still 0 errors and the same 4 warnings                                                                           |
+
+One lab changed after it ran. Lab 04 was written as "the test that cannot fail", but Playwright 1.65
+fails an unawaited assertion with "Test ended". The lab now teaches reading that message, and why an
+unawaited assertion inside a helper can still pass.
 
 ## Security sprint (20 Nov)
 

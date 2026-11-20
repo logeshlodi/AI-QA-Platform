@@ -1,0 +1,8 @@
+{
+  "name": "@aiqa/interview-learning",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interview question bank for the learning path: each answer points at the code that shows it",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts"
+}

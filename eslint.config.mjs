@@ -40,6 +40,8 @@ export default tseslint.config(
       'packages/playwright-framework/tests/**/*.ts',
       'packages/api-framework/tests/**/*.ts',
       'packages/data-framework/tests/**/*.ts',
+      // Lab solutions are model answers, so they meet the rules; the exercises break them on purpose.
+      'packages/examples/labs/**/solution.spec.ts',
     ],
     ...playwright.configs['flat/recommended'],
     rules: {

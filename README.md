@@ -60,7 +60,9 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                            | Playwright            |
 | `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard        | Vitest                |
 | `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records     | Vitest                |
-| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data                | Vitest                |
+| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data, quiz          | Vitest                |
+| `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
+| `packages/interview-learning`   | 43 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
@@ -288,6 +290,17 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 | `PW_WS_ENDPOINT=ws://localhost:30333/`                                                 | Run the browsers on a Playwright browser server instead of locally            |
 | `AIQA_PUSHGATEWAY=http://localhost:30091`                                              | Push each run's results to Prometheus for the Grafana "Test runs" dashboard   |
 
+## Learning path
+
+[`docs/learning`](docs/learning/README.md) turns the repository into a course: twelve stops, each with
+a guide to read, a command to run, a lab to fix and a quiz to check yourself.
+
+```bash
+pnpm lab                      # list the break-it labs; pnpm lab 03 runs one
+pnpm test:labs                # every lab solution (CI runs this)
+pnpm aiqa quiz --topic api    # interview questions; --list prints them with answers
+```
+
 ## Roadmap
 
 | Phase | Sprints                 | What                                                                                                 | State                   |
@@ -297,7 +310,8 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 | -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done                    |
 | -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done                    |
 | -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done                    |
-| 5     | 9 onward                | AI agents, chat app, web dashboard, learning content (`interview-learning`, `examples`, `templates`) | Scoped before it starts |
+| -     | Learning                | Learning path and ten guides, eight break-it labs, interview question bank and `aiqa quiz`           | Done                    |
+| 5     | 9 onward                | AI agents, chat app, web dashboard, `templates`                                                      | Scoped before it starts |
 
 Folders that belong to Phase 5 exist already with a README that says so. `docs/architecture.md`
 explains how the parts fit together, and `docs/adr/` records the decisions behind them.
