@@ -1,0 +1,489 @@
+/* AI-QA Platform UI. Colours are roles; light and dark values swap in one place. */
+:root {
+  color-scheme: light;
+  --surface-0: #f4f4f1;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --border: rgba(11, 11, 11, 0.12);
+  --grid: #e1e0d9;
+  --axis: #8a8984;
+  --accent: #2a78d6;
+  --link: #1d5fb0;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
+  --status-neutral: #8a8984;
+  --focus: #1d5fb0;
+  --radius: 8px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --border: rgba(255, 255, 255, 0.12);
+    --grid: #2c2c2a;
+    --axis: #8f8e88;
+    --accent: #3987e5;
+    --link: #7fb2f0;
+    --focus: #7fb2f0;
+  }
+}
+[data-theme='dark'] {
+  color-scheme: dark;
+  --surface-0: #121211;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --border: rgba(255, 255, 255, 0.12);
+  --grid: #2c2c2a;
+  --axis: #8f8e88;
+  --accent: #3987e5;
+  --link: #7fb2f0;
+  --focus: #7fb2f0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font: 15px/1.5 var(--font);
+}
+a {
+  color: var(--link);
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+code,
+.aiqa-mono {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 4px;
+}
+h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.aiqa-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Shell */
+.aiqa-skip {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  padding: 8px 12px;
+  background: var(--surface-1);
+  border-radius: var(--radius);
+  z-index: 10;
+}
+.aiqa-skip:focus {
+  top: 8px;
+}
+.aiqa-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 12px 24px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+.aiqa-brand {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.aiqa-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.aiqa-nav a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.aiqa-nav a:hover {
+  color: var(--text-primary);
+}
+.aiqa-nav a[aria-current='page'] {
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.aiqa-user {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--text-secondary);
+}
+.aiqa-main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 24px;
+}
+.aiqa-main:focus {
+  outline: none;
+}
+.aiqa-page-lede {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Cards and tiles */
+.aiqa-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.aiqa-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.aiqa-stat {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.aiqa-stat p {
+  margin: 0;
+}
+.aiqa-stat__label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.aiqa-stat__value {
+  font-size: 1.75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.aiqa-stat__hint {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* Badges: the icon carries the status colour; the label stays in text ink. */
+.aiqa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px 1px 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.aiqa-badge__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.aiqa-badge__icon g {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.aiqa-badge--passed .aiqa-badge__icon circle {
+  fill: var(--status-good);
+}
+.aiqa-badge--failed .aiqa-badge__icon circle {
+  fill: var(--status-critical);
+}
+.aiqa-badge--flaky .aiqa-badge__icon circle {
+  fill: var(--status-warning);
+}
+.aiqa-badge--flaky .aiqa-badge__icon g {
+  stroke: #0b0b0b;
+}
+.aiqa-badge--skipped .aiqa-badge__icon circle {
+  fill: var(--status-neutral);
+}
+
+/* Tables */
+.aiqa-table-wrap {
+  overflow-x: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.aiqa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.aiqa-table caption {
+  text-align: left;
+  padding: 12px 16px 4px;
+  font-weight: 600;
+}
+.aiqa-table th,
+.aiqa-table td {
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--grid);
+  vertical-align: top;
+}
+.aiqa-table thead th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+.aiqa-table tbody th {
+  font-weight: 500;
+}
+.aiqa-table tr:last-child > * {
+  border-bottom: 0;
+}
+.aiqa-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.aiqa-cell-note {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* Tests of a run */
+.aiqa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.aiqa-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.aiqa-filter label {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  background: var(--surface-1);
+}
+.aiqa-filter label.is-active {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.aiqa-filter input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.aiqa-filter label:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.aiqa-tests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.aiqa-test {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.aiqa-test__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.aiqa-test__title {
+  font-weight: 600;
+}
+.aiqa-test__meta,
+.aiqa-test__file {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.aiqa-test__file {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+}
+.aiqa-test__error {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--surface-0);
+  border-left: 3px solid var(--status-critical);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  font: 0.8rem/1.4 var(--mono);
+}
+
+/* Empty state */
+.aiqa-empty {
+  background: var(--surface-1);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.aiqa-empty__title {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Trend chart: one thin line, recessive grid, text in text ink. */
+.aiqa-chart {
+  margin: 0;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.aiqa-chart__title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-weight: 600;
+}
+.aiqa-chart__latest {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.aiqa-chart__plot {
+  position: relative;
+}
+.aiqa-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.aiqa-chart__grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+.aiqa-chart__tick {
+  fill: var(--text-secondary);
+  font-size: 10px; /* viewBox units: the chart scales with its card */
+}
+.aiqa-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.aiqa-chart__dot {
+  fill: var(--accent);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+.aiqa-chart__crosshair {
+  stroke: var(--axis);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.aiqa-chart__tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: grid;
+  padding: 4px 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.8rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.aiqa-chart__tooltip-label {
+  color: var(--text-secondary);
+}
+.aiqa-chart__tooltip-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.aiqa-chart__table summary {
+  cursor: pointer;
+  color: var(--link);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.aiqa-chart__table .aiqa-table {
+  margin-top: 8px;
+}
+.aiqa-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+/* A themed island, for stories and previews; the app sets data-theme on <html>. */
+.aiqa-theme-root {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  padding: 16px;
+}
+
+/* Suite picker links and narrow message pages */
+.aiqa-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.aiqa-pill[aria-current='page'] {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.aiqa-narrow {
+  max-width: 640px;
+}

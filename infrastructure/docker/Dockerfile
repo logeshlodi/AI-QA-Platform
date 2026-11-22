@@ -9,17 +9,24 @@ RUN npm install -g pnpm@10
 # Dependency layer first, so code changes do not reinstall packages. List every workspace package:
 # a frozen install fails when a package the lockfile names is missing.
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
-COPY packages/shared/package.json packages/shared/
+COPY packages/ai-agents/package.json packages/ai-agents/
 COPY packages/ai-engine/package.json packages/ai-engine/
-COPY packages/self-healing-engine/package.json packages/self-healing-engine/
-COPY packages/reporting-engine/package.json packages/reporting-engine/
-COPY packages/test-data-engine/package.json packages/test-data-engine/
-COPY packages/cli/package.json packages/cli/
-COPY packages/data-framework/package.json packages/data-framework/
-COPY packages/playwright-framework/package.json packages/playwright-framework/
 COPY packages/api-framework/package.json packages/api-framework/
+COPY packages/cli/package.json packages/cli/
+COPY packages/contract-tests/package.json packages/contract-tests/
+COPY packages/dashboard/package.json packages/dashboard/
+COPY packages/data-framework/package.json packages/data-framework/
+COPY packages/examples/package.json packages/examples/
+COPY packages/interview-learning/package.json packages/interview-learning/
 COPY packages/load-tests/package.json packages/load-tests/
+COPY packages/mcp-server/package.json packages/mcp-server/
+COPY packages/playwright-framework/package.json packages/playwright-framework/
+COPY packages/reporting-engine/package.json packages/reporting-engine/
+COPY packages/self-healing-engine/package.json packages/self-healing-engine/
+COPY packages/shared/package.json packages/shared/
+COPY packages/test-data-engine/package.json packages/test-data-engine/
 COPY apps/order-service/package.json apps/order-service/
+COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 # The image ships the browsers of its own tag. If @playwright/test is newer (a Dependabot update),
 # this adds the matching ones; when the versions agree it does nothing.

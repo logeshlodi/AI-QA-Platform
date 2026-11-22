@@ -14,3 +14,7 @@ lighthouse-report
 packages/load-tests/results
 # Helm templates are Go templates, not YAML until rendered: `helm lint` checks them
 infrastructure/kubernetes/aiqa-stack/templates
+
+# Next.js build output and its generated type file
+.next
+next-env.d.ts

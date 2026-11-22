@@ -265,6 +265,44 @@ jobs:
         if: failure()
         with: { name: visual-diff, path: packages/playwright-framework/test-results, retention-days: 7 }
 
+  components:
+    name: Component tests (stories, axe, visual)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The image the visual baselines were made in, as for the UI suite's visual job.
+    container: { image: 'mcr.microsoft.com/playwright:v1.65.1-noble', options: --ipc=host }
+    env: { PW_VISUAL: '1', HOME: /root }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium, system-deps: 'false' }
+      - run: pnpm --filter @aiqa/dashboard test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with: { name: components-report, path: packages/dashboard/playwright-report, retention-days: 7 }
+
+  web:
+    name: Web app (Keycloak sign-in, end to end, accessibility)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium }
+      # Only Keycloak is needed: the app reads a fixed fixture data set, not the other services.
+      - run: docker compose -f infrastructure/docker/stack.compose.yml up -d --wait keycloak
+      - run: pnpm --filter @aiqa/web test
+      - name: Keycloak logs
+        if: failure()
+        run: docker compose -f infrastructure/docker/stack.compose.yml logs keycloak
+      - if: always()
+        run: docker compose -f infrastructure/docker/stack.compose.yml down -v
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with: { name: web-report, path: apps/web/playwright-report, retention-days: 7 }
+
   labs:
     name: Lab solutions
     needs: quality

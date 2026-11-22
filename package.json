@@ -8,7 +8,7 @@
     "node": "^22.22.0 || >=24.6.0"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/dashboard/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -52,7 +52,11 @@
     "test:agents": "vitest run packages/ai-agents packages/mcp-server",
     "agents:eval": "tsx packages/cli/src/bin.ts agents eval triage",
     "mcp:smoke": "node packages/mcp-server/scripts/smoke.mjs",
-    "agents:eval:all": "tsx packages/cli/src/bin.ts agents eval all --record"
+    "agents:eval:all": "tsx packages/cli/src/bin.ts agents eval all --record",
+    "web": "pnpm --filter @aiqa/web dev",
+    "test:web": "pnpm --filter @aiqa/web test",
+    "test:components": "pnpm --filter @aiqa/dashboard test",
+    "gallery": "pnpm --filter @aiqa/dashboard gallery"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
@@ -60,6 +64,7 @@
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-playwright": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
     "husky": "catalog:",
     "lint-staged": "catalog:",
     "pnpm": "10.34.9",

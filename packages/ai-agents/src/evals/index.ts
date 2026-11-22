@@ -133,9 +133,9 @@ export const AGENT_EVALS: AgentEval[] = [
       const outcomes = [
         ...plan.cases
           .filter((c) => c.source === 'model')
-          .map((c) => ({ id: c.name, input: true, expected: 'pass' })),
+          .map((c) => ({ id: `${c.operationId}: ${c.name}`, input: true, expected: 'pass' })),
         ...plan.rejected.map((r) => ({
-          id: `${r.case.name} (${r.problem})`,
+          id: `${r.case.operationId}: ${r.case.name} (${r.problem})`,
           input: false,
           expected: 'pass',
         })),

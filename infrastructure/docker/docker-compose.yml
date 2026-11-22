@@ -20,6 +20,16 @@ services:
     volumes:
       - ../../packages/playwright-framework/tests/visual:/work/packages/playwright-framework/tests/visual
 
+  # The component gallery's visual baselines (packages/dashboard), made the same way:
+  #   docker compose -f infrastructure/docker/docker-compose.yml run --rm dashboard-snapshots
+  dashboard-snapshots:
+    build: { context: ../.., dockerfile: infrastructure/docker/Dockerfile }
+    ipc: host
+    environment: { PW_VISUAL: '1' }
+    command: pnpm --filter @aiqa/dashboard snapshots:update
+    volumes:
+      - ../../packages/dashboard/tests/components/__screenshots__:/work/packages/dashboard/tests/components/__screenshots__
+
   # Optional local model:  docker compose --profile ai up ollama
   ollama:
     image: ollama/ollama

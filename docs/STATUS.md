@@ -1,7 +1,7 @@
 # Status
 
-Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review) and 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents) are built and have run; the web apps and the docs site are not started.
+Last full run: 22 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents) and 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests) are built and have run; chat, admin and the docs site are not started.
 
 ## What was run, and the result
 
@@ -40,31 +40,78 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## Sprint 12: web dashboard, Keycloak sign-in, component tests (22 Nov)
+
+Built: `apps/web` (Next.js 16, React 19) with overview, runs, a run's tests, trends, flaky tests, heal
+audit and agent runs, read-only over the existing stores; sign-in through the stack's Keycloak (new
+`web` client, code flow with PKCE, encrypted cookie session, `dashboard-viewer` role checked on every
+page); `packages/dashboard` with the shared components and a story per state; ADR 0015 and learning
+stop 14.
+
+Run on the Windows laptop:
+
+| Check                                    | Result                                                                                                                                                               |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck (root, dashboard, web)         | passed                                                                                                                                                               |
+| Lint                                     | 0 errors (the 4 old `expect-expect` warnings in feature specs)                                                                                                       |
+| Unit tests                               | 277 passed (12 new: session cookie, return address, roles)                                                                                                           |
+| Prettier, licence gate                   | passed; 647 packages, all allowed                                                                                                                                    |
+| Component tests (`pnpm test:components`) | 38 passed: behaviour, keyboard, axe on all 19 stories light and dark                                                                                                 |
+| Visual baselines                         | 19 made in the Playwright Linux image (`dashboard-snapshots`)                                                                                                        |
+| Web app (`pnpm test:web`)                | 24 passed against the real Keycloak: sign-in and out, no-role page, open redirect, changed cookie, expired sign-in, headers, every page's numbers, axe on every page |
+
+The gate (end-to-end, component, accessibility and visual specs) passes locally; the visual
+comparison and both new jobs run in CI on the next push.
+
+Fixed on the way:
+
+- The web app first used port 3000, which the stack's Grafana already serves, and Grafana also
+  answers `/healthz`: Playwright reused it and tested Grafana. The app is on 3200 now, and its
+  Playwright config never reuses a running server, so a clash fails loudly.
+- Next.js pulls in `sharp`, whose libvips binaries are LGPL-3.0 and failed the licence gate. The app
+  has no images to optimise: `sharp` is not installed (`ignoredOptionalDependencies`) and images are
+  unoptimised.
+- Keycloak serves its login form again from `login-actions/authenticate` after a wrong password;
+  Next.js keeps an empty `role=alert` route announcer on every page; axe needed more than 30 s on the
+  first pages with four workers on a busy laptop. Specs adjusted for each.
+- The realm only imports into a fresh Keycloak container: after the realm file changes, run
+  `docker compose -f infrastructure/docker/stack.compose.yml up -d --force-recreate keycloak`.
+
+Not done: the three placeholder folders (`apps/web-dashboard`, `apps/ai-chat`, `apps/admin`) are
+removed in the commit (decision 3: one app with three areas).
+
 ## Sprint 11: five more agents and live evals for all nine (20 to 22 Nov)
 
 Run on the Windows laptop, `qwen2.5-coder:7b` on CPU through Ollama (`AI_ENABLED=true pnpm aiqa agents eval <agent> --record`).
 
-| Agent          | What the eval measures                                                    | Score                  | Gate        | Time     |
-| -------------- | ------------------------------------------------------------------------- | ---------------------- | ----------- | -------- |
-| Triage         | 30 recorded failures labelled product, test, flaky or environment         | 28/30 (93%)            | 80%, passed | 9.7 min  |
-| Flaky hunter   | Likely cause of 8 flaky tests from their errors                           | 8/8 (100%)             | 75%, passed | 10.3 min |
-| Accessibility  | Priority of 10 axe findings by what users cannot do                       | 9/10 (90%)             | 80%, passed | 10.1 min |
-| Run reporter   | 5 summaries with every number in the facts and every failure named        | 4/5 (80%)              | 80%, passed | 4.8 min  |
-| Test data      | Model-proposed edge-case records that pass their schema                   | 8/8 (100%)             | 80%, passed | 5.7 min  |
-| Healing review | Pull-request descriptions that name the locator and its new form          | 3/3 (100%)             | 80%, passed | 2.3 min  |
-| Planner        | Plans for 2 SauceDemo pages that name only elements on the page           | 2/2 (100%)             | 80%, passed | 5.3 min  |
-| Generator      | Scenario 1 of the inventory plan passes 3 runs in a row                   | 1/1                    | passed      | 9.0 min  |
-| API tester     | Model-proposed cases the OpenAPI document allows, every operation covered | not yet run to the end | 80%         |          |
+| Agent          | What the eval measures                                                    | Score        | Gate        | Time     |
+| -------------- | ------------------------------------------------------------------------- | ------------ | ----------- | -------- |
+| Triage         | 30 recorded failures labelled product, test, flaky or environment         | 28/30 (93%)  | 80%, passed | 9.7 min  |
+| Flaky hunter   | Likely cause of 8 flaky tests from their errors                           | 8/8 (100%)   | 75%, passed | 10.3 min |
+| Accessibility  | Priority of 10 axe findings by what users cannot do                       | 9/10 (90%)   | 80%, passed | 10.1 min |
+| Run reporter   | 5 summaries with every number in the facts and every failure named        | 4/5 (80%)    | 80%, passed | 4.8 min  |
+| Test data      | Model-proposed edge-case records that pass their schema                   | 8/8 (100%)   | 80%, passed | 5.7 min  |
+| Healing review | Pull-request descriptions that name the locator and its new form          | 3/3 (100%)   | 80%, passed | 2.3 min  |
+| Planner        | Plans for 2 SauceDemo pages that name only elements on the page           | 2/2 (100%)   | 80%, passed | 5.3 min  |
+| Generator      | Scenario 1 of the inventory plan passes 3 runs in a row                   | 1/1          | passed      | 9.0 min  |
+| API tester     | Model-proposed cases the OpenAPI document allows, every operation covered | 11/11 (100%) | 80%, passed | 35.8 min |
 
 The misses: Triage as in Sprint 9; Accessibility ranked `link-name` fix-soon where the label says
-fix-now; Run reporter's "site down" summary was rejected and replaced by the template. The API tester's
-run was cut off when the laptop disconnected; rerun it with the stack up.
+fix-now; Run reporter's "site down" summary was rejected and replaced by the template. The API tester
+first timed out twice at 15 minutes (0/4) and then scored 7/11 before the fixes below; after them it
+scored 11/11.
 
 Fixed on the way:
 
 - `--record` opened the run history read-only and could not save; it now uses the reporter's writable
   store. Planner and Generator scores are recorded (suite `agents`); the others' are in
   `.aiqa/agents/eval-*.log`.
+- The API tester asked for every operation's cases in one answer, which a CPU model could not
+  finish in 15 minutes. It now asks once per operation for two or three cases, and `body` is required
+  in the answer for operations that take one (left optional, the model sent PUTs without a body).
+- Saving the API tester's scores failed because two model cases shared a name and the run history
+  keys results by test id; ids now carry the operation and a counter for repeats. Its 11/11 is in
+  `.aiqa/s11b/eval-api-tester.log`, not yet in the run history.
 - Starting the stack on a busy laptop failed three ways, each fixed in `stack.compose.yml`: Keycloak
   gets a 300 s start period, Kafka's health check 30 s and a 180 s start period, and the order service
   `restart: on-failure:5` when it cannot join its consumer group right after Kafka turns healthy.

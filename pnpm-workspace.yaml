@@ -3,6 +3,11 @@ packages:
   - 'apps/*'
 
 # The `pnpm` dev dependency's install script only self-installs a global copy; not wanted here.
+# Next.js's image optimiser (sharp) ships LGPL-3.0 libvips binaries; the web app has no images to
+# optimise (images.unoptimized), so the optional dependency is not installed at all.
+ignoredOptionalDependencies:
+  - sharp
+
 ignoredBuiltDependencies:
   - pnpm
   # Pact's usage-analytics package phones home from its install script; never run it.
@@ -38,6 +43,18 @@ catalog:
   '@ai-sdk/openai-compatible': 3.0.93
   '@modelcontextprotocol/server': 2.4.0
   '@modelcontextprotocol/client': 2.4.0
+
+  # Web app (apps/web) and its shared components (packages/dashboard)
+  'next': 16.4.6
+  'react': 19.3.1
+  'react-dom': 19.3.1
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
+  # OpenID Connect sign-in through the stack's Keycloak
+  'openid-client': 6.9.1
+  # Serves the component-test story gallery (Playwright's stories model needs a dev server)
+  'vite': 8.3.8
+  '@vitejs/plugin-react': 6.3.0
 
   # Runtime utilities
   'pino': 10.4.0
@@ -82,6 +99,7 @@ catalog:
   'eslint': 10.15.0
   'typescript-eslint': 8.72.2
   'eslint-plugin-playwright': 2.12.2
+  'eslint-plugin-react-hooks': 7.1.1
   'prettier': 3.10.1
   'husky': 9.1.7
   'lint-staged': 17.6.1

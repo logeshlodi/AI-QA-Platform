@@ -1,0 +1,32 @@
+{
+  "name": "@aiqa/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The platform's web app: dashboard of run history, trends, flaky tests, heal audit and agent runs, signed in through Keycloak",
+  "scripts": {
+    "dev": "next dev --port 3200",
+    "build": "next build",
+    "start": "next start --port 3200",
+    "seed": "tsx tests/fixtures/seed.ts",
+    "test": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aiqa/dashboard": "workspace:*",
+    "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/self-healing-engine": "workspace:*",
+    "jose": "catalog:",
+    "next": "catalog:",
+    "openid-client": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tsx": "catalog:"
+  }
+}

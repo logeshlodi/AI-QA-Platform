@@ -8,6 +8,10 @@
       {
         "name": "catalog-admin",
         "description": "May create products and change their name, price and stock"
+      },
+      {
+        "name": "dashboard-viewer",
+        "description": "May sign in to the web app and read run history, heal audit and agent runs"
       }
     ]
   },
@@ -155,6 +159,42 @@
       "attributes": {
         "access.token.lifespan": "3600"
       }
+    },
+    {
+      "clientId": "web",
+      "name": "web",
+      "description": "The platform's web app (apps/web): browser sign-in with the authorization code flow and PKCE.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-web-secret",
+      "serviceAccountsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3200/auth/callback"],
+      "webOrigins": ["http://localhost:3200"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3200/signed-out"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles-in-id-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -186,6 +226,40 @@
       "username": "service-account-storefront",
       "enabled": true,
       "serviceAccountClientId": "storefront",
+      "realmRoles": []
+    },
+    {
+      "username": "qa-viewer",
+      "enabled": true,
+      "firstName": "Dashboard",
+      "lastName": "Viewer",
+      "email": "qa-viewer@aiqa.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-only-qa-viewer-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": [],
+      "realmRoles": ["dashboard-viewer"]
+    },
+    {
+      "username": "qa-no-access",
+      "enabled": true,
+      "firstName": "No",
+      "lastName": "Access",
+      "email": "qa-no-access@aiqa.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-only-qa-no-access-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": [],
       "realmRoles": []
     }
   ]

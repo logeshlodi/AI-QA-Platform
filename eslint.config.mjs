@@ -1,5 +1,6 @@
 import tseslint from 'typescript-eslint';
 import playwright from 'eslint-plugin-playwright';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 const noImport = (names, message) => ({
   'no-restricted-imports': ['error', { paths: names.map((name) => ({ name, message })) }],
@@ -13,6 +14,8 @@ export default tseslint.config(
       '**/test-results/**',
       '**/allure-*/**',
       '**/.aiqa/**',
+      '**/.next/**',
+      '**/next-env.d.ts',
     ],
   },
   ...tseslint.configs.recommended,
@@ -40,6 +43,8 @@ export default tseslint.config(
       'packages/playwright-framework/tests/**/*.ts',
       'packages/api-framework/tests/**/*.ts',
       'packages/data-framework/tests/**/*.ts',
+      'packages/dashboard/tests/**/*.ts',
+      'apps/web/tests/e2e/**/*.ts',
       // Lab solutions are model answers, so they meet the rules; the exercises break them on purpose.
       'packages/examples/labs/**/solution.spec.ts',
     ],
@@ -57,5 +62,11 @@ export default tseslint.config(
         { assertFunctionNames: ['expect', 'expectSchema', 'expectToMatch', 'expectRefused'] },
       ],
     },
+  },
+  {
+    // React components and the web app: the rules of hooks.
+    files: ['packages/dashboard/**/*.tsx', 'apps/web/**/*.tsx'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: reactHooks.configs.recommended.rules,
   },
 );

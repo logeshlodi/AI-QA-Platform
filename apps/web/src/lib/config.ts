@@ -1,0 +1,50 @@
+import path from 'node:path';
+
+/**
+ * Settings, from the environment with local defaults. The defaults match the stack's Keycloak and the
+ * repository's own .aiqa folders, so `pnpm --filter @aiqa/web dev` works with no .env at all.
+ */
+const env = (name: string, fallback: string) => process.env[name]?.trim() || fallback;
+
+/** apps/web is two levels below the repository root. */
+// Run-time data folders, not code: kept out of the build's file tracing.
+const ROOT = path.resolve(
+  /*turbopackIgnore: true*/ env(
+    'AIQA_ROOT',
+    path.resolve(/*turbopackIgnore: true*/ process.cwd(), '..', '..'),
+  ),
+);
+
+export const config = {
+  /** Where the app is reached in a browser; redirect URIs are built from it, never from the Host header. */
+  appUrl: env('APP_URL', 'http://localhost:3200').replace(/\/$/, ''),
+  auth: {
+    issuer: env('AUTH_ISSUER', 'http://localhost:8180/realms/aiqa'),
+    clientId: env('AUTH_CLIENT_ID', 'web'),
+    // The local realm's published test secret (infrastructure/docker/keycloak); set your own anywhere else.
+    clientSecret: env('AUTH_CLIENT_SECRET', 'dev-only-web-secret'),
+    /** Realm role a person needs to see the dashboard. */
+    role: env('AUTH_ROLE', 'dashboard-viewer'),
+  },
+  data: {
+    historyDir: env('AIQA_HISTORY_DIR', path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'history')),
+    healDir: env(
+      'AIQA_HEAL_DIR',
+      path.join(/*turbopackIgnore: true*/ ROOT, 'packages', 'playwright-framework', '.aiqa'),
+    ),
+    agentLog: env(
+      'AIQA_AGENT_LOG',
+      path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'agents', 'runs.jsonl'),
+    ),
+  },
+};
+
+/** Secret that encrypts the session cookie. Required in production; a fixed value only for `next dev`. */
+export function sessionSecret(): string {
+  const secret = process.env.SESSION_SECRET?.trim();
+  if (secret && secret.length >= 32) return secret;
+  if (secret) throw new Error('SESSION_SECRET must be at least 32 characters.');
+  if (process.env.NODE_ENV === 'production')
+    throw new Error('Set SESSION_SECRET (32+ characters) to run the web app.');
+  return 'dev-only-session-secret-for-next-dev-0000';
+}

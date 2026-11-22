@@ -294,12 +294,16 @@ agents
         total = report.total;
         correct = report.correct;
         console.log(formatEval(`${name} (${e.measures})`, report));
+        const seen = new Map<string, number>(); // the run history keys results by test id: keep them unique
         for (const o of report.outcomes) {
+          const n = (seen.get(o.id) ?? 0) + 1;
+          seen.set(o.id, n);
+          const id = n === 1 ? o.id : `${o.id} (${n})`;
           results.push({
             runId,
-            testId: `${name}:${o.id}`,
+            testId: `${name}:${id}`,
             retry: 0,
-            title: `${name} › ${o.id}`,
+            title: `${name} › ${id}`,
             file: `agents/${name}`,
             project: model.label,
             status: o.correct ? 'passed' : 'failed',

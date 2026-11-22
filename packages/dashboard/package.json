@@ -1,0 +1,27 @@
+{
+  "name": "@aiqa/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React components shared by the web app's dashboard, chat and admin areas, with stories for Playwright component tests",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "gallery": "vite --config playwright/vite.config.mts",
+    "test": "playwright test",
+    "snapshots:update": "playwright test --grep @visual --update-snapshots"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vite": "catalog:"
+  }
+}

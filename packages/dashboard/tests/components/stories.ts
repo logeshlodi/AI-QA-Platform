@@ -1,0 +1,22 @@
+/** Every story, by id. The accessibility and visual specs walk this list, so a new story is covered once added here. */
+export const STORIES = [
+  'components/StatusBadge/AllStatuses',
+  'components/StatTile/Tiles',
+  'components/RunTable/Recent',
+  'components/RunTable/Empty',
+  'components/TestTable/MixedRun',
+  'components/TestTable/AllPassed',
+  'components/TrendChart/PassRate',
+  'components/TrendChart/Duration',
+  'components/TrendChart/OnePoint',
+  'components/TrendChart/Empty',
+  'components/TrendChart/PassRateDark',
+  'components/FlakyTable/Some',
+  'components/FlakyTable/None',
+  'components/HealTable/Mixed',
+  'components/HealTable/None',
+  'components/AgentRunTable/Mixed',
+  'components/AgentRunTable/None',
+  'components/AppShell/SignedIn',
+  'components/AppShell/SignedInDark',
+] as const;

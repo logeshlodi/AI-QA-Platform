@@ -63,12 +63,14 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data, quiz          | Vitest                |
 | `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and the Triage agent                           | Vitest, mock models   |
 | `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                 | Vitest, MCP client    |
+| `packages/dashboard`            | React components of the web app, a story per state, a gallery for Playwright's `mount`                             | Playwright components |
 | `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
 | `packages/interview-learning`   | 43 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
 | `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB writes, Kafka out; OpenAPI at `/openapi.json`; OpenTelemetry | Data suites           |
+| `apps/web`                      | Next.js app: run history, trends, flaky tests, heal audit, agent runs; Keycloak sign-in                            | Playwright e2e, axe   |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
 import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
@@ -147,7 +149,7 @@ SauceDemo, Restful-Booker, The Internet, UI Testing Playground, Playwright's Tod
 API-mocking demos, the Countries GraphQL API and a public SOAP calculator. The `setup` project
 pings each one first. If a target is down, its specs are **skipped** with a `target-down`
 annotation rather than failed. To use a local copy, set for example
-`TARGET_SAUCEDEMO_URL=http://localhost:3000`.
+`TARGET_SAUCEDEMO_URL=http://localhost:3200`.
 
 ## Self-healing
 
@@ -221,6 +223,18 @@ Agents answer from rules when no model is configured. Set `AI_ENABLED=true` for 
 or `AGENT_PROVIDER=openai-compatible` with `AGENT_BASE_URL`, `AGENT_MODEL` and `AGENT_API_KEY` in `.env`
 for a hosted one. Claude Code picks up the MCP server from `.mcp.json` as `aiqa`.
 
+## Web app
+
+`apps/web` shows the run history, a run's tests, trends, flaky tests, the heal audit and the agent run
+log in the browser, behind a Keycloak sign-in ([ADR 0015](docs/adr/0015-one-nextjs-app-and-stories-for-components.md)).
+
+```bash
+npx pnpm stack:up            # Keycloak, with the web client and two test users
+npx pnpm web                 # http://localhost:3200, sign in as qa-viewer / dev-only-qa-viewer-password
+npx pnpm test:components     # the shared components: behaviour and axe on every story
+npx pnpm test:web            # sign-in, every page on a fixed data set, axe on every page
+```
+
 ## Run history and the dashboard
 
 `pnpm test:ui` and `pnpm test:api` record every run to `.aiqa/history` (SQLite when Node has it,
@@ -241,7 +255,7 @@ events. `packages/data-framework` tests it from the outside: schema and constrai
 queries over every stored order, the audit index, Kafka partition ordering, and the full flow for
 a confirmed order, too little stock, an unknown SKU, a duplicate delivery and four invalid messages.
 
-Grafana at http://localhost:3000 shows the service while the suites run (orders by outcome,
+Grafana at http://localhost:3200 shows the service while the suites run (orders by outcome,
 processing time p50 and p95); Prometheus is at http://localhost:9090.
 
 ## Security
@@ -327,17 +341,17 @@ pnpm aiqa quiz --topic api    # interview questions; --list prints them with ans
 
 ## Roadmap
 
-| Phase | Sprints                 | What                                                                                                 | State                   |
-| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1-3   | 1-5                     | Working core: framework, locator and feature labs, API tests, self-healing, the AI layer             | Done                    |
-| 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done                    |
-| -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done                    |
-| -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done                    |
-| -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done                    |
-| -     | Learning                | Learning path and ten guides, eight break-it labs, interview question bank and `aiqa quiz`           | Done                    |
-| 5     | 9 onward                | AI agents, chat app, web dashboard, `templates`                                                      | Scoped before it starts |
+| Phase | Sprints                 | What                                                                                                 | State       |
+| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------- |
+| 1-3   | 1-5                     | Working core: framework, locator and feature labs, API tests, self-healing, the AI layer             | Done        |
+| 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done        |
+| -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done        |
+| -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done        |
+| -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done        |
+| -     | Learning                | Learning path and ten guides, eight break-it labs, interview question bank and `aiqa quiz`           | Done        |
+| 5     | 9-14                    | Nine agents, MCP server, web app (dashboard, then chat and admin), docs site, `templates`            | In progress |
 
-Folders that belong to Phase 5 exist already with a README that says so. `docs/architecture.md`
+Folders still to be built in Phase 5 have a README that says so. `docs/architecture.md`
 explains how the parts fit together, and `docs/adr/` records the decisions behind them.
 
 ## Status

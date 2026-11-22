@@ -26,5 +26,7 @@
     "packages/examples/labs",
     "vitest.config.ts",
     "vitest.live.config.ts"
-  ]
+  ],
+  // React code has its own configs (JSX, Next's types): typechecked by the typecheck script.
+  "exclude": ["apps/web", "packages/dashboard"]
 }

@@ -20,6 +20,7 @@ export default defineConfig({
     include: [
       'packages/{shared,ai-engine,self-healing-engine,reporting-engine,test-data-engine,interview-learning,ai-agents,mcp-server,cli,load-tests}/tests/**/*.test.ts',
       'apps/order-service/tests/**/*.test.ts',
+      'apps/web/tests/**/*.test.ts',
     ],
     environment: 'node',
   },
