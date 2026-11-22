@@ -1,6 +1,6 @@
 # Learning path
 
-This repository is built to be learned from. The route below takes you through it in fourteen stops, from
+This repository is built to be learned from. The route below takes you through it in fifteen stops, from
 running your first spec to tests running as Kubernetes Jobs. Each stop has four parts:
 
 - **Read**: a guide in this folder, which points at the specs and source that show the idea.
@@ -26,6 +26,7 @@ About a week a stop, at 45 to 60 minutes a day, alongside the study guide.
 | 12  | CI, observability, Kubernetes     | [CI, observability and Kubernetes](10-ci-and-platform.md)    | `pnpm k8s:up && pnpm k8s:test data`                                  | —           | `platform`    |
 | 13  | Test agents                       | [Test agents: Playwright's and ours](11-test-agents.md)      | `pnpm aiqa agents plan inventory --path /inventory.html --logged-in` | —           | `ai`          |
 | 14  | Testing a web app you own         | [Web and component testing](12-web-and-component-testing.md) | `pnpm test:components`, `pnpm test:web`                              | —           | `framework`   |
+| 15  | Testing AI features               | [Testing AI features](13-testing-ai-features.md)             | `pnpm test:web`                                                      | —           | `ai`          |
 
 ## How to use a stop
 

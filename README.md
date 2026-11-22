@@ -70,7 +70,7 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
 | `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB writes, Kafka out; OpenAPI at `/openapi.json`; OpenTelemetry | Data suites           |
-| `apps/web`                      | Next.js app: run history, trends, flaky tests, heal audit, agent runs; Keycloak sign-in                            | Playwright e2e, axe   |
+| `apps/web`                      | Next.js app: dashboard, chat over the MCP tools with approvals, admin; Keycloak sign-in                            | Playwright e2e, axe   |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
 import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
@@ -227,12 +227,16 @@ for a hosted one. Claude Code picks up the MCP server from `.mcp.json` as `aiqa`
 
 `apps/web` shows the run history, a run's tests, trends, flaky tests, the heal audit and the agent run
 log in the browser, behind a Keycloak sign-in ([ADR 0015](docs/adr/0015-one-nextjs-app-and-stories-for-components.md)).
+Its chat answers from the platform's MCP tools and holds every change it asks for until a platform
+admin approves it; the admin area sets the chat's budget and lists quarantined tests
+([ADR 0016](docs/adr/0016-chat-over-mcp-with-approval-and-a-stub-model.md)).
 
 ```bash
 npx pnpm stack:up            # Keycloak, with the web client and two test users
 npx pnpm web                 # http://localhost:3200, sign in as qa-viewer / dev-only-qa-viewer-password
 npx pnpm test:components     # the shared components: behaviour and axe on every story
-npx pnpm test:web            # sign-in, every page on a fixed data set, axe on every page
+npx pnpm test:web            # sign-in, every page on fixed data, chat and admin on a stub model, axe
+# Test users: qa-viewer / dev-only-qa-viewer-password, qa-admin / dev-only-qa-admin-password
 ```
 
 ## Run history and the dashboard

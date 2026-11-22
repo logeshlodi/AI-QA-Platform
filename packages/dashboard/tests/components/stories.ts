@@ -19,4 +19,12 @@ export const STORIES = [
   'components/AgentRunTable/None',
   'components/AppShell/SignedIn',
   'components/AppShell/SignedInDark',
+  'components/ChatTranscript/Answered',
+  'components/ChatTranscript/Streaming',
+  'components/ChatTranscript/Stopped',
+  'components/ChatTranscript/WaitingForAViewer',
+  'components/ChatTranscript/Outcomes',
+  'components/ChatTranscript/AdminDecides',
+  'components/ChatTranscript/Composer',
+  'components/ChatTranscript/AnsweredDark',
 ] as const;

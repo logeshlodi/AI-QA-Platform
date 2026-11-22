@@ -1,6 +1,8 @@
 import { AppShell, type NavItem } from '@aiqa/dashboard';
 import type { ReactNode } from 'react';
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin, requireViewer } from '@/lib/auth';
+import { config } from '@/lib/config';
+import type { Session } from '@/lib/session';
 
 export const NAV: NavItem[] = [
   { href: '/', label: 'Overview' },
@@ -9,14 +11,28 @@ export const NAV: NavItem[] = [
   { href: '/flaky', label: 'Flaky tests' },
   { href: '/heals', label: 'Heal audit' },
   { href: '/agents', label: 'Agent runs' },
+  { href: '/chat', label: 'Chat' },
 ];
+const ADMIN: NavItem = { href: '/admin', label: 'Admin' };
 
-/** Every dashboard page: checks the viewer, then draws the shell around the page. */
-export async function Frame({ current, children }: { current: string; children: ReactNode }) {
-  const session = await requireViewer(current);
+/**
+ * Every page: checks the viewer (or the admin, for the admin area), then draws the shell. The page
+ * gets the session, so it never has to look it up again.
+ */
+export async function Frame({
+  current,
+  admin = false,
+  children,
+}: {
+  current: string;
+  admin?: boolean;
+  children: ReactNode | ((session: Session) => ReactNode);
+}) {
+  const session = admin ? await requireAdmin(current) : await requireViewer(current);
+  const nav = session.roles.includes(config.auth.adminRole) ? [...NAV, ADMIN] : NAV;
   return (
-    <AppShell nav={NAV} current={current} user={{ name: session.name, signOutHref: '/auth/logout' }}>
-      {children}
+    <AppShell nav={nav} current={current} user={{ name: session.name, signOutHref: '/auth/logout' }}>
+      {typeof children === 'function' ? children(session) : children}
     </AppShell>
   );
 }

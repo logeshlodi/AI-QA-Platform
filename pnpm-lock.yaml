@@ -315,15 +315,30 @@ importers:
 
   apps/web:
     dependencies:
+      '@aiqa/ai-agents':
+        specifier: workspace:*
+        version: link:../../packages/ai-agents
       '@aiqa/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
+      '@aiqa/mcp-server':
+        specifier: workspace:*
+        version: link:../../packages/mcp-server
       '@aiqa/reporting-engine':
         specifier: workspace:*
         version: link:../../packages/reporting-engine
       '@aiqa/self-healing-engine':
         specifier: workspace:*
         version: link:../../packages/self-healing-engine
+      '@aiqa/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
+      ai:
+        specifier: 'catalog:'
+        version: 7.0.177(zod@4.6.7)
       jose:
         specifier: 'catalog:'
         version: 6.2.18
@@ -339,6 +354,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.3.1(react@19.3.1)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@axe-core/playwright':
         specifier: 'catalog:'

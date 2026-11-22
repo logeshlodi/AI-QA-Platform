@@ -10,3 +10,5 @@ export { FlakyTable } from './components/FlakyTable';
 export { HealTable } from './components/HealTable';
 export { AgentRunTable } from './components/AgentRunTable';
 export { AppShell, type AppShellProps } from './components/AppShell';
+export { ChatTranscript, type ChatTranscriptProps } from './components/ChatTranscript';
+export { ChatComposer, type ChatComposerProps } from './components/ChatComposer';

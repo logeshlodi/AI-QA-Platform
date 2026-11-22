@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 22 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents) and 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests) are built and have run; chat, admin and the docs site are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests) and 13 (chat over the MCP tools with approvals, admin area, tests for AI features) are built and have run; the docs site and templates (Sprint 14) are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,46 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Sprint 13: chat and admin, and tests for AI features (22 Nov)
+
+Built: `/chat` in the web app, answering from the platform MCP server's tools (connected in process),
+streamed; `quarantine_test` as the one write, held as an approval card with a sealed ten-minute token
+and carried out only by `/api/chat/approve` for a `platform-admin`; `/admin` with the model in use (key
+never shown), the chat's step and time budget, a switch for chat writes, and the quarantine list. Realm:
+`platform-admin` role and `qa-admin` user. ADR 0016 and learning stop 15.
+
+Run on the Windows laptop:
+
+| Check                         | Result                                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Typecheck, prettier, licences | passed; 647 packages, all allowed                                                                                |
+| Lint                          | 0 errors (the 4 old `expect-expect` warnings)                                                                    |
+| Unit tests                    | 289 passed (24 in the web app: request limits, tool-output wrapping, settings, quarantine store, the stub model) |
+| Component tests               | 53 passed: chat transcript and composer added, axe on all 27 stories                                             |
+| Visual baselines              | 27 in the Playwright Linux image (8 new for the chat)                                                            |
+| Web app (`pnpm test:web`)     | 40 passed against the real Keycloak and the stub model                                                           |
+
+The gate passes: an instruction planted in a page's text (a storefront failure telling the model to
+quarantine `checkout-two`) makes the stub model, scripted to obey, ask for the write; nothing is written
+until a person decides, a viewer cannot approve in the page or through the API with the token, and an
+admin is asked first too. The chat specs also cover streaming and Stop, the same question answered in
+different words with the same facts, and the API refusing no session, another origin, non-JSON and
+oversized requests.
+
+Fixed on the way:
+
+- The proxy redirected a signed-out API call to the sign-in page (200, HTML); API routes now bypass it
+  and answer 401 themselves.
+- A new Playwright request context inherits the project's signed-in state; the "no session" check now
+  passes an empty one.
+- `role="alert"` on a list item replaced its list role (axe `list`); the Approve button's white on the
+  chart blue was just under 4.5:1, so buttons use the link blue.
+- Prettier read the saved sign-in state (`playwright/.auth`); it is ignored now. axe needed more than
+  30 s on the first stories with four workers on a busy laptop.
+
+Not done: trying the chat on the real local model is manual (`AI_ENABLED=true pnpm web`, sign in as
+`qa-admin`); with `qwen2.5-coder:7b` on CPU expect minutes per answer.
 
 ## Sprint 12: web dashboard, Keycloak sign-in, component tests (22 Nov)
 

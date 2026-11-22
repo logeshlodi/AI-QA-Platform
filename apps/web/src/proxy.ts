@@ -13,6 +13,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything but sign-in, sign-out, the signed-out page, static files and the health check.
-  matcher: ['/((?!auth/|signed-out|no-access|healthz|_next/static|_next/image|favicon.ico).*)'],
+  // Pages only. The JSON API answers 401 itself (a redirect to a sign-in page means nothing to fetch),
+  // and sign-in, sign-out, the signed-out page, static files and the health check are public.
+  matcher: ['/((?!api/|auth/|signed-out|no-access|healthz|_next/static|_next/image|favicon.ico|icon.svg).*)'],
 };

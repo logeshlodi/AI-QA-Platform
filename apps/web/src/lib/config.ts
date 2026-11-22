@@ -25,6 +25,8 @@ export const config = {
     clientSecret: env('AUTH_CLIENT_SECRET', 'dev-only-web-secret'),
     /** Realm role a person needs to see the dashboard. */
     role: env('AUTH_ROLE', 'dashboard-viewer'),
+    /** Realm role that may open the admin area and approve the changes the chat asks for. */
+    adminRole: env('AUTH_ADMIN_ROLE', 'platform-admin'),
   },
   data: {
     historyDir: env('AIQA_HISTORY_DIR', path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'history')),
@@ -35,6 +37,21 @@ export const config = {
     agentLog: env(
       'AIQA_AGENT_LOG',
       path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'agents', 'runs.jsonl'),
+    ),
+    /** Where chat runs and approvals are logged: the agent run log, unless set apart (the specs do). */
+    chatLog: env(
+      'AIQA_CHAT_LOG',
+      env('AIQA_AGENT_LOG', path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'agents', 'runs.jsonl')),
+    ),
+    /** Tests quarantined through the chat, after an admin's approval. */
+    quarantine: env(
+      'AIQA_QUARANTINE_FILE',
+      path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'quarantine.json'),
+    ),
+    /** Chat budgets and switches the admin area changes. */
+    settings: env(
+      'AIQA_WEB_SETTINGS',
+      path.join(/*turbopackIgnore: true*/ ROOT, '.aiqa', 'web-settings.json'),
     ),
   },
 };

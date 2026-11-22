@@ -17,7 +17,7 @@ test('the overview shows the latest run of each suite and the counts that need a
 test('from the runs list to one run, and its failing test with the error', async ({ page }) => {
   await page.goto('/runs');
   const table = page.getByRole('table', { name: 'All runs' });
-  await expect(table.getByRole('row')).toHaveCount(13); // header + 12 runs
+  await expect(table.getByRole('row')).toHaveCount(14); // header + 13 runs
   await page
     .getByRole('navigation', { name: 'Suite' })
     .getByRole('link', { name: 'ui', exact: true })
@@ -66,9 +66,10 @@ test('flaky tests, heal audit and agent runs come from their own stores', async 
 
   await page.getByRole('link', { name: 'Agent runs' }).click();
   const agents = page.getByRole('table', { name: 'Agent runs, newest first' });
-  await expect(agents.getByRole('row').nth(1)).toContainText('api-tester');
-  await expect(agents.getByRole('row').nth(1)).toContainText('aborted due to timeout');
-  await expect(agents.getByRole('row').nth(2)).toContainText('Model');
+  await expect(agents.getByRole('row').filter({ hasText: 'api-tester' })).toContainText(
+    'aborted due to timeout',
+  );
+  await expect(agents.getByRole('row').filter({ hasText: 'triage' })).toContainText('Model');
 });
 
 test('an unknown run is a 404 page with a way back', async ({ page }) => {

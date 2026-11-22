@@ -72,3 +72,20 @@ export interface NavItem {
   href: string;
   label: string;
 }
+
+/** One entry of a chat transcript. */
+export type ChatItem =
+  | { kind: 'user'; id: string; text: string }
+  | { kind: 'assistant'; id: string; text: string; streaming?: boolean; stopped?: boolean }
+  /** A read-only tool the assistant used, shown so the person can see where an answer came from. */
+  | { kind: 'tool'; id: string; name: string; input: unknown }
+  /** A write the assistant asked for. Nothing happens until a person approves it. */
+  | {
+      kind: 'approval';
+      id: string;
+      tool: string;
+      input: unknown;
+      state: 'pending' | 'approving' | 'approved' | 'denied' | 'failed';
+      result?: string;
+    }
+  | { kind: 'error'; id: string; text: string };

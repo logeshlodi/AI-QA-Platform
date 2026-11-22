@@ -12,6 +12,10 @@
       {
         "name": "dashboard-viewer",
         "description": "May sign in to the web app and read run history, heal audit and agent runs"
+      },
+      {
+        "name": "platform-admin",
+        "description": "May open the web app's admin area and approve changes the chat asks for"
       }
     ]
   },
@@ -261,6 +265,23 @@
       ],
       "requiredActions": [],
       "realmRoles": []
+    },
+    {
+      "username": "qa-admin",
+      "enabled": true,
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "email": "qa-admin@aiqa.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-only-qa-admin-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": [],
+      "realmRoles": ["dashboard-viewer", "platform-admin"]
     }
   ]
 }

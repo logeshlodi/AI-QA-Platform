@@ -9,6 +9,7 @@
   --grid: #e1e0d9;
   --axis: #8a8984;
   --accent: #2a78d6;
+  --on-accent: #ffffff;
   --link: #1d5fb0;
   --status-good: #0ca30c;
   --status-warning: #fab219;
@@ -30,6 +31,7 @@
     --grid: #2c2c2a;
     --axis: #8f8e88;
     --accent: #3987e5;
+    --on-accent: #0b0b0b;
     --link: #7fb2f0;
     --focus: #7fb2f0;
   }
@@ -44,6 +46,7 @@
   --grid: #2c2c2a;
   --axis: #8f8e88;
   --accent: #3987e5;
+  --on-accent: #0b0b0b;
   --link: #7fb2f0;
   --focus: #7fb2f0;
 }
@@ -486,4 +489,166 @@ h2 {
 }
 .aiqa-narrow {
   max-width: 640px;
+}
+
+/* Chat */
+.aiqa-chat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.aiqa-chat__msg {
+  max-width: 80ch;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+}
+.aiqa-chat__msg--user {
+  justify-self: end;
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+}
+.aiqa-chat__msg--assistant {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+.aiqa-chat__cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--text-secondary);
+}
+.aiqa-chat__note {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+.aiqa-chat__tool {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.aiqa-chat__tool summary {
+  cursor: pointer;
+}
+.aiqa-chat__tool pre,
+.aiqa-chat__approval pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--surface-0);
+  border-radius: 4px;
+  font: 0.8rem/1.4 var(--mono);
+  white-space: pre-wrap;
+}
+.aiqa-chat__approval {
+  padding: 12px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--status-warning);
+  border-radius: var(--radius);
+}
+.aiqa-chat__approval-title {
+  margin: 0;
+  font-weight: 600;
+}
+.aiqa-chat__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.aiqa-chat__outcome {
+  margin: 8px 0 0;
+}
+.aiqa-chat__error {
+  padding: 10px 14px;
+  border-left: 4px solid var(--status-critical);
+  background: var(--surface-1);
+  border-radius: var(--radius);
+}
+.aiqa-composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.aiqa-composer textarea {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--link);
+  background: var(--link); /* the link blue: AA contrast against the button text in both themes */
+  color: var(--on-accent);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.aiqa-button--quiet {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+/* Admin forms and facts */
+.aiqa-card h2 {
+  margin-bottom: 8px;
+}
+.aiqa-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 8px;
+}
+.aiqa-facts dt {
+  color: var(--text-secondary);
+}
+.aiqa-facts dd {
+  margin: 0;
+}
+.aiqa-form {
+  display: grid;
+  gap: 12px;
+  max-width: 520px;
+}
+.aiqa-form label {
+  display: grid;
+  gap: 4px;
+}
+.aiqa-form input[type='number'] {
+  width: 10ch;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+}
+.aiqa-form .aiqa-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.aiqa-form button {
+  justify-self: start;
+}
+.aiqa-chat-panel {
+  display: grid;
+  gap: 16px;
 }

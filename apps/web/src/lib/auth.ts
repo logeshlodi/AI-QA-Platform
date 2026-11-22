@@ -18,3 +18,10 @@ export async function requireViewer(returnTo: string): Promise<Session> {
   if (!session.roles.includes(config.auth.role)) redirect('/no-access');
   return session;
 }
+
+/** The admin area: the viewer role and the admin role. Anyone else sees "no access". */
+export async function requireAdmin(returnTo: string): Promise<Session> {
+  const session = await requireViewer(returnTo);
+  if (!session.roles.includes(config.auth.adminRole)) redirect('/no-access?area=admin');
+  return session;
+}

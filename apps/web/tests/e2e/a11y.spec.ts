@@ -4,7 +4,17 @@ import { expect, test } from '@playwright/test';
 // axe walks the whole page; with four workers on a busy laptop the first pages took 30 to 40 s.
 test.describe.configure({ timeout: 90_000 });
 
-const PAGES = ['/', '/runs', '/runs/ui-08', '/trends', '/flaky', '/heals', '/agents', '/runs/no-such-run'];
+const PAGES = [
+  '/',
+  '/runs',
+  '/runs/ui-08',
+  '/trends',
+  '/flaky',
+  '/heals',
+  '/agents',
+  '/chat',
+  '/runs/no-such-run',
+];
 
 for (const path of PAGES) {
   test(`${path} has no WCAG 2.2 AA violations`, async ({ page }) => {
@@ -36,4 +46,19 @@ test('the run page works from the keyboard alone', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('main')).toBeFocused();
+});
+
+test('the chat with an answer and a change waiting has no WCAG 2.2 AA violations', async ({ page }) => {
+  await page.goto('/chat');
+  await page.getByRole('textbox', { name: /Ask about runs/ }).fill('Why did the last storefront run fail?');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listitem', { name: /Change waiting for approval/ })).toBeVisible({
+    timeout: 30_000,
+  });
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(
+    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 });

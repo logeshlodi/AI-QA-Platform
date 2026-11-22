@@ -9,17 +9,24 @@
     "start": "next start --port 3200",
     "seed": "tsx tests/fixtures/seed.ts",
     "test": "playwright test",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "model-stub": "tsx tests/fixtures/model-stub.ts"
   },
   "dependencies": {
+    "@aiqa/ai-agents": "workspace:*",
     "@aiqa/dashboard": "workspace:*",
+    "@aiqa/mcp-server": "workspace:*",
     "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/self-healing-engine": "workspace:*",
+    "@aiqa/shared": "workspace:*",
+    "@modelcontextprotocol/client": "catalog:",
+    "ai": "catalog:",
     "jose": "catalog:",
     "next": "catalog:",
     "openid-client": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:",

@@ -1,9 +1,15 @@
 # web
 
-The platform's web app (Next.js 16, React 19): run history, a run's tests, trends, flaky tests, the heal
-audit and the agent run log, behind a Keycloak sign-in. It only reads: the run history, heal audit and
-agent log are opened read-only and nothing is created when they are missing. Chat and admin areas
-join it in Sprint 13 (decision 3 of the Phase 5 plan: one app, three areas).
+The platform's web app (Next.js 16, React 19), behind a Keycloak sign-in, in three areas (decision 3
+of the Phase 5 plan: one app):
+
+- **Dashboard**: run history, a run's tests, trends, flaky tests, the heal audit, the agent run log.
+  Read-only: nothing is created when a store is missing.
+- **Chat** (`/chat`): questions answered from the platform's MCP tools, streamed. A change the
+  assistant asks for (`quarantine_test`) becomes an approval card; only a `platform-admin` can approve
+  it, anyone can refuse it (ADR 0016).
+- **Admin** (`/admin`, `platform-admin` only): the model in use (from `.env`, key never shown), the
+  chat's step and time budget, whether the chat may ask for changes at all, and the quarantined tests.
 
 ```bash
 pnpm stack:up                 # Keycloak (and the rest of the stack)

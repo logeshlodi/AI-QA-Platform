@@ -94,18 +94,18 @@ export function flakyRows(runs: StoredRun[]): FlakyRow[] {
   });
 }
 
-export function loadHeals(): HealRow[] {
+/** Heal events as stored, newest first. */
+export function loadHealEvents(): HealEvent[] {
   if (!fs.existsSync(config.data.healDir)) return [];
   const repo = createHealRepository(config.data.healDir);
   try {
-    return repo
-      .listEvents()
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map(toHealRow);
+    return repo.listEvents().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   } finally {
     repo.close();
   }
 }
+
+export const loadHeals = (): HealRow[] => loadHealEvents().map(toHealRow);
 
 export function toHealRow(e: HealEvent, i = 0): HealRow {
   return {

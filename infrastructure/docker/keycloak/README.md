@@ -14,12 +14,13 @@ which is fine for a throwaway container on your machine and in CI, and never for
 | `web`                       | no              | (ID token only) | The web app's browser sign-in (code flow, PKCE) |
 
 All but `web` are service clients (OAuth 2.0 client credentials). `web` signs people in to
-`apps/web`, with two test users whose passwords are as published as the secrets:
+`apps/web`, with three test users whose passwords are as published as the secrets:
 
-| User           | Password                         | `dashboard-viewer` | Used for                          |
-| -------------- | -------------------------------- | ------------------ | --------------------------------- |
-| `qa-viewer`    | `dev-only-qa-viewer-password`    | yes                | Signing in to the dashboard       |
-| `qa-no-access` | `dev-only-qa-no-access-password` | no                 | The "no access" page for the role |
+| User           | Password                         | `dashboard-viewer`        | Used for                               |
+| -------------- | -------------------------------- | ------------------------- | -------------------------------------- |
+| `qa-viewer`    | `dev-only-qa-viewer-password`    | yes                       | Signing in to the dashboard            |
+| `qa-admin`     | `dev-only-qa-admin-password`     | yes, and `platform-admin` | The admin area; approving chat changes |
+| `qa-no-access` | `dev-only-qa-no-access-password` | no                        | The "no access" page for the role      |
 
 Keycloak imports the realm only when it does not exist yet. After this file changes, recreate the
 container so it imports again: `docker compose -f infrastructure/docker/stack.compose.yml up -d
