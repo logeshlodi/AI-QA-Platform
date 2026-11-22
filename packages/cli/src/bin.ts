@@ -3,13 +3,17 @@ import { chromium } from '@playwright/test';
 import { targetNames, targetUrl, type TargetName } from '@aiqa/shared';
 import { Argument, Command, InvalidArgumentError, Option } from 'commander';
 import { ENTITIES, makeData, type Entity } from './commands/data';
-import { metricTrends } from '@aiqa/reporting-engine';
 import { formatFlaky, formatHistory, formatPerf, loadRuns } from './commands/history';
 import { formatFiles, renderPage, writeFiles } from './commands/new-page';
 import { formatList, runQuiz } from './commands/quiz';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
+import { randomUUID } from 'node:crypto';
+import { createRunRepository, HISTORY_DIR, metricTrends, type ResultRecord } from '@aiqa/reporting-engine';
 import {
   askOnTerminal,
+  rerunTest,
   formatAgentLog,
   formatHealingReviews,
   formatTriage,
@@ -20,14 +24,21 @@ import {
   buildTriageContexts,
   chooseModel,
   formatEval,
+  AGENT_EVALS,
+  edgeCaseData,
   generateSpec,
+  huntFlaky,
   JsonlRunLog,
+  planApiTests,
+  rankA11yFindings,
+  renderApiSpec,
+  reportRun,
+  runFacts,
   parsePlan,
   planPage,
   reviewHeals,
   runTriageEval,
   triage,
-  TRIAGE_GATE,
 } from '@aiqa/ai-agents';
 import { createHealRepository, readPatchableSources } from '@aiqa/self-healing-engine';
 import { loadEnv } from '@aiqa/shared';
@@ -209,29 +220,276 @@ agents
 
 agents
   .command('eval')
-  .description('score an agent against its labelled cases (exit code 1 below the sprint gate)')
-  .addArgument(new Argument('<agent>', 'which agent').choices(['triage']))
-  .option('--model-only', 'switch the rules off and measure the model alone')
-  .option('--only <ids>', 'comma-separated case ids')
-  .action(async (_agent: string, opts: { modelOnly?: boolean; only?: string }) => {
-    const model = chooseModel(loadEnv());
-    if (opts.modelOnly && !model.model) {
+  .description('score agents on their labelled cases with the configured model (exit code 1 below a gate)')
+  .argument('<agent>', `one of: all, generator, ${AGENT_EVALS.map((e) => e.agent).join(', ')}`)
+  .option('--model-only', 'triage only: switch the rules off and measure the model alone')
+  .option('--record', 'save the scores to the run history as suite "agents"')
+  .action(async (which: string, opts: { modelOnly?: boolean; record?: boolean }) => {
+    const env = loadEnv();
+    const model = chooseModel(env);
+    if (!model.model)
       throw new Error(
-        '--model-only needs a model: set AI_ENABLED=true or AGENT_PROVIDER (see .env.example).',
+        'Agent evals measure the model: set AI_ENABLED=true or AGENT_PROVIDER (see .env.example).',
       );
+    const names = which === 'all' ? [...AGENT_EVALS.map((e) => e.agent), 'generator'] : [which];
+    const unknown = names.filter((n) => n !== 'generator' && !AGENT_EVALS.some((e) => e.agent === n));
+    if (unknown.length) throw new Error(`No eval for ${unknown.join(', ')}.`);
+    const log = new JsonlRunLog();
+    const ctx = { model, log, timeoutMs: env.AGENT_TIMEOUT_MS, openApi: undefined as unknown };
+    if (names.includes('api-tester')) {
+      try {
+        ctx.openApi = await (
+          await fetch(`${process.env.ORDER_SERVICE_URL ?? 'http://localhost:8088'}/openapi.json`)
+        ).json();
+      } catch {
+        console.log('api-tester: skipped, the order service is not running ("pnpm stack:up").');
+        names.splice(names.indexOf('api-tester'), 1);
+      }
     }
-    const report = await runTriageEval({
-      model,
-      skipRules: opts.modelOnly,
+    const started = new Date().toISOString();
+    const results: ResultRecord[] = [];
+    const runId = randomUUID();
+    let below = 0;
+    for (const name of names) {
+      const began = Date.now();
+      console.log(`\n${name}: running…`);
+      let total = 0;
+      let correct = 0;
+      let gate = 0.8;
+      if (name === 'generator') {
+        // Needs a browser and SauceDemo: scenario 1 of the checked-in plan must pass 3 runs.
+        const plan = parsePlan(fs.readFileSync(path.join(FRAMEWORK, 'specs/inventory.plan.md'), 'utf8'));
+        const file = 'tests/generated/eval-generator.spec.ts';
+        const examples = ['tests/seed.spec.ts', 'tests/journeys/checkout.spec.ts'].map((p) => ({
+          path: p,
+          code: fs.readFileSync(path.join(FRAMEWORK, p), 'utf8'),
+        }));
+        const result = await generateSpec(
+          { scenario: plan.scenarios[0]!, file, examples, url: 'https://www.saucedemo.com/inventory.html' },
+          specCheck(FRAMEWORK, file, 3),
+          ctx,
+        );
+        fs.rmSync(path.join(FRAMEWORK, file), { force: true });
+        total = 1;
+        correct = result.status === 'passed' ? 1 : 0;
+        console.log(`generator: ${result.status} after ${result.attempts} attempt(s)`);
+        results.push({
+          runId,
+          testId: 'generator:inventory-1',
+          retry: 0,
+          title: 'generator › inventory scenario 1 passes 3 runs',
+          file: 'agents/generator',
+          project: model.label,
+          status: correct ? 'passed' : 'failed',
+          durationMs: Date.now() - began,
+          errorMessage: result.errors?.split('\n')[0],
+        });
+      } else {
+        const e = AGENT_EVALS.find((x) => x.agent === name)!;
+        gate = e.gate;
+        const report =
+          name === 'triage' && opts.modelOnly
+            ? await runTriageEval({ ...ctx, skipRules: true })
+            : await e.run(ctx);
+        total = report.total;
+        correct = report.correct;
+        console.log(formatEval(`${name} (${e.measures})`, report));
+        for (const o of report.outcomes) {
+          results.push({
+            runId,
+            testId: `${name}:${o.id}`,
+            retry: 0,
+            title: `${name} › ${o.id}`,
+            file: `agents/${name}`,
+            project: model.label,
+            status: o.correct ? 'passed' : 'failed',
+            durationMs: 0,
+            errorMessage: o.correct ? undefined : `expected ${o.expected}, got ${o.actual} (${o.source})`,
+          });
+        }
+      }
+      const accuracy = total ? correct / total : 0;
+      const ok = accuracy >= gate;
+      if (!ok) below++;
+      console.log(
+        `${name}: ${correct}/${total} = ${Math.round(accuracy * 100)}%, gate ${Math.round(gate * 100)}% ${ok ? 'passed' : 'NOT reached'} (${((Date.now() - began) / 60000).toFixed(1)} min)`,
+      );
+      results.push({
+        runId,
+        testId: `${name}:gate`,
+        retry: 0,
+        title: `${name} › gate`,
+        file: `agents/${name}`,
+        project: model.label,
+        status: ok ? 'passed' : 'failed',
+        durationMs: Date.now() - began,
+        metrics: { accuracy_pct: Math.round(accuracy * 1000) / 10 },
+      });
+    }
+    if (opts.record) {
+      const repo = createRunRepository(HISTORY_DIR); // the reporter's own writable store
+      repo.saveRun({
+        run: {
+          id: runId,
+          suite: 'agents',
+          startedAt: started,
+          finishedAt: new Date().toISOString(),
+          environment: model.label,
+        },
+        results,
+      });
+      repo.close();
+      console.log(`\nRecorded as run ${runId} in the run history (suite "agents").`);
+    }
+    if (below) process.exitCode = 1;
+  });
+
+agents
+  .command('flaky')
+  .description('find flaky tests in the history, rerun them, and say the likely cause and fix')
+  .option('--suite <suite>', "which suite's history", 'ui')
+  .option('--rerun <n>', 'rerun each candidate n times (0 = history only)', (v) => Number(v), 5)
+  .option('--limit <n>', 'at most this many tests', positiveInt, 5)
+  .action(async (opts: { suite: string; rerun: number; limit: number }) => {
+    const env = loadEnv();
+    const runs = loadRuns().filter((r) => r.run.suite === opts.suite);
+    const findings = await huntFlaky(runs, {
+      model: chooseModel(env),
       log: new JsonlRunLog(),
-      timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
-      only: opts.only?.split(',').map((s) => s.trim()),
+      timeoutMs: env.AGENT_TIMEOUT_MS,
+      limit: opts.limit,
+      rerun:
+        opts.rerun > 0
+          ? async (t) => {
+              console.log(`rerunning "${t.title}" ${opts.rerun} times…`);
+              return rerunTest(path.resolve(FRAMEWORK, '..'), opts.suite, t.title, opts.rerun);
+            }
+          : undefined,
     });
-    const mode = opts.modelOnly ? 'model only' : model.model ? 'rules, then model' : 'rules only';
-    console.log(formatEval(`triage (${mode}, ${model.label})`, report));
-    console.log(`
-Gate: ${Math.round(TRIAGE_GATE * 100)}% ${report.accuracy >= TRIAGE_GATE ? 'passed' : 'not reached'}`);
-    if (report.accuracy < TRIAGE_GATE) process.exitCode = 1;
+    if (!findings.length) return console.log(`No flaky tests in the last runs of "${opts.suite}".`);
+    for (const f of findings) {
+      console.log(
+        `\n${f.verdict.toUpperCase().padEnd(10)} ${f.test.title}  (cause: ${f.diagnosis.cause}, ${f.diagnosis.source})`,
+      );
+      console.log(`  ${f.diagnosis.explanation}\n  fix: ${f.diagnosis.fix}`);
+    }
+  });
+
+agents
+  .command('data')
+  .description('edge-case records for an entity: model proposals that pass the schema, builders for the rest')
+  .addArgument(new Argument('<entity>', 'entity').choices(['product', 'customer']))
+  .action(async (entity: 'product' | 'customer') => {
+    const env = loadEnv();
+    const result = await edgeCaseData(entity, {
+      model: chooseModel(env),
+      log: new JsonlRunLog(),
+      timeoutMs: env.AGENT_TIMEOUT_MS,
+    });
+    console.log(JSON.stringify(result.records, null, 2));
+    console.error(
+      `\n${result.modelProposed} proposed by the model, ${result.rejected.length} rejected by the schema, ${result.records.filter((r) => r.source === 'builder').length} built by code for edges the model missed.`,
+    );
+    for (const r of result.rejected) console.error(`  rejected: ${r.problem}`);
+  });
+
+agents
+  .command('a11y')
+  .description('scan a page with axe and rank the findings by what users cannot do')
+  .addOption(new Option('--target <target>', 'demo target').choices(targetNames).default('saucedemo'))
+  .option('--path <path>', 'path relative to the target base URL', '/')
+  .option('--logged-in', 'open the page with the saved SauceDemo session')
+  .action(async (opts: { target: string; path: string; loggedIn?: boolean }) => {
+    const env = loadEnv();
+    const url = new URL(opts.path, targetUrl(opts.target as TargetName)).toString();
+    const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined });
+    let findings;
+    try {
+      const page = await browser.newPage({ storageState: opts.loggedIn ? SAUCE_SESSION : undefined });
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+        .analyze();
+      findings = results.violations.map((v) => ({
+        id: v.id,
+        impact: v.impact ?? 'unknown',
+        help: v.help,
+        nodes: v.nodes.length,
+        page: url,
+      }));
+    } finally {
+      await browser.close();
+    }
+    if (!findings.length) return console.log(`axe found nothing on ${url}.`);
+    const ranked = await rankA11yFindings(findings, {
+      model: chooseModel(env),
+      log: new JsonlRunLog(),
+      timeoutMs: env.AGENT_TIMEOUT_MS,
+    });
+    for (const r of ranked)
+      console.log(
+        `${r.priority.padEnd(9)} ${r.id} (${r.impact}, ${r.nodes} element${r.nodes === 1 ? '' : 's'}, ${r.source})\n          ${r.userImpact}`,
+      );
+  });
+
+agents
+  .command('report')
+  .description(
+    'a short summary of the latest run of a suite for a person; every number checked against the history',
+  )
+  .option('--suite <suite>', 'suite', 'ui')
+  .action(async (opts: { suite: string }) => {
+    const env = loadEnv();
+    const runs = loadRuns();
+    const latest = runs
+      .filter((r) => r.run.suite === opts.suite)
+      .sort((a, b) => a.run.startedAt.localeCompare(b.run.startedAt))
+      .at(-1);
+    const labels: Record<string, string> = {};
+    if (latest)
+      for (const ctx of buildTriageContexts(runs, latest.run.id))
+        labels[ctx.testId] = (await triage(ctx)).label;
+    const facts = runFacts(runs, opts.suite, labels);
+    if (!facts) return console.log(`No recorded "${opts.suite}" run.`);
+    const report = await reportRun(facts, {
+      model: chooseModel(env),
+      log: new JsonlRunLog(),
+      timeoutMs: env.AGENT_TIMEOUT_MS,
+    });
+    console.log(report.markdown);
+    if (report.reason) console.error(`\n(template used: ${report.reason})`);
+  });
+
+agents
+  .command('api-tests')
+  .description('write API cases for the order service from its OpenAPI document into the data suite')
+  .option('--run', 'run the written spec against the stack afterwards')
+  .action(async (opts: { run?: boolean }) => {
+    const env = loadEnv();
+    const base = process.env.ORDER_SERVICE_URL ?? 'http://localhost:8088';
+    const document = await (await fetch(`${base}/openapi.json`)).json();
+    const plan = await planApiTests(document, {
+      model: chooseModel(env),
+      log: new JsonlRunLog(),
+      timeoutMs: env.AGENT_TIMEOUT_MS,
+    });
+    const dataFramework = path.resolve(FRAMEWORK, '..', 'data-framework');
+    const file = path.join(dataFramework, 'tests', 'generated', 'order-service-api.spec.ts');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, renderApiSpec(plan.cases, 'Order service API, generated'));
+    console.log(
+      `wrote packages/data-framework/tests/generated/order-service-api.spec.ts: ${plan.cases.length} cases (${plan.cases.filter((c) => c.source === 'model').length} from the model, ${plan.cases.filter((c) => c.source === 'rules').length} added by code)`,
+    );
+    for (const r of plan.rejected) console.log(`  rejected "${r.case.name}": ${r.problem}`);
+    if (opts.run) {
+      const playwright = require.resolve('@playwright/test/cli', { paths: [dataFramework] });
+      const run = spawnSync(
+        process.execPath,
+        [playwright, 'test', 'tests/generated/order-service-api.spec.ts', '--reporter=line'],
+        { cwd: dataFramework, stdio: 'inherit' },
+      );
+      process.exitCode = run.status ?? 1;
+    }
   });
 
 agents

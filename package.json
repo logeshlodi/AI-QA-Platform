@@ -51,7 +51,8 @@
     "mcp": "tsx packages/mcp-server/src/bin.ts",
     "test:agents": "vitest run packages/ai-agents packages/mcp-server",
     "agents:eval": "tsx packages/cli/src/bin.ts agents eval triage",
-    "mcp:smoke": "node packages/mcp-server/scripts/smoke.mjs"
+    "mcp:smoke": "node packages/mcp-server/scripts/smoke.mjs",
+    "agents:eval:all": "tsx packages/cli/src/bin.ts agents eval all --record"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

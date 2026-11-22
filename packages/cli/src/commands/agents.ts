@@ -115,3 +115,53 @@ export function formatHealingReviews(reviews: HealingReview[]): string {
     )
     .join('\n\n');
 }
+
+const SUITE_PACKAGES: Record<string, string> = {
+  ui: 'playwright-framework',
+  api: 'api-framework',
+  data: 'data-framework',
+};
+
+/**
+ * Reruns one test `times` times with no retries, in the package its suite belongs to, and counts the
+ * results from Playwright's JSON report. Read-only: it writes only Playwright's own test-results.
+ */
+export function rerunTest(
+  packagesDir: string,
+  suite: string,
+  title: string,
+  times: number,
+): { passed: number; failed: number } {
+  const pkg = path.join(packagesDir, SUITE_PACKAGES[suite] ?? SUITE_PACKAGES.ui!);
+  const playwright = require.resolve('@playwright/test/cli', { paths: [pkg] });
+  const leaf = title.split(' › ').at(-1) ?? title;
+  const grep = leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const project = suite === 'ui' ? ['--project=chromium'] : [];
+  const run = spawnSync(
+    process.execPath,
+    [
+      playwright,
+      'test',
+      '--grep',
+      grep,
+      ...project,
+      `--repeat-each=${times}`,
+      '--retries=0',
+      '--reporter=json',
+    ],
+    {
+      cwd: pkg,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, FORCE_COLOR: '0' },
+    },
+  );
+  try {
+    const stats = (
+      JSON.parse(run.stdout) as { stats: { expected: number; unexpected: number; flaky: number } }
+    ).stats;
+    return { passed: stats.expected + stats.flaky, failed: stats.unexpected };
+  } catch {
+    return { passed: 0, failed: times };
+  }
+}

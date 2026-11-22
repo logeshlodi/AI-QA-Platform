@@ -53,8 +53,11 @@ services:
           '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:19092 > /dev/null',
         ]
       interval: 5s
-      timeout: 10s
+      # The check starts a JVM: on a busy laptop (Keycloak building, a local model running) that
+      # alone can take over 10 seconds, so the check gets 30 and a start period that does not count.
+      timeout: 30s
       retries: 30
+      start_period: 180s
 
   # OAuth 2.0 / OpenID Connect for the product API: a local test realm with service clients only.
   # The issuer is fixed to http://localhost:8180 however a token is requested (from your machine or from
@@ -82,9 +85,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 40
+      # Keycloak builds itself on first start (about 2.5 minutes on a busy laptop); failures in this
+      # window do not count against the retries.
+      start_period: 300s
 
   order-service:
     build: { context: ../.., dockerfile: apps/order-service/Dockerfile }
+    # Right after Kafka turns healthy its group coordinator may not be ready yet, and the consumer
+    # gives up joining after four tries. Starting again a few seconds later always works.
+    restart: on-failure:5
     environment:
       DATABASE_URL: postgres://aiqa:aiqa@postgres:5432/shop
       MONGO_URL: mongodb://mongo:27017

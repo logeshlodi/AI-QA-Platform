@@ -50,6 +50,22 @@ pnpm aiqa agents heal-review --apply                        # asks before writin
   object, with a pull-request description. It refuses when the old locator appears more than once,
   only in a spec, or on an assertion line.
 
+## The other five agents
+
+The same rules apply to the rest of the platform's agents: plain code decides what it can, the model
+does one job, and code checks the model's answer before anyone sees it.
+
+| Agent         | The model's job                            | What code checks                                                                      |
+| ------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Flaky hunter  | Names the likely cause from the errors     | Which tests are flaky (history), whether they still are (reruns)                      |
+| API tester    | Proposes cases from the OpenAPI document   | Operation exists, status documented, body valid exactly when success is expected      |
+| Test data     | Proposes edge-case records                 | Every record passes its schema; code builds any edge the model missed                 |
+| Accessibility | Ranks axe findings by what users cannot do | Every finding keeps axe's own level if the model skips it                             |
+| Run reporter  | Words the run summary                      | Every number must be in the run history, every failure named, or the template is used |
+
+`pnpm agents:eval:all` runs every agent against its labelled cases with your model and records the
+scores in the run history as suite `agents`, so a model change that makes an agent worse shows up.
+
 ## How they differ
 
 |                       | Playwright's agents                            | Ours                                                                                                       |

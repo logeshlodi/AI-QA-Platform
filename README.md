@@ -209,6 +209,10 @@ npx pnpm aiqa agents eval triage                 # score Triage on its 30 labell
 npx pnpm aiqa agents plan inventory --path /inventory.html --logged-in   # a test plan from the live page
 npx pnpm aiqa agents generate specs/inventory.plan.md --scenario 1       # a spec that must pass 3 runs
 npx pnpm aiqa agents heal-review --apply                                 # healed locators as patches, after your yes
+npx pnpm aiqa agents flaky --suite api          # flaky tests, rerun, with the likely cause
+npx pnpm aiqa agents a11y --path /inventory.html --logged-in            # axe findings ranked by user impact
+npx pnpm aiqa agents report --suite ui           # a summary whose every number is checked
+npx pnpm agents:eval:all                         # all nine agents against their evals, recorded
 npx pnpm aiqa agents log                         # every agent run: tools called, answer, model, time
 npx pnpm mcp                                     # the platform's MCP server on stdio
 ```

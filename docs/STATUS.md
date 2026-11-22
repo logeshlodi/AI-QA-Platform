@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 20 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server) and 10 (Planner, Generator, Healing review) are built and have run; the other agents, the web apps and the docs site are not started.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review) and 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents) are built and have run; the web apps and the docs site are not started.
 
 ## What was run, and the result
 
@@ -39,6 +39,37 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Sprint 11: five more agents and live evals for all nine (20 to 22 Nov)
+
+Run on the Windows laptop, `qwen2.5-coder:7b` on CPU through Ollama (`AI_ENABLED=true pnpm aiqa agents eval <agent> --record`).
+
+| Agent          | What the eval measures                                                    | Score                  | Gate        | Time     |
+| -------------- | ------------------------------------------------------------------------- | ---------------------- | ----------- | -------- |
+| Triage         | 30 recorded failures labelled product, test, flaky or environment         | 28/30 (93%)            | 80%, passed | 9.7 min  |
+| Flaky hunter   | Likely cause of 8 flaky tests from their errors                           | 8/8 (100%)             | 75%, passed | 10.3 min |
+| Accessibility  | Priority of 10 axe findings by what users cannot do                       | 9/10 (90%)             | 80%, passed | 10.1 min |
+| Run reporter   | 5 summaries with every number in the facts and every failure named        | 4/5 (80%)              | 80%, passed | 4.8 min  |
+| Test data      | Model-proposed edge-case records that pass their schema                   | 8/8 (100%)             | 80%, passed | 5.7 min  |
+| Healing review | Pull-request descriptions that name the locator and its new form          | 3/3 (100%)             | 80%, passed | 2.3 min  |
+| Planner        | Plans for 2 SauceDemo pages that name only elements on the page           | 2/2 (100%)             | 80%, passed | 5.3 min  |
+| Generator      | Scenario 1 of the inventory plan passes 3 runs in a row                   | 1/1                    | passed      | 9.0 min  |
+| API tester     | Model-proposed cases the OpenAPI document allows, every operation covered | not yet run to the end | 80%         |          |
+
+The misses: Triage as in Sprint 9; Accessibility ranked `link-name` fix-soon where the label says
+fix-now; Run reporter's "site down" summary was rejected and replaced by the template. The API tester's
+run was cut off when the laptop disconnected; rerun it with the stack up.
+
+Fixed on the way:
+
+- `--record` opened the run history read-only and could not save; it now uses the reporter's writable
+  store. Planner and Generator scores are recorded (suite `agents`); the others' are in
+  `.aiqa/agents/eval-*.log`.
+- Starting the stack on a busy laptop failed three ways, each fixed in `stack.compose.yml`: Keycloak
+  gets a 300 s start period, Kafka's health check 30 s and a 180 s start period, and the order service
+  `restart: on-failure:5` when it cannot join its consumer group right after Kafka turns healthy.
+- The kind cluster was stopped to free about three CPU cores; `docker start aiqa-control-plane` brings
+  it back unchanged.
 
 ## Sprint 10: Planner, Generator and Healing review agents (20 Nov)
 

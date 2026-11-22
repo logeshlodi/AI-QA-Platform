@@ -11,8 +11,11 @@
     "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
+    "@aiqa/test-data-engine": "workspace:*",
     "ai": "catalog:",
     "ai-sdk-ollama": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
     "zod": "catalog:"
   }
 }
