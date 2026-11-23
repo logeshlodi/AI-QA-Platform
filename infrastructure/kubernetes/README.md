@@ -52,7 +52,10 @@ the case).
 `.github/workflows/kubernetes.yml` does the same on a GitHub runner every night (and from the Actions
 tab, with a choice of suites): installs kind and Helm at the versions above, runs `pnpm k8s:up`, then
 each suite. Reports and the run history are kept as the `kubernetes-results` artifact; when something
-fails, the log shows the pods, recent events and the logs of any pod that is not running.
+fails, the log shows the pods, recent events and the logs of any pod that is not running. The Jobs
+write into `.aiqa` as root, so on a Linux host the workflow hands the folder back to the runner
+(`chown`) before recording the load summary; on Linux, run `sudo chown -R $USER .aiqa` after the
+suites if `pnpm k8s:test load` reports a read-only database.
 
 ## How it fits together
 

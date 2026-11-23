@@ -46,7 +46,8 @@ Built, then run on the Windows laptop:
 
 1. **A nightly cluster workflow** (`.github/workflows/kubernetes.yml`): kind and Helm on a GitHub
    runner, `pnpm k8s:up`, then the data, UI (Chromium, Firefox, WebKit) and load suites as Jobs, with
-   the reports kept as an artifact. `actionlint` passes it; it has not run on GitHub yet.
+   the reports kept as an artifact. Its first run on GitHub (23 Nov) built the stack and passed the
+   data and UI steps, then failed at the load step: see the fix below.
 2. **The nine agent evals on `qwen3:8b`**, thinking off (`AGENT_THINK=false`, new: qwen3 reasons
    before every answer by default, several times slower on a CPU).
 3. **Playwright's planner, generator and healer against ours**: `pnpm aiqa agents compare plan | spec
@@ -119,10 +120,16 @@ Not done yet:
   page-object members (`sort`, `prices()`, `card(...).addToCart`) but skips the sign-in the seed spec
   shows, so the first click times out on the login page. `qwen2.5-coder:7b` passes on the first
   attempt (3.0 min, down from 9.0). For writing specs, keep `qwen2.5-coder:7b` or use a hosted model.
-- Playwright's side of the agent comparison: it needs a person in Claude Code (the runbook has the
-  prompts). Ours: the plan passes (21 named elements, one, "Remove", only on the page after a product
-  is added); the healing gate spec passes; the generator results are above.
-- The nightly cluster workflow's first run on GitHub.
+- **Playwright's agents against ours** ([agents-vs-playwright.md](agents-vs-playwright.md)):
+  Playwright's planner passes (23 scenarios, 44 steps, every named element on the page) and its
+  generator's spec passes 3 runs in a row; ours pass the plan and the healing gate, and the spec on
+  `qwen2.5-coder:7b` only. Its healer is still to run. Scoring its plan showed our plan parser did not
+  read Playwright's layout (it read 0 steps); `parsePlan` now reads both.
+- **The nightly cluster workflow's first run failed at the load step** with "attempt to write a
+  readonly database". The Jobs write `.aiqa` (run history included) as root through the kind
+  mount; the load step then records k6's summary on the runner as its own user, which cannot write to
+  that file. Docker Desktop on Windows does not enforce file owners, so the laptop never showed it.
+  The workflow now hands `.aiqa` back to the runner (`chown`) before recording; the next run checks it.
 
 ## Review after Phase 5 (23 Nov)
 
@@ -590,8 +597,8 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
   which passes) and the comparison with ours is ready (`docs/agents-vs-playwright.md`,
   `pnpm aiqa agents compare`). Our side has run; theirs needs a person in Claude Code.
 - **Firefox and WebKit run journeys and smoke only**; the labs run on Chromium by design.
-- **The nightly cluster workflow** (`.github/workflows/kubernetes.yml`) has not run on GitHub yet: it
-  runs at 02:30 IST after the next push, or now from the Actions tab.
+- **The nightly cluster workflow** (`.github/workflows/kubernetes.yml`) has run once and failed at the
+  load step (file ownership, fixed above); the fix is unproven until its next run.
 
 ## Known gaps and honest notes
 

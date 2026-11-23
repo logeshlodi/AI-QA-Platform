@@ -61,6 +61,65 @@ describe('planner', () => {
   });
 });
 
+describe("parsePlan reads Playwright's planner layout too", () => {
+  // The shape Playwright's planner agent wrote on 23 Nov: groups, numbered scenarios, bold labels.
+  const playwrightPlan = `# Test Plan: Inventory
+
+## Application Overview
+
+Six products.
+
+## Starting State
+
+**Seed:** \`tests/seed.spec.ts\`.
+
+## Test Scenarios
+
+### 1. Sorting
+
+#### 1.1 Default sort is Name (A to Z)
+
+**Seed:** \`tests/seed.spec.ts\`
+
+**Steps:**
+1. Read the active sort label.
+2. Read all product names.
+
+**Expected Results:**
+- The active label is "Name (A to Z)".
+
+### 2. Cart Badge
+
+#### 2.1 No badge on a fresh session
+
+**Steps:**
+1. Look at the cart icon.
+
+**Expected Results:**
+- No badge is shown.
+
+## Notes for the Generator
+
+- Use the fixtures.
+`;
+
+  it('takes the numbered scenarios under each group, with their steps and expected results', () => {
+    const plan = parsePlan(playwrightPlan);
+    expect(plan.scenarios).toEqual([
+      {
+        title: 'Default sort is Name (A to Z)',
+        steps: ['Read the active sort label.', 'Read all product names.'],
+        expected: ['The active label is "Name (A to Z)".'],
+      },
+      {
+        title: 'No badge on a fresh session',
+        steps: ['Look at the cart icon.'],
+        expected: ['No badge is shown.'],
+      },
+    ]);
+  });
+});
+
 describe('generator', () => {
   const input = {
     scenario: PLAN.scenarios[1]!,

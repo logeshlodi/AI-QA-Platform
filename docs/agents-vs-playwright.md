@@ -105,16 +105,27 @@ patched page object then works.
 
 ## Results
 
-Our side ran on 23 Nov on the Windows laptop, `qwen3:8b` on CPU with thinking off. Playwright's side
-needs a person in Claude Code.
+Both sides ran on 23 Nov on the Windows laptop: ours on `qwen3:8b` on CPU with thinking off (and
+`qwen2.5-coder:7b` for the spec), Playwright's in Claude Code. The healing task on Playwright's side is
+still to run.
 
-| Task | Playwright's agent (Claude Code) | Ours (`qwen3:8b`, CPU)                                                                                        |
-| ---- | -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Plan | not run yet                      | PASS: 3 scenarios, 15 steps, 21 named elements; one ("Remove") appears only after a product is added, 4.6 min |
-| Spec | not run yet                      | FAIL on `qwen3:8b` (compiles, never signs in); PASS on `qwen2.5-coder:7b`, first attempt, 3.0 min             |
-| Heal | not run yet                      | PASS: the heal-review gate spec (suggestion, patch applies, page object works again)                          |
+| Task | Playwright's agent (Claude Code)                                          | Ours (`qwen3:8b`, CPU)                                                                                        |
+| ---- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Plan | PASS: 23 scenarios in 4 groups, 44 steps, every named element on the page | PASS: 3 scenarios, 15 steps, 21 named elements; one ("Remove") appears only after a product is added, 4.6 min |
+| Spec | PASS: lint clean, type-checks, 3 runs in a row                            | FAIL on `qwen3:8b` (compiles, never signs in); PASS on `qwen2.5-coder:7b`, first attempt, 3.0 min             |
+| Heal | not run yet                                                               | PASS: the heal-review gate spec (suggestion, patch applies, page object works again)                          |
 
 The unhealed task scores FAIL (locator not replaced, the run fails), as it should.
+
+What the first two tasks show: Playwright's planner explored the page through the browser and wrote
+far more (23 scenarios, including reloads, the cart page, the product page, `problem_user` and
+`error_user`); ours reads one accessibility tree and writes three. Playwright's generator records
+steps it performed, so its spec passed first time; ours writes code from examples and needed the
+type check to stop `qwen3:8b` calling page-object members that do not exist.
+
+Scoring Playwright's plan found a bug in our tooling: its layout (groups, `#### 1.1` scenarios,
+**Steps:** labels) was not the one our parser assumed, so it read as 0 steps. `parsePlan` now reads
+both layouts, which also lets our generator take Playwright's plans.
 
 ## What to expect
 
