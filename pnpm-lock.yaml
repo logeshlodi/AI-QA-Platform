@@ -112,8 +112,8 @@ catalogs:
       specifier: 3.33.0
       version: 3.33.0
     allure-playwright:
-      specifier: 3.14.0
-      version: 3.14.0
+      specifier: 3.15.0
+      version: 3.15.0
     astro:
       specifier: 7.4.13
       version: 7.4.13
@@ -463,7 +463,7 @@ importers:
         version: 1.65.1
       allure-playwright:
         specifier: 'catalog:'
-        version: 3.14.0(@playwright/test@1.65.1)
+        version: 3.15.0(@playwright/test@1.65.1)
       fast-xml-parser:
         specifier: 'catalog:'
         version: 5.12.1
@@ -589,7 +589,7 @@ importers:
         version: 8.23.1
       allure-playwright:
         specifier: 'catalog:'
-        version: 3.14.0(@playwright/test@1.65.1)
+        version: 3.15.0(@playwright/test@1.65.1)
       cross-env:
         specifier: 'catalog:'
         version: 10.1.0
@@ -664,7 +664,7 @@ importers:
         version: 1.65.1
       allure-playwright:
         specifier: 'catalog:'
-        version: 3.14.0(@playwright/test@1.65.1)
+        version: 3.15.0(@playwright/test@1.65.1)
       lighthouse:
         specifier: 'catalog:'
         version: 13.6.0(ajv@8.20.0)(supports-color@7.2.0)
@@ -2621,16 +2621,16 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  allure-js-commons@3.14.0:
-    resolution: {integrity: sha512-Qr/F/tvc+PJv7Q5mniFF2DUJIOvVXmfaFqDZMgSpM2dfzPmSO/D//zGiO8w6kidJMB0VHuPdHPLx5ncLcxj3Gg==}
+  allure-js-commons@3.15.0:
+    resolution: {integrity: sha512-UpRChK/WIqb/xJcXa8qOXx2k/AkNPDhqDCseNrvqpk6ZqmbMQIVoERA/kuCwhtssyR++74BY9zivcJZhAYxfrA==}
     peerDependencies:
-      allure-playwright: 3.14.0
+      allure-playwright: 3.15.0
     peerDependenciesMeta:
       allure-playwright:
         optional: true
 
-  allure-playwright@3.14.0:
-    resolution: {integrity: sha512-TrC1iONL3dEEzCb6y+R4KUladUjcmY5WoM9D/a4pe3YAFw53wvtElUQzlID+beTALocMxThtRyxUaLGx0YRNmw==}
+  allure-playwright@3.15.0:
+    resolution: {integrity: sha512-PVPvd4lsQ0ruqylk/LmNTfoeSYjCREKIjqUUx56R2zgGQpSeek1ibqlKuG5BPCLnA4pBW5U9r3EKFtMeEQ74XQ==}
     peerDependencies:
       '@playwright/test': '>=1.62.0'
 
@@ -7344,16 +7344,16 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  allure-js-commons@3.14.0(allure-playwright@3.14.0(@playwright/test@1.65.1)):
+  allure-js-commons@3.15.0(allure-playwright@3.15.0(@playwright/test@1.65.1)):
     dependencies:
       md5: 2.3.0
     optionalDependencies:
-      allure-playwright: 3.14.0(@playwright/test@1.65.1)
+      allure-playwright: 3.15.0(@playwright/test@1.65.1)
 
-  allure-playwright@3.14.0(@playwright/test@1.65.1):
+  allure-playwright@3.15.0(@playwright/test@1.65.1):
     dependencies:
       '@playwright/test': 1.65.1
-      allure-js-commons: 3.14.0(allure-playwright@3.14.0(@playwright/test@1.65.1))
+      allure-js-commons: 3.15.0(allure-playwright@3.15.0(@playwright/test@1.65.1))
 
   allure@3.33.0(debug@4.4.3(supports-color@7.2.0))(preact@11.2.0)(supports-color@7.2.0):
     dependencies:
