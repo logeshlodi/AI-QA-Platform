@@ -5,9 +5,13 @@ How the parts of AI-QA-Platform fit together. The decisions behind them are in [
 ## Three layers of code
 
 ```
+apps             web (dashboard, chat, admin), documentation, order-service (system under test)
+  │ import
 specs            packages/playwright-framework/tests, api-framework/tests, data-framework/tests
   │ import
-frameworks       playwright-framework, api-framework, data-framework, load-tests, cli
+frameworks       playwright-framework, api-framework, data-framework, load-tests, cli, mcp-server
+  │ import
+agents           ai-agents (runtime, nine agents, evals), dashboard (React components)
   │ import
 engines          self-healing-engine, ai-engine, reporting-engine, test-data-engine
   │ import
@@ -16,7 +20,7 @@ shared           env config (zod), demo-target registry, logger, error types
 
 Imports only go down. ESLint enforces the two rules that matter most: `shared` never imports
 Playwright, and the engines never import the test runner. So the engines are plain TypeScript, unit
-tested in milliseconds without a browser, and usable from the CLI or a future agent.
+tested in milliseconds without a browser, and usable from the CLI, the agents and the web app.
 
 ## What runs where
 
@@ -70,10 +74,33 @@ Nothing a model returns is trusted as is: a healed locator must match exactly on
 least `HEAL_THRESHOLD` against the stored fingerprint, a generated locator must come from the page's own
 accessibility tree, and generated data must pass its zod schema.
 
+## Agents, the MCP server and the web app
+
+```
+aiqa agents ... ─┐
+MCP client ──────┼─► agent runtime (ai-agents) ─► tools: run history, heal audit, test data, axe, OpenAPI
+web app chat ────┘     tool budget, approval for writes,        │
+                       run log in .aiqa/agents                  └─► the engines above
+web app dashboard ─────────────────────────────────────────────► run history, heal audit, agent log
+Keycloak (realm aiqa) ─► sign-in for the web app (dashboard-viewer, platform-admin)
+```
+
+Each of the nine agents answers from rules when no model is set, and with a model it may call only its
+own tools, a few times per run ([ADR 0014](adr/0014-agents-rules-first-on-the-ai-sdk.md)). The MCP
+server (`packages/mcp-server`) offers the same read-only tools to any MCP client, and the web app's
+chat calls them in process; the one tool that writes (quarantining a test) waits for a platform admin
+to approve it ([ADR 0016](adr/0016-chat-over-mcp-with-approval-and-a-stub-model.md)). The web app is
+one Next.js app that only reads data the engines already keep; it has no database of its own
+([ADR 0015](adr/0015-one-nextjs-app-and-stories-for-components.md)).
+
+Healing changes reach the code only as patches a person accepts: `aiqa agents heal-review` writes them
+to `.aiqa/heal-patches`, and with `--apply --branch` commits them on a local `heal/*` branch. Nothing
+is pushed or merged by an agent.
+
 ## Where it runs
 
 - **Laptop**: everything, including Docker Compose (`pnpm stack:up`) and a kind cluster (`pnpm k8s:up`).
-- **GitHub Actions**: the full pipeline on every push and nightly.
+- **GitHub Actions**: the full pipeline on every push and nightly, and the docs site to GitHub Pages.
 - **Azure DevOps** and **Jenkins**: the same stages, for the two CI systems most teams use besides GitHub.
-- **Kubernetes** (kind): the stack from one Helm chart, the suites as Jobs, UI Jobs sharing one
-  Playwright browser server.
+- **Kubernetes** (kind): the stack, Keycloak and the web app from one Helm chart, the suites as Jobs,
+  UI Jobs sharing one Playwright browser server.

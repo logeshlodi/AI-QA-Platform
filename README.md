@@ -60,13 +60,13 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                            | Playwright            |
 | `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard        | Vitest                |
 | `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records     | Vitest                |
-| `packages/cli`                  | `aiqa`: page object and spec generator (locators from the accessibility tree), history, flaky, data, quiz          | Vitest                |
-| `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and the Triage agent                           | Vitest, mock models   |
+| `packages/cli`                  | `aiqa`: page and project generators, history, flaky, data, quiz, and the agents (`aiqa agents ...`)                | Vitest                |
+| `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and nine agents, each with a rules fallback    | Vitest, mock models   |
 | `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                 | Vitest, MCP client    |
 | `packages/dashboard`            | React components of the web app, a story per state, a gallery for Playwright's `mount`                             | Playwright components |
 | `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
 | `packages/templates`            | Starter projects for `aiqa new project`: UI, API or both, standalone, CI-tested                                    | Vitest, CI smoke      |
-| `packages/interview-learning`   | 43 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
+| `packages/interview-learning`   | 51 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
@@ -205,7 +205,7 @@ See `packages/playwright-framework/specs/README.md` for other tools (VS Code, Co
 
 ## Agents and the MCP server
 
-Phase 5 has started: [ADR 0014](docs/adr/0014-agents-rules-first-on-the-ai-sdk.md) sets the rules.
+Nine agents, each with one job, a tool budget and a rules fallback; [ADR 0014](docs/adr/0014-agents-rules-first-on-the-ai-sdk.md) sets the rules.
 
 ```bash
 npx pnpm aiqa agents triage --suite api          # why each failed test of the latest run failed

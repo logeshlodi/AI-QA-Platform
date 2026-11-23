@@ -60,10 +60,15 @@ export default tseslint.config(
       'playwright/prefer-to-have-count': 'off',
       'playwright/consistent-spacing-between-blocks': 'off',
       'playwright/expect-expect': [
-        'warn',
-        { assertFunctionNames: ['expect', 'expectSchema', 'expectToMatch', 'expectRefused'] },
+        'error',
+        { assertFunctionNames: ['expect', 'expectList', 'expectSchema', 'expectToMatch', 'expectRefused'] },
       ],
     },
+  },
+  {
+    // Setup projects prepare state (health checks, sign-in); they record results, not assertions.
+    files: ['packages/*/tests/setup/**/*.ts'],
+    rules: { 'playwright/expect-expect': 'off' },
   },
   {
     // React components and the web app: the rules of hooks.

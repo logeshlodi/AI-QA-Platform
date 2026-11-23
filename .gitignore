@@ -10,3 +10,5 @@ lighthouse-report/
 *.log
 _to_delete/
 packages/contract-tests/pacts/
+# TypeScript's incremental build state, rewritten on every typecheck
+*.tsbuildinfo

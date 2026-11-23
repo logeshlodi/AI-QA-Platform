@@ -8,7 +8,10 @@ test.use({ targetName: 'uiPlayground' });
 test.describe('auto-waiting', () => {
   test('waits for a slow page to finish loading', async ({ page }) => {
     await page.goto(targetUrl('uiPlayground', '/loaddelay'));
-    await page.getByRole('button', { name: 'Button Appearing After Delay' }).click();
+    const button = page.getByRole('button', { name: 'Button Appearing After Delay' });
+    // No wait before the click: it waits for the button itself.
+    await button.click();
+    await expect(button).toBeVisible();
   });
 
   test('waits for content computed on the client after a delay', async ({ page }) => {

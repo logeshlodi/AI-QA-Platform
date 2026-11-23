@@ -17,7 +17,7 @@ ignoredBuiltDependencies:
 catalog:
   # Test runner and Playwright plugins
   '@playwright/test': 1.65.1
-  'allure-playwright': 3.14.0
+  'allure-playwright': 3.15.0
   'allure': 3.33.0
   '@axe-core/playwright': 4.14.0
   'lighthouse': 13.6.0
@@ -38,9 +38,9 @@ catalog:
   '@faker-js/faker': 10.6.0
 
   # Agents (packages/ai-agents) and the platform's MCP server (packages/mcp-server)
-  'ai': 7.0.177
+  'ai': 7.0.179
   'ai-sdk-ollama': 4.6.3
-  '@ai-sdk/openai-compatible': 3.0.93
+  '@ai-sdk/openai-compatible': 3.0.94
   '@modelcontextprotocol/server': 2.4.0
   '@modelcontextprotocol/client': 2.4.0
 
@@ -73,7 +73,7 @@ catalog:
   # Data and messaging suites, and the order service they test
   'pg': 8.23.1
   '@types/pg': 8.23.1
-  'mongodb': 7.9.0
+  'mongodb': 7.9.1
   # Maintained, pure-TypeScript Kafka client (replaced kafkajs, unmaintained since 2023).
   # Needs Node 22.22+ or 24.6+. Tests reach it only through KafkaBus in data-framework.
   '@platformatic/kafka': 2.17.0
@@ -99,13 +99,13 @@ catalog:
   'typescript': 6.0.3
   # Types match the oldest Node the project runs on (22, as in CI), so code cannot use newer APIs by mistake.
   '@types/node': ^22.0.0
-  'vitest': 5.1.0
+  'vitest': 5.1.1
   'eslint': 10.15.0
-  'typescript-eslint': 8.72.2
+  'typescript-eslint': 8.73.0
   'eslint-plugin-playwright': 2.12.2
   'eslint-plugin-react-hooks': 7.1.1
   'prettier': 3.10.1
   'husky': 9.1.7
-  'lint-staged': 17.6.1
+  'lint-staged': 17.6.2
   '@commitlint/cli': 21.2.4
   '@commitlint/config-conventional': 21.2.4

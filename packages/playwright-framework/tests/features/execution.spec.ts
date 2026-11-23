@@ -39,6 +39,7 @@ test.describe('serial mode shares state across ordered tests', () => {
 
   test('first', async () => {
     seen.push('first');
+    expect(seen).toEqual(['first']);
   });
   test('second runs after first, in the same worker', async () => {
     seen.push('second');

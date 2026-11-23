@@ -95,6 +95,25 @@ export const QUESTIONS: readonly Question[] = [
       'docs/adr/0001-pnpm-workspace-and-catalog.md',
     ],
   },
+  {
+    id: 'framework-6',
+    topic: 'framework',
+    level: 'senior',
+    question: 'When would you use component tests instead of end-to-end tests?',
+    outline: [
+      'A component test mounts one component in a real browser with chosen props, with no server or sign-in.',
+      'It reaches states that are hard to set up end to end: empty, error, very long data, loading.',
+      'Each state is a story, so the same states feed behaviour, accessibility and visual checks.',
+      'End-to-end tests still prove the pieces work together: sign-in, data, routing.',
+      'Keep visual baselines in one fixed environment (a Linux image), or fonts make them differ.',
+    ],
+    files: [
+      'docs/adr/0015-one-nextjs-app-and-stories-for-components.md',
+      'packages/dashboard/tests/components/stories.ts',
+      'packages/dashboard/tests/components/a11y.spec.ts',
+      'packages/dashboard/tests/components/visual.spec.ts',
+    ],
+  },
 
   // ── locators ─────────────────────────────────────────────────────────────────────────────────
   {
@@ -479,6 +498,93 @@ export const QUESTIONS: readonly Question[] = [
       'packages/playwright-framework/tests/seed.spec.ts',
     ],
   },
+  {
+    id: 'ai-5',
+    topic: 'ai',
+    level: 'senior',
+    question: 'How do you keep an AI agent in a test platform safe and affordable to run?',
+    outline: [
+      'One job per agent, with a fixed list of tools; nothing open-ended like "run any command".',
+      'A budget of tool calls per run, so a slow or confused model cannot loop.',
+      'Read-only tools by default; anything that writes waits for a person to approve that exact call.',
+      'A plain-code answer when no model is set, so the agent still works in CI and offline.',
+      'Every run logged: prompt, tools called, answer, model, time and tokens.',
+    ],
+    files: [
+      'docs/adr/0014-agents-rules-first-on-the-ai-sdk.md',
+      'packages/ai-agents/src/runtime.ts',
+      'packages/ai-agents/src/tools.ts',
+      'packages/ai-agents/src/log.ts',
+    ],
+  },
+  {
+    id: 'ai-6',
+    topic: 'ai',
+    level: 'senior',
+    question: 'How do you measure whether an AI agent is good enough to use?',
+    outline: [
+      'An eval: a fixed set of cases with known right answers, scored the same way every time.',
+      'A pass mark agreed before the run (for example 80%), not chosen after seeing the score.',
+      'Check what can be checked by code: the answer parses, every number matches the data, every element named exists on the page.',
+      'Run the evals with a mock model in CI for the plumbing, and with the real model on request for quality.',
+      'Record scores over time, so a model or prompt change that makes things worse shows up.',
+    ],
+    files: [
+      'packages/ai-agents/src/eval.ts',
+      'packages/ai-agents/src/triage/cases.ts',
+      'packages/ai-agents/src/evals/cases.ts',
+    ],
+  },
+  {
+    id: 'ai-7',
+    topic: 'ai',
+    level: 'senior',
+    question: 'How would you test a chat feature built on a language model?',
+    outline: [
+      'Replace the model with a scripted stub that speaks the same API, so the specs are fast and repeatable.',
+      'Test the streaming itself: text arrives in parts, Stop ends it, the composer comes back.',
+      'For answers that vary, assert on the facts (numbers, names) and not on exact wording.',
+      'Test the dangerous paths on purpose: the stub obeys an instruction planted in tool output, and the app must still hold the write.',
+      'Keep a few runs against the real model as a manual or nightly check, not in every CI run.',
+    ],
+    files: [
+      'apps/web/tests/fixtures/model-stub.ts',
+      'apps/web/tests/e2e/chat.spec.ts',
+      'docs/adr/0016-chat-over-mcp-with-approval-and-a-stub-model.md',
+    ],
+  },
+  {
+    id: 'ai-8',
+    topic: 'ai',
+    level: 'architect',
+    question: 'What is prompt injection, and how do you defend a testing tool against it?',
+    outline: [
+      'Text the model reads (a page, an error message, a ticket) can contain instructions that try to take over.',
+      'Pass such text as data, clearly marked, and never mix it into the instructions.',
+      'Do not rely on the model refusing: put every write behind an approval the model cannot give itself.',
+      'Check who approves on the server, not only in the page (a viewer must not be able to approve through the API).',
+      'Write a test that plants an instruction and proves nothing is written until a person decides.',
+    ],
+    files: [
+      'apps/web/tests/e2e/chat.spec.ts',
+      'apps/web/src/app/api/chat/approve/route.ts',
+      'packages/ai-agents/src/tools.ts',
+    ],
+  },
+  {
+    id: 'ai-9',
+    topic: 'ai',
+    level: 'architect',
+    question: 'What is MCP, and why would a test platform offer an MCP server?',
+    outline: [
+      'The Model Context Protocol is a standard way for an AI client to list and call tools a server offers.',
+      'One server makes the platform (run history, flaky tests, heal audit, test data) usable from any MCP client: an IDE assistant, a chat app, an agent.',
+      'Tools have typed inputs and outputs, so the client knows how to call them and the server checks what it gets.',
+      'Keep the tools read-only, or make a writing tool require approval, since the caller is a model.',
+      "Playwright's own MCP server drives a browser; this one serves the platform's data. They do different jobs.",
+    ],
+    files: ['packages/mcp-server/src/server.ts', 'packages/mcp-server/tests/server.test.ts', '.mcp.json'],
+  },
 
   // ── performance ──────────────────────────────────────────────────────────────────────────────
   {
@@ -635,6 +741,25 @@ export const QUESTIONS: readonly Question[] = [
     ],
     files: ['apps/order-service/src/contract.ts', 'packages/data-framework/tests/http/limits.spec.ts'],
   },
+  {
+    id: 'security-5',
+    topic: 'security',
+    level: 'senior',
+    question: 'How do you test a sign-in that goes through an identity provider like Keycloak?',
+    outline: [
+      'Run the real provider in the test stack with test users, rather than mocking the sign-in away.',
+      'Sign in once in a setup project and reuse the saved state, so each test does not repeat the sign-in.',
+      'Test the edges: a wrong password, a user without the role, signing out ends the provider session too.',
+      'Test the attacks: a return address pointing to another site, a changed session cookie, an old or foreign sign-in attempt.',
+      'Check the security headers the pages send.',
+    ],
+    files: [
+      'apps/web/tests/e2e/auth.spec.ts',
+      'apps/web/tests/e2e/auth.setup.ts',
+      'apps/web/src/lib/oidc.ts',
+      'infrastructure/docker/keycloak/aiqa-realm.json',
+    ],
+  },
 
   // ── platform ─────────────────────────────────────────────────────────────────────────────────
   {
@@ -703,6 +828,24 @@ export const QUESTIONS: readonly Question[] = [
       'packages/reporting-engine/src/push.ts',
       'apps/order-service/src/tracing.ts',
       'infrastructure/kubernetes/aiqa-stack/files/grafana/dashboards/test-runs.json',
+    ],
+  },
+  {
+    id: 'platform-5',
+    topic: 'platform',
+    level: 'architect',
+    question: 'How would you help other teams start writing tests the way your platform does?',
+    outline: [
+      'A generator that creates a working starter project (page objects, fixtures, a smoke test), not a wiki page to copy from.',
+      'Pin it to the same tool versions the platform uses, and test the generated project in CI so the template cannot rot.',
+      'Documentation built from the same repository, with a check that fails on broken links.',
+      'Decision records that explain why things are done this way, so teams can disagree with reasons.',
+    ],
+    files: [
+      'packages/templates/src/index.ts',
+      'packages/templates/tests/render.test.ts',
+      'apps/documentation/scripts/check-links.ts',
+      'docs/adr/README.md',
     ],
   },
 ];

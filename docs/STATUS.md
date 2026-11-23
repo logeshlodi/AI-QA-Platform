@@ -8,7 +8,7 @@ Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitorin
 | Check                                                                    | Where                                     | Result                                                                                                                                 |
 | ------------------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Type-check (`pnpm typecheck`)                                            | Windows laptop and Linux workspace        | Clean                                                                                                                                  |
-| Lint (`pnpm lint`)                                                       | Windows laptop and Linux workspace        | 0 errors, 4 warnings                                                                                                                   |
+| Lint (`pnpm lint`)                                                       | Windows laptop and Linux workspace        | 0 errors, 0 warnings                                                                                                                   |
 | Unit tests (`pnpm test:unit`)                                            | Linux workspace, Node 22                  | 132 passed                                                                                                                             |
 | Unit tests (`pnpm test:unit`)                                            | Windows laptop, Node 24.22                | 135 passed, none skipped (the six SQLite store contracts now run; they skipped on Node 23.3)                                           |
 | API specs (`pnpm test:api`)                                              | Windows laptop, live APIs                 | 18 passed, twice, both recorded in the run history                                                                                     |
@@ -39,6 +39,40 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Review after Phase 5 (23 Nov)
+
+A pass over the whole repository once Phase 5 was done, for anything stale, inconsistent or loose.
+
+Changed:
+
+- **Lint is clean.** The four `expect-expect` warnings are gone: the custom-matcher test's helper is
+  now known to the rule, two feature tests gained the assertion they lacked, and setup projects are
+  exempt because they record state rather than assert it. The rule is now an error, so a test
+  without an assertion fails lint.
+- **Docs caught up with Phase 5.** `docs/architecture.md` has the agents, the MCP server and the web
+  app; the ADR index lists 0014 to 0016; the `ai-agents` and `documentation` READMEs no longer say
+  "not built yet"; the root README's package rows and agent section match what is built.
+- **Eight new interview questions** (51 in all) on agent safety, agent evals, testing a chat on a
+  stub model, prompt injection, MCP, component tests, testing a Keycloak sign-in, and starter
+  templates. Each points at the files that answer it, which the bank's unit test checks.
+- **Patch and minor updates:** `ai` 7.0.179, `@ai-sdk/openai-compatible` 3.0.94, `mongodb` 7.9.1,
+  `vitest` 5.1.1, `allure-playwright` 3.15.0, `typescript-eslint` 8.73.0, `lint-staged` 17.6.2.
+  The majors held back on purpose (TypeScript 7, `@types/node` 26, pnpm 12) stay held.
+
+Run on the Windows laptop:
+
+| Check                            | Result                                                        |
+| -------------------------------- | ------------------------------------------------------------- |
+| Typecheck, prettier              | passed                                                        |
+| Lint                             | 0 errors, 0 warnings                                          |
+| Unit tests                       | 304 passed                                                    |
+| Licence gate                     | 857 packages, all allowed (1 named exception)                 |
+| Docs site build                  | 36 pages, every internal link resolves                        |
+| Changed feature specs (Chromium) | 17 passed, 1 skipped (the `fixme` example, skipped by design) |
+
+`pnpm audit` still reports the same two moderate advisories (see Known gaps); the updates above do
+not clear them.
 
 ## Sprint 14: docs site, project templates, web app in Kubernetes (23 Nov). Phase 5 complete
 

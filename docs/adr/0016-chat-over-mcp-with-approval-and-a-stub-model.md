@@ -1,4 +1,4 @@
-# 16. The chat: MCP tools in process, every write held for a person, a stub model for the specs
+# 0016. The chat: MCP tools in process, every write held for a person, a stub model for the specs
 
 Date: 2026-11-22. Status: accepted.
 

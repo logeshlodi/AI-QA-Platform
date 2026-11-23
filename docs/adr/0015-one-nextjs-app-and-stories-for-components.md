@@ -1,4 +1,4 @@
-# 15. One Next.js app on Keycloak, and component tests on Playwright's stories
+# 0015. One Next.js app on Keycloak, and component tests on Playwright's stories
 
 Date: 2026-11-22. Status: accepted.
 
