@@ -73,6 +73,7 @@ Built, then run on the Windows laptop:
 | UI smoke in the cluster, three engines | passed on Chromium, Firefox and WebKit through the shared browser server                      |
 | k6 smoke, Docker and cluster           | 61 of 61 orders confirmed, 0 failed requests; every `k6_*` metric in Prometheus               |
 | Grafana's p95 against k6's own         | 49.7 ms (from the histogram) against 46 ms (exact)                                            |
+| GitHub Actions after the push          | CI #66 and the docs site workflow passed; the site is live                                    |
 | PDF report                             | spec passed; `report:pdf` wrote the full (46 runs) and data-suite (14 runs) reports           |
 | Helm                                   | `helm lint` passed; the chart now renders RabbitMQ and the gRPC port                          |
 
@@ -201,8 +202,8 @@ Fixed on the way:
   link check).
 
 Not done: the cluster has not been recreated with the new chart (`pnpm k8s:down && pnpm k8s:up`,
-since kind opens its ports only when the cluster is created). GitHub Pages must be switched on in
-the repository settings before the docs workflow can publish.
+since kind opens its ports only when the cluster is created). The docs site is live at
+https://logeshlodi.github.io/AI-QA-Platform/ (published by the docs workflow since 23 Nov).
 
 ## Sprint 13: chat and admin, and tests for AI features (22 Nov)
 
