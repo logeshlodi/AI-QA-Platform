@@ -16,3 +16,12 @@ the platform's data to any MCP client (Claude Code, VS Code, the Phase 5 chat ap
 Every tool only reads. Start it with `pnpm mcp`; the repository's `.mcp.json` registers it for Claude
 Code as `aiqa`. `triage_failures` uses a model only when one is configured (`AI_ENABLED=true` or
 `AGENT_PROVIDER`, see `.env.example`); otherwise it answers from rules.
+
+## Playwright MCP
+
+This package also holds the set-up for Playwright's browser MCP server (`@playwright/mcp`):
+`playwright-mcp.config.json` turns every capability on (72 tools), and the root `.mcp.json` registers
+it as `playwright`. It runs on the repository's Playwright 1.65.1 through an override in
+`pnpm-workspace.yaml`. `tests/playwright-mcp.test.ts` checks the tool groups in the unit suite;
+`pnpm test:mcp:playwright` drives a browser through every group. See
+[docs/playwright-mcp.md](../../docs/playwright-mcp.md).

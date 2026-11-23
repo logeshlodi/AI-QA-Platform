@@ -111,6 +111,7 @@ Paths are relative to the repository root.
 | Streamed answers, Stop, answers that vary, prompt injection held for approval, API refusals             | `apps/web/tests/e2e/chat.spec.ts`                                           | Web app + stub model       |
 | Human approval of AI-proposed writes, settings validated on the server                                  | `apps/web/tests/e2e/admin.spec.ts`                                          | Web app + stub model       |
 | CSRF (cross-site form post, foreign Origin) and stored XSS shown as text                                | `apps/web/tests/e2e/security.spec.ts`                                       | Web app + Keycloak         |
+| Playwright MCP (`@playwright/mcp`): all 8 capabilities, 72 tools, each group driven once                | `packages/mcp-server/tests/playwright-mcp.{test.ts,live.ts}`                | Local orders page          |
 | A generated starter project passing its own tests                                                       | CI job `templates` (`packages/templates`)                                   | SauceDemo, Restful-Booker  |
 
 ## In the plan, not built yet

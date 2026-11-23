@@ -13,6 +13,13 @@ ignoredBuiltDependencies:
   # Pact's usage-analytics package phones home from its install script; never run it.
   - '@scarf/scarf'
 
+# Playwright MCP pins an alpha build of Playwright in every release. The MCP server code is also in
+# stable Playwright (playwright-core's tools bundle), so it runs on ours: one Playwright, one set of
+# browsers. 0.0.84 is the release built on 1.65.
+overrides:
+  '@playwright/mcp>playwright': 1.65.1
+  '@playwright/mcp>playwright-core': 1.65.1
+
 # Versions are pinned once here; packages refer to them as "catalog:".
 catalog:
   # Test runner and Playwright plugins
@@ -43,6 +50,7 @@ catalog:
   '@ai-sdk/openai-compatible': 3.0.94
   '@modelcontextprotocol/server': 2.4.0
   '@modelcontextprotocol/client': 2.4.0
+  '@playwright/mcp': 0.0.84
 
   # Web app (apps/web) and its shared components (packages/dashboard)
   'next': 16.4.6

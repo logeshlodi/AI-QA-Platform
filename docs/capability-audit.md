@@ -393,18 +393,21 @@ Beyond the list: licence gate, `pnpm audit`, OSV-Scanner, ZAP API scan (ADR 0013
 
 ## 25. Playwright MCP
 
-| Item                       | Status | Where                                                              |
-| -------------------------- | ------ | ------------------------------------------------------------------ |
-| MCP server setup           | ✅     | `packages/mcp-server` (ours); `fw/.mcp.json` (Playwright's)        |
-| Browser control via MCP    | ✅     | Playwright's test MCP server, driven by its agents                 |
-| DOM inspection             | ✅     | browser snapshots through MCP                                      |
-| Screenshot analysis        | 🟡     | the MCP takes screenshots; nothing analyses them                   |
-| Locator generation         | ✅     | the generator agent, our `aiqa new page`                           |
-| Natural-language execution | ✅     | the web app's chat over our MCP tools                              |
-| AI-assisted debugging      | ✅     | Playwright's healer, our triage                                    |
-| AI test generation         | ✅     | as above                                                           |
-| Prompt templates           | ✅     | the agents' system prompts, `docs/agents-vs-playwright.md` prompts |
-| Memory integration         | 🟡     | the agent run log is kept; no memory fed back into prompts         |
+Three MCP servers: `@playwright/mcp` for driving a browser, Playwright's test MCP for its agents, and
+ours for the platform's data. See [Playwright MCP](playwright-mcp.md).
+
+| Item                       | Status | Where                                                                                                                              |
+| -------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| MCP server setup           | ✅     | root `.mcp.json`: `playwright` (`@playwright/mcp`, all 8 capabilities, 72 tools) and `aiqa`; `fw/.mcp.json`: Playwright's test MCP |
+| Browser control via MCP    | ✅     | `packages/mcp-server/tests/playwright-mcp.live.ts` (every capability group, local page)                                            |
+| DOM inspection             | ✅     | accessibility snapshots with element references and boxes, in the same test                                                        |
+| Screenshot analysis        | 🟡     | the MCP takes screenshots; nothing analyses them                                                                                   |
+| Locator generation         | ✅     | `browser_generate_locator` (live test), the generator agent, `aiqa new page`                                                       |
+| Natural-language execution | ✅     | the web app's chat over our MCP tools                                                                                              |
+| AI-assisted debugging      | ✅     | Playwright's healer, our triage                                                                                                    |
+| AI test generation         | ✅     | as above                                                                                                                           |
+| Prompt templates           | ✅     | the agents' system prompts, `docs/agents-vs-playwright.md` prompts                                                                 |
+| Memory integration         | 🟡     | the agent run log is kept; no memory fed back into prompts                                                                         |
 
 ## 26. Playwright test agents
 

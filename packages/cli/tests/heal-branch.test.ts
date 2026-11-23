@@ -37,7 +37,9 @@ function repo() {
   return dir;
 }
 
-describe('heal patches and branches', () => {
+// Real git commands: slow on Windows, more so with Defender scanning each one and other test files
+// starting processes at the same time. 5 s was not enough there.
+describe('heal patches and branches', { timeout: 30_000 }, () => {
   it('slugs locator keys for file and branch names', () => {
     expect(slug('CheckoutPage.payNow')).toBe('checkoutpage-paynow');
     expect(slug('***')).toBe('heal');

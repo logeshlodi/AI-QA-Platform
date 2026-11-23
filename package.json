@@ -51,6 +51,8 @@
     "lab": "pnpm --filter @aiqa/examples lab",
     "test:labs": "pnpm --filter @aiqa/examples test:solutions",
     "mcp": "tsx packages/mcp-server/src/bin.ts",
+    "mcp:playwright": "node packages/mcp-server/node_modules/@playwright/mcp/cli.js --config packages/mcp-server/playwright-mcp.config.json",
+    "test:mcp:playwright": "vitest run --config vitest.live.config.ts packages/mcp-server/tests/playwright-mcp.live.ts",
     "test:agents": "vitest run packages/ai-agents packages/mcp-server",
     "agents:eval": "tsx packages/cli/src/bin.ts agents eval triage",
     "mcp:smoke": "node packages/mcp-server/scripts/smoke.mjs",

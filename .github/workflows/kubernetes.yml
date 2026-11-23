@@ -49,6 +49,12 @@ jobs:
       - name: UI suite on Chromium, Firefox and WebKit through the shared browser server
         if: (success() || failure()) && contains(env.SUITES, 'ui')
         run: pnpm k8s:test ui all-browsers
+      # The Jobs write into .aiqa through the kind mount as root (the run history among it), but
+      # `k8s:test load` records k6's summary from the runner as the runner user, which then cannot
+      # write to that database ("attempt to write a readonly database"). Hand the folder back first.
+      - name: Give the runner back what the Jobs wrote
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" .aiqa
       - name: Load smoke against the order service
         if: (success() || failure()) && contains(env.SUITES, 'load')
         run: pnpm k8s:test load smoke
@@ -62,6 +68,9 @@ jobs:
             echo "::group::$pod"; kubectl --context kind-aiqa -n aiqa describe "$pod" | tail -40; kubectl --context kind-aiqa -n aiqa logs "$pod" --all-containers --tail=100 || true; echo "::endgroup::"
           done
 
+      - name: Give the runner back what the load Job wrote
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" .aiqa
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -40,6 +40,25 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## Playwright MCP with every capability (23 Nov)
+
+`@playwright/mcp` is registered in the root `.mcp.json` as `playwright`, with all eight capabilities
+(core, network, storage, testing, vision, PDF, DevTools, config: 72 tools). Every release of it pins an
+alpha Playwright, so an override runs it on the repository's 1.65.1 (release 0.0.84, built on 1.65):
+one Playwright, one set of browsers. See [Playwright MCP](playwright-mcp.md).
+
+| Check                                                                | Where                     | Result                                                                                                      |
+| -------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Tool groups (`tests/playwright-mcp.test.ts`, in `pnpm test:unit`)    | Linux workspace           | 5 passed: 72 tools with the config, 25 core without it                                                      |
+| Every group against a local orders page (`pnpm test:mcp:playwright`) | Linux workspace, Chromium | 8 passed: snapshot refs, form fill, verify, locators, storage, mocked API, click by coordinates, trace, PDF |
+| Lint, type-check, unit tests, licences                               | Linux workspace           | Clean; 331 unit tests; 874 packages allowed                                                                 |
+| The same on the Windows laptop                                       | Windows laptop            | Clean: one `playwright-core` (1.65.1), 332 unit tests twice, live 8 of 8, docs and licences                 |
+
+On the laptop the first unit run timed out two `heal-branch` tests (real `git` commands, 5 s limit,
+with the new MCP tests starting processes alongside), and the live test's clean-up waited on the
+browser's open connections. The git tests now allow 30 s and the clean-up closes those connections;
+both runs after that were clean.
+
 ## Capability gap sprint (23 Nov)
 
 The [capability audit](capability-audit.md) scored the repository against a 283-item enterprise

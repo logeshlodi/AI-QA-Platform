@@ -2,7 +2,7 @@
   "name": "@aiqa/mcp-server",
   "version": "0.1.0",
   "private": true,
-  "description": "The platform's MCP server: run history, flaky tests, perf trends, heal audit, test data and triage as tools",
+  "description": "The platform's MCP server (run history, flaky tests, perf trends, heal audit, test data and triage as tools), and the config for Playwright MCP",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
@@ -15,6 +15,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "catalog:"
+    "@modelcontextprotocol/client": "catalog:",
+    "@playwright/mcp": "catalog:"
   }
 }

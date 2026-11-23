@@ -27,6 +27,7 @@ export default defineConfig({
           items: [
             { label: 'Playwright cheat sheet', link: '/cheat-sheet/' },
             { label: 'From Selenium to Playwright', link: '/migration-from-selenium/' },
+            { label: 'Playwright MCP', link: '/playwright-mcp/' },
             { label: 'Troubleshooting', link: '/troubleshooting/' },
           ],
         },
