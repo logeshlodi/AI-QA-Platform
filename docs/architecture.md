@@ -97,6 +97,37 @@ Healing changes reach the code only as patches a person accepts: `aiqa agents he
 to `.aiqa/heal-patches`, and with `--apply --branch` commits them on a local `heal/*` branch. Nothing
 is pushed or merged by an agent.
 
+## Design patterns
+
+Each pattern is used where it removes a real problem, not for its own sake.
+
+| Pattern                        | Where                                                                                          | Why it is there                                                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Page Object                    | `playwright-framework/src/pages`, all extending `BasePage`                                     | locators and actions live once; specs read as user journeys                                                     |
+| Component Object               | `src/components` (header, product card)                                                        | parts repeated across pages are defined once and composed into pages                                            |
+| Flow (Screenplay-lite)         | `src/flows` (`loginFlow`, checkout)                                                            | a journey over several pages is one call, so specs do not repeat it                                             |
+| Fixture (dependency injection) | `src/fixtures` via `test.extend`                                                               | a test asks for what it needs; creation and clean-up are in one place and only run when asked for               |
+| Builder                        | `test-data-engine/src/builders.ts` (`anOrder().withLines(...)`)                                | readable test data with sensible defaults; seeded, so a failure replays                                         |
+| Strategy                       | `self-healing-engine/src/strategies.ts` (test id, role and name, text, attribute, LLM)         | each way to find a moved element is a class behind one interface; the order is configurable and the LLM is last |
+| Factory                        | `ai-engine/src/providers/factory.ts`, the store factories in the healing and reporting engines | the environment chooses Ollama or the fake model, SQLite or JSON; callers see one interface                     |
+| Repository                     | `store/repository.ts` in the healing and reporting engines                                     | storage is an interface, so the engines are unit tested with JSON files and run on SQLite                       |
+| Adapter                        | `ai-engine` providers, `reporting-engine/src/playwright-reporter.ts`                           | a vendor API or Playwright's reporter interface is translated into our own types at the edge                    |
+| Singleton (lazy, resettable)   | `shared/src/env.ts` (`loadEnv()` parses `process.env` once with zod)                           | one validated configuration per process; `resetEnvCache()` keeps it testable, unlike a classic singleton        |
+| Command                        | `cli/src/bin.ts` with commander; each command's logic in `cli/src/commands`                    | every CLI action is a small, separately tested function; the binary only wires arguments to it                  |
+| Observer                       | the custom reporter, `context.on('requestfinished')` in the `networkLog` fixture               | collecting results and requests without the test knowing                                                        |
+
+### SOLID, in this codebase
+
+- **Single responsibility**: page objects find and act; specs assert; engines decide; reporters record.
+- **Open/closed**: a new healing strategy, AI provider or store is a new class registered in a factory,
+  with no change to the engine that uses it.
+- **Liskov substitution**: the fake model and the JSON store pass the same unit tests as Ollama and
+  SQLite, which is what makes them safe stand-ins.
+- **Interface segregation**: `LlmProvider` has one method; `HealingStrategy` has one; agents receive
+  only the tools they need, not the whole MCP server.
+- **Dependency inversion**: the engines depend on interfaces in their own package; Playwright, Ollama
+  and SQLite are plugged in from outside. ESLint stops `shared` and the engines importing the runner.
+
 ## Where it runs
 
 - **Laptop**: everything, including Docker Compose (`pnpm stack:up`) and a kind cluster (`pnpm k8s:up`).

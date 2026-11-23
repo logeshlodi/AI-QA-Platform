@@ -1,0 +1,6 @@
+case,username,password,outcome,message
+standard user signs in,standard_user,secret_sauce,products,
+locked-out user is refused,locked_out_user,secret_sauce,error,"Sorry, this user has been locked out."
+"unknown user, right password",nobody_user,secret_sauce,error,Username and password do not match
+wrong password,standard_user,not-the-password,error,Username and password do not match
+empty username,,secret_sauce,error,Username is required

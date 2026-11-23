@@ -201,6 +201,9 @@ catalogs:
     web-vitals:
       specifier: 6.2.3
       version: 6.2.3
+    yaml:
+      specifier: 2.9.1
+      version: 2.9.1
     zod:
       specifier: 4.6.7
       version: 4.6.7
@@ -683,6 +686,9 @@ importers:
       '@aiqa/shared':
         specifier: workspace:*
         version: link:../shared
+      '@aiqa/test-data-engine':
+        specifier: workspace:*
+        version: link:../test-data-engine
       '@axe-core/playwright':
         specifier: 'catalog:'
         version: 4.14.0(playwright-core@1.65.1)
@@ -698,6 +704,9 @@ importers:
       web-vitals:
         specifier: 'catalog:'
         version: 6.2.3
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       allure:
         specifier: 'catalog:'
@@ -753,6 +762,9 @@ importers:
       '@faker-js/faker':
         specifier: 'catalog:'
         version: 10.6.0
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
       zod:
         specifier: 'catalog:'
         version: 4.6.7

@@ -4,6 +4,7 @@ import { createProvider } from '@aiqa/ai-engine';
 import { createHealRepository, HealingEngine, LlmStrategy } from '@aiqa/self-healing-engine';
 import { loadEnv, type Env, type HealMode, type TargetName } from '@aiqa/shared';
 import { trackConsoleErrors } from '../checks/console';
+import { NetworkLog } from '../checks/network-log';
 import { CheckoutFlow } from '../flows/checkout.flow';
 import { LoginFlow } from '../flows/login.flow';
 import { Healer } from '../healing/healer';
@@ -86,8 +87,30 @@ const pages = base.extend<PageFixtures>({
     use(new CheckoutFlow(inventoryPage, cartPage, checkoutPage)),
 });
 
-const checks = base.extend<{ consoleErrors: string[] }>({
+const checks = base.extend<{ consoleErrors: string[]; networkLog: NetworkLog; slowRequestMs: number }>({
   consoleErrors: async ({ page }, use) => use(trackConsoleErrors(page)),
+  /** A request slower than this is flagged in the network log. */
+  slowRequestMs: [2_000, { option: true }],
+  // Auto: every test keeps a network log; a failed test gets it attached, slow requests named.
+  networkLog: [
+    async ({ context, slowRequestMs }, use, testInfo) => {
+      const log = new NetworkLog(context, slowRequestMs);
+      await use(log);
+      if (log.slow.length > 0) {
+        testInfo.annotations.push({
+          type: 'slow-requests',
+          description: log.slow.map((e) => `${e.method} ${e.url} ${e.durationMs} ms`).join('; '),
+        });
+      }
+      if (testInfo.status !== testInfo.expectedStatus && log.entries.length > 0) {
+        await testInfo.attach('network-log', {
+          body: JSON.stringify(log.entries, null, 2),
+          contentType: 'application/json',
+        });
+      }
+    },
+    { auto: true },
+  ],
 });
 
 const healing = core.extend<{ healer: Healer }>({

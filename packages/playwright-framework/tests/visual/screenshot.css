@@ -1,0 +1,5 @@
+/* Applied while every toHaveScreenshot capture is taken (playwright.config.ts, stylePath).
+   Hides content that changes on its own, so it never fails a visual comparison. */
+[data-visual='volatile'] {
+  visibility: hidden !important;
+}

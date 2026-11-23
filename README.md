@@ -367,7 +367,8 @@ pnpm aiqa quiz --topic api    # interview questions; --list prints them with ans
 | 5     | 9-14                    | Nine agents, MCP server, web app (dashboard, chat, admin), docs site, project templates              | Done  |
 
 `docs/architecture.md` explains how the parts fit together, and `docs/adr/` records the decisions
-behind them.
+behind them. To work on the repository, start with [`CONTRIBUTING.md`](CONTRIBUTING.md); the docs
+site also has a Playwright cheat sheet, a Selenium-to-Playwright guide and a troubleshooting page.
 
 ## Start your own project
 

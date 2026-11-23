@@ -1,0 +1,31 @@
+{
+  // Format with Prettier and fix lint on save, the same tools the pre-commit hook and CI run.
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "eslint.useFlatConfig": true,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+
+  // The workspace's TypeScript, not the one bundled with VS Code, so editor errors match `pnpm typecheck`.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // Playwright Test for VS Code: the main suite's config; traces open in the editor.
+  "playwright.reuseBrowser": false,
+  "playwright.showTrace": false,
+
+  // Run output and generated files stay out of search and the file tree.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/test-results": true,
+    "**/playwright-report": true,
+    "**/allure-results": true,
+    "**/.aiqa": true,
+    "**/dist": true,
+    "**/.next": true,
+    "**/.astro": true,
+    "apps/documentation/src/content/docs": true
+  },
+  "files.watcherExclude": { "**/.aiqa/**": true, "**/test-results/**": true, "**/node_modules/**": true }
+}

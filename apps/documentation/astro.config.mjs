@@ -22,8 +22,17 @@ export default defineConfig({
         { label: 'Learning path', items: [{ autogenerate: { directory: 'learning' } }] },
         { label: 'Architecture', link: '/architecture/' },
         { label: 'Decisions (ADRs)', items: [{ autogenerate: { directory: 'adr' } }] },
+        {
+          label: 'Guides',
+          items: [
+            { label: 'Playwright cheat sheet', link: '/cheat-sheet/' },
+            { label: 'From Selenium to Playwright', link: '/migration-from-selenium/' },
+            { label: 'Troubleshooting', link: '/troubleshooting/' },
+          ],
+        },
         { label: 'Coverage matrix', link: '/coverage-matrix/' },
         { label: 'Agents vs Playwright', link: '/agents-vs-playwright/' },
+        { label: 'Capability audit', link: '/capability-audit/' },
         { label: 'Status', link: '/status/' },
       ],
     }),

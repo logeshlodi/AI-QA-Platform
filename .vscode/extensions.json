@@ -1,0 +1,13 @@
+{
+  // Suggested when the folder is opened in VS Code. Every one is free.
+  "recommendations": [
+    "ms-playwright.playwright",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "vitest.explorer",
+    "editorconfig.editorconfig",
+    "redhat.vscode-yaml",
+    "astro-build.astro-vscode",
+    "ms-azuretools.vscode-containers"
+  ]
+}

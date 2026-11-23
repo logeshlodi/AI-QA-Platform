@@ -20,6 +20,7 @@
     "test:edge": "pnpm --filter @aiqa/playwright-framework test:edge",
     "test:smoke": "pnpm --filter @aiqa/playwright-framework exec playwright test --grep @smoke",
     "test:ui": "pnpm --filter @aiqa/playwright-framework test:history",
+    "test:debug": "pnpm --filter @aiqa/playwright-framework test:debug",
     "test:api": "pnpm --filter @aiqa/api-framework test:history",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:ui",
     "report:dashboard": "node scripts/open-dashboard.mjs",

@@ -41,7 +41,12 @@ export default defineConfig<Options>({
   // Visual baselines are per operating system. On CI only the `visual` job compares them (PW_VISUAL=1):
   // it runs in the same Docker image that created the Linux baselines, so fonts and rendering match.
   ignoreSnapshots: env.CI && !process.env.PW_VISUAL,
-  expect: { timeout: 7_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
+  expect: {
+    timeout: 7_000,
+    // stylePath: CSS applied while every baseline screenshot is taken, to hide what changes on its own
+    // (mark such elements data-visual="volatile").
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01, stylePath: './tests/visual/screenshot.css' },
+  },
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
@@ -70,8 +75,10 @@ export default defineConfig<Options>({
       : {}),
   },
   projects: [
-    // Runs first: health-checks every target, then saves a logged-in session.
-    { name: 'setup', testMatch: '**/health.setup.ts' },
+    // Runs first: health-checks every target, then saves a logged-in session ...
+    // ... and `cleanup` runs once after everything that needed setup has finished.
+    { name: 'setup', testMatch: '**/health.setup.ts', teardown: 'cleanup' },
+    { name: 'cleanup', testMatch: '**/cleanup.teardown.ts' },
     { name: 'auth', testMatch: '**/auth.setup.ts', dependencies: ['setup'] },
     {
       name: 'chromium',
@@ -118,6 +125,8 @@ export default defineConfig<Options>({
       dependencies: ready,
       testMatch: '**/smoke/**',
     },
+    // A tablet: an iPad in WebKit, touch and a portrait viewport between phone and desktop.
+    { name: 'tablet', use: { ...devices['iPad Pro 11'] }, dependencies: ready, testMatch: '**/smoke/**' },
     ...branded.map((name) => ({
       name,
       use: { ...devices['Desktop Chrome'], channel: name },

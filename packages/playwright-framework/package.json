@@ -14,6 +14,7 @@
     "test:lighthouse": "playwright test --project=lighthouse",
     "test:headed": "playwright test --project=chromium --headed",
     "test:ui-mode": "playwright test --ui",
+    "test:debug": "playwright test --project=chromium --debug",
     "snapshots:update": "playwright test tests/visual --project=chromium --update-snapshots",
     "report:allure": "allure generate ./allure-results --output ./allure-report",
     "report:allure:open": "allure open ./allure-report",
@@ -24,11 +25,13 @@
     "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
+    "@aiqa/test-data-engine": "workspace:*",
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
     "allure-playwright": "catalog:",
     "lighthouse": "catalog:",
-    "web-vitals": "catalog:"
+    "web-vitals": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "allure": "catalog:",

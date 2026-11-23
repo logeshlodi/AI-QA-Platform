@@ -65,6 +65,14 @@ export default defineConfig({
       dependencies: ['sign-in', 'dashboard'],
       use: { ...devices['Desktop Chrome'], storageState: ADMIN_STATE },
     },
+    {
+      // After admin: these compare the settings file before and after an attack, so nothing else may
+      // change it meanwhile.
+      name: 'security',
+      testMatch: /security\.spec\.ts/,
+      dependencies: ['sign-in', 'admin'],
+      use: { ...devices['Desktop Chrome'], storageState: ADMIN_STATE },
+    },
   ],
   webServer: [
     {

@@ -1,0 +1,19 @@
+# Sort orders on the SauceDemo inventory page, with the product expected first and last.
+# Two products cost $15.99, so price orders are checked by price, never by name between those two.
+cases:
+  - label: Name (A to Z)
+    option: az
+    first: { name: Sauce Labs Backpack, price: 29.99 }
+    last: { name: Test.allTheThings() T-Shirt (Red), price: 15.99 }
+  - label: Name (Z to A)
+    option: za
+    first: { name: Test.allTheThings() T-Shirt (Red), price: 15.99 }
+    last: { name: Sauce Labs Backpack, price: 29.99 }
+  - label: Price (low to high)
+    option: lohi
+    first: { name: Sauce Labs Onesie, price: 7.99 }
+    last: { name: Sauce Labs Fleece Jacket, price: 49.99 }
+  - label: Price (high to low)
+    option: hilo
+    first: { name: Sauce Labs Fleece Jacket, price: 49.99 }
+    last: { name: Sauce Labs Onesie, price: 7.99 }

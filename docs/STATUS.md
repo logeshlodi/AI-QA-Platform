@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 23 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests), 13 (chat over the MCP tools with approvals, admin area, tests for AI features) and 14 (docs site, project templates, the web app in Kubernetes, healing patches and branch) are built and have run. Phase 5 is complete. After it: a nightly cluster workflow, RabbitMQ and gRPC suites, PDF reports, k6 over OpenTelemetry, three engines in the cluster, and the agents measured on `qwen3:8b`.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests), 13 (chat over the MCP tools with approvals, admin area, tests for AI features) and 14 (docs site, project templates, the web app in Kubernetes, healing patches and branch) are built and have run. Phase 5 is complete. After it: a nightly cluster workflow, RabbitMQ and gRPC suites, PDF reports, k6 over OpenTelemetry, three engines in the cluster, and the agents measured on `qwen3:8b`. Then a capability audit against an enterprise Playwright checklist, and a sprint that closed 40 of its gaps.
 
 ## What was run, and the result
 
@@ -39,6 +39,47 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Capability gap sprint (23 Nov)
+
+The [capability audit](capability-audit.md) scored the repository against a 283-item enterprise
+Playwright checklist: 230 built, 24 partial, 29 missing. This sprint closed 40 of the 53; the audit now
+reads 270 / 9 / 4, and the four still missing are left out on purpose (Vue, Angular, Excel, AI
+screenshot analysis).
+
+Built:
+
+- **Browser APIs** on a local https page (`src/local/site.ts`): clipboard granted and refused, WebAuthn
+  with a CDP virtual authenticator, notifications (full Chromium: the headless shell has none), a fake
+  camera and microphone.
+- **Devices**: a `tablet` project (iPad Pro 11, WebKit) for the smoke specs; touch with `hasTouch`,
+  `tap()` and a CDP swipe.
+- **Files, network, visual**: several uploads and the `filechooser` event, the downloaded CSV's content,
+  request modification (headers, method, body, `route.fallback`), full-page screenshots, `mask`, `style`
+  and `stylePath`.
+- **Debugging**: `pnpm test:debug`, an automatic `networkLog` fixture that names slow requests and
+  attaches every request of a failed test, trace chunks, `page.pause()` behind `PWDEBUG`.
+- **State and data**: IndexedDB in storage state, a `cleanup` teardown project, CSV and YAML readers
+  in the test-data engine (schema-checked, errors name the file, row and field) with a data-driven spec.
+- **Security of our own web app**: CSRF from a page on another site and from a foreign Origin, both
+  refused while the admin is signed in; stored markup in a test title shown as text, never run.
+- **Docs and editor**: `CONTRIBUTING.md` with the coding standards, a troubleshooting page, a cheat
+  sheet, a Selenium-to-Playwright guide, design patterns and SOLID in the architecture page,
+  `.vscode` settings and recommended extensions.
+
+| Check                               | Where          | Result                                                                                  |
+| ----------------------------------- | -------------- | --------------------------------------------------------------------------------------- |
+| Install, type-check, lint, licences | Windows laptop | Clean (873 packages, `yaml` 2.9.1 added)                                                |
+| Unit tests                          | Windows laptop | 327 passed (19 new for the CSV and YAML readers)                                        |
+| Prettier                            | Windows laptop | Repository clean (only the local, git-ignored `.claude/settings.local.json` is flagged) |
+| Docs site build and link check      | Windows laptop | 41 pages, every internal link resolves                                                  |
+| Nine new feature specs, Chromium    | Windows laptop | 25 passed                                                                               |
+| CSV and YAML data-driven spec       | Windows laptop | 12 passed (SauceDemo)                                                                   |
+| `tablet` project (smoke)            | Windows laptop | 5 passed                                                                                |
+| Visual specs with `stylePath`       | Windows laptop | 4 passed, baselines unchanged                                                           |
+| Web app (`pnpm test:web`, Keycloak) | Windows laptop | 43 passed, including the 3 new security specs                                           |
+
+The screenshot spec was also repeated three times in the Linux workspace (9 of 9).
 
 ## After Phase 5: six improvements (23 Nov)
 

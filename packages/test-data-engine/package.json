@@ -6,8 +6,9 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@aiqa/ai-engine": "workspace:*",
+    "@aiqa/shared": "workspace:*",
     "@faker-js/faker": "catalog:",
-    "zod": "catalog:",
-    "@aiqa/shared": "workspace:*"
+    "yaml": "catalog:",
+    "zod": "catalog:"
   }
 }
