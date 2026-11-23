@@ -39,6 +39,7 @@ test.beforeAll(async () => {
       );
     }
     if (req.url === '/api/orders') return send(200, '[]');
+    // review-ok: the server is slow on purpose, so the network log flags it
     if (req.url === '/api/recommendations') return void setTimeout(() => send(200, '[]'), 400);
     return send(404, '{"error":"not found"}');
   });

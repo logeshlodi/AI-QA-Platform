@@ -3,7 +3,7 @@ import { createRemoteJWKSet, errors, jwtVerify, type JWTPayload, type JWTVerifyG
 /**
  * Bearer-token checks for the endpoints that change data (RFC 6750). Tokens are JWTs from Keycloak,
  * checked against its published signing keys: signature, expiry, issuer, audience and the required
- * realm role. Off when AUTH_ISSUER is unset (the Kubernetes chart has no Keycloak), on in the Docker stack.
+ * realm role. Off when AUTH_ISSUER is unset; on in the Docker stack and in the Kubernetes chart (keycloak.enabled).
  */
 export interface AuthConfig {
   /** The `iss` every token must carry, e.g. http://localhost:8180/realms/aiqa. */

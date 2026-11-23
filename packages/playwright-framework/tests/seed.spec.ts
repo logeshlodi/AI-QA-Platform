@@ -8,6 +8,7 @@ import { expect, test } from '../src/fixtures';
 test.use({ targetName: 'saucedemo' });
 
 test.describe('SauceDemo', () => {
+  // review-ok: Playwright's agents look for a test named "seed"
   test('seed', async ({ loginFlow, inventoryPage }) => {
     await loginFlow.loginAs('standard');
     await expect(inventoryPage.title).toHaveText('Products');

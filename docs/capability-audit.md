@@ -1,23 +1,26 @@
 # Playwright capability audit
 
-An enterprise Playwright checklist (29 areas), scored against this repository on 23 Nov 2026. Each item
-points at the file that proves it. ✅ built and run, 🟡 partly there, ❌ missing. Paths starting with
+An enterprise Playwright checklist (29 areas), scored against this repository on 23 Nov 2026 and updated on 24 Nov. Each item
+points at the file that proves it. ✅ built and run, 🟡 partly there, ❌ missing, ➖ left out on purpose ([ADR 0017](adr/0017-what-the-platform-leaves-out.md)). Paths starting with
 `fw/` are under `packages/playwright-framework/`.
 
 ## Summary
 
 | Status | Items |
 | ------ | ----- |
-| ✅     | 270   |
-| 🟡     | 9     |
-| ❌     | 4     |
+| ✅     | 276   |
+| 🟡     | 3     |
+| ❌     | 0     |
+| ➖     | 4     |
 
 Maturity: **level 5** (AI-assisted testing, an MCP server, Playwright's test agents compared with
 nine of our own, self-healing with review, run analytics). The first audit found 29 missing and 24
 partial items; the sprint that followed closed 40 of them (browser APIs, tablet and touch, files,
 request modification, screenshots, debugging, IndexedDB state, CSV and YAML data, CSRF and XSS checks,
-editor settings and the contributor docs). What is left is listed, with the reason, at
-[the end](#what-is-left).
+editor settings and the contributor docs). A second one (24 Nov) built risk-based test selection, a
+spec-review agent, memory of people's decisions, a TLS test of our own service, an environment matrix
+and a choice of console reporter, and recorded what is left out on purpose. What is left is listed,
+with the reason, at [the end](#what-is-left).
 
 ## 1. Project architecture
 
@@ -73,16 +76,16 @@ editor settings and the contributor docs). What is left is listed, with the reas
 
 ## 3. Parallel execution
 
-| Item                  | Status | Where                                                  |
-| --------------------- | ------ | ------------------------------------------------------ |
-| Parallel execution    | ✅     | every config                                           |
-| Fully parallel        | ✅     | `fullyParallel`                                        |
-| Worker isolation      | ✅     | a fresh browser context per test; unique data per test |
-| Parallel browsers     | ✅     | three engine projects; `k8s:test ui all-browsers`      |
-| Parallel environments | 🟡     | one target set per run; no matrix over environments    |
-| Parallel devices      | ✅     | mobile-chrome and mobile-safari projects               |
-| Parallel CI execution | ✅     | parallel CI jobs                                       |
-| Sharding support      | ✅     | `--shard=n/3`                                          |
+| Item                  | Status | Where                                                                                                                                                       |
+| --------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Parallel execution    | ✅     | every config                                                                                                                                                |
+| Fully parallel        | ✅     | `fullyParallel`                                                                                                                                             |
+| Worker isolation      | ✅     | a fresh browser context per test; unique data per test                                                                                                      |
+| Parallel browsers     | ✅     | three engine projects; `k8s:test ui all-browsers`                                                                                                           |
+| Parallel environments | ✅     | `pnpm test:matrix`: the environment smoke against every environment in `infrastructure/environments.json` (Docker stack, kind) in one run, one project each |
+| Parallel devices      | ✅     | mobile-chrome and mobile-safari projects                                                                                                                    |
+| Parallel CI execution | ✅     | parallel CI jobs                                                                                                                                            |
+| Sharding support      | ✅     | `--shard=n/3`                                                                                                                                               |
 
 ## 4. Browser support
 
@@ -216,12 +219,12 @@ Beyond the list: gRPC (`data-framework/tests/grpc`) and messaging (Kafka, Rabbit
 
 ## 12. Component testing
 
-| Item                          | Status | Where                                                    |
-| ----------------------------- | ------ | -------------------------------------------------------- |
-| React                         | ✅     | `packages/dashboard/tests/components` (ADR 0015)         |
-| Vue                           | ❌     | no Vue components to test                                |
-| Angular                       | ❌     | no Angular components; Playwright has no Angular adapter |
-| Story-based component testing | ✅     | the stories model, `packages/dashboard/src/stories`      |
+| Item                          | Status | Where                                                                                         |
+| ----------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| React                         | ✅     | `packages/dashboard/tests/components` (ADR 0015)                                              |
+| Vue                           | ➖     | left out on purpose: no Vue components ([ADR 0017](adr/0017-what-the-platform-leaves-out.md)) |
+| Angular                       | ➖     | left out on purpose: no Angular components, no Playwright adapter (ADR 0017)                  |
+| Story-based component testing | ✅     | the stories model, `packages/dashboard/src/stories`                                           |
 
 ## 13. Performance
 
@@ -280,19 +283,19 @@ Beyond the list: k6 load tests, memory-leak checks, trends and regression verdic
 
 ## 17. Reporting
 
-| Item              | Status | Where                                                      |
-| ----------------- | ------ | ---------------------------------------------------------- |
-| HTML              | ✅     | every config                                               |
-| Allure            | ✅     | `allure-playwright`, `pnpm report:allure`                  |
-| JSON              | ✅     | `test-results/results.json`                                |
-| JUnit XML         | ✅     | `test-results/junit.xml` (Azure DevOps, Jenkins read it)   |
-| Blob              | ✅     | on CI, for merging shards                                  |
-| GitHub reporter   | ✅     | on CI (annotations)                                        |
-| Failures reporter | 🟡     | `list` and the custom reporter's failures; no `dot`/`line` |
-| Custom reporter   | ✅     | `reporting-engine/src/playwright-reporter.ts`              |
-| Merged reports    | ✅     | `fw/merge.config.ts`, CI                                   |
-| Execution history | ✅     | SQLite or JSON run history, `aiqa history`                 |
-| Trend reports     | ✅     | HTML dashboard, PDF report, Grafana "Test runs"            |
+| Item              | Status | Where                                                                                                |
+| ----------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| HTML              | ✅     | every config                                                                                         |
+| Allure            | ✅     | `allure-playwright`, `pnpm report:allure`                                                            |
+| JSON              | ✅     | `test-results/results.json`                                                                          |
+| JUnit XML         | ✅     | `test-results/junit.xml` (Azure DevOps, Jenkins read it)                                             |
+| Blob              | ✅     | on CI, for merging shards                                                                            |
+| GitHub reporter   | ✅     | on CI (annotations)                                                                                  |
+| Failures reporter | ✅     | `list` by default; `PW_CONSOLE_REPORTER=line` or `dot` (`consoleReporter()` in the reporting engine) |
+| Custom reporter   | ✅     | `reporting-engine/src/playwright-reporter.ts`                                                        |
+| Merged reports    | ✅     | `fw/merge.config.ts`, CI                                                                             |
+| Execution history | ✅     | SQLite or JSON run history, `aiqa history`                                                           |
+| Trend reports     | ✅     | HTML dashboard, PDF report, Grafana "Test runs"                                                      |
 
 ## 18. Assertions
 
@@ -317,7 +320,7 @@ Also `toPass()` for retried blocks.
 | JSON              | ✅     | fixtures and HAR files                                                                        |
 | YAML              | ✅     | `packages/test-data-engine/src/files.ts` (`readYaml`), `fw/tests/journeys/data-files.spec.ts` |
 | CSV               | ✅     | the same (`readCsv`, RFC 4180, schema-checked)                                                |
-| Excel             | ❌     | none                                                                                          |
+| Excel             | ➖     | left out on purpose: CSV and YAML instead, diffable in review (ADR 0017)                      |
 | Database seeding  | ✅     | `stockProducts` fixture in `data-framework/src/fixtures.ts`                                   |
 | Cleanup           | ✅     | the same fixture deletes what it added; unique queues deleted                                 |
 
@@ -347,16 +350,16 @@ Also `toPass()` for retried blocks.
 
 ## 22. Security testing
 
-| Item              | Status | Where                                                                                   |
-| ----------------- | ------ | --------------------------------------------------------------------------------------- |
-| CSP headers       | ✅     | `fw/src/checks/headers.ts`                                                              |
-| Cookie validation | ✅     | session cookie flags and tampering (web app)                                            |
-| HTTPS             | 🟡     | headers check includes HSTS; no TLS or redirect test of our own                         |
-| Security headers  | ✅     | headers check, web app headers, ZAP                                                     |
-| Authentication    | ✅     | Keycloak, JWT edge cases                                                                |
-| Authorization     | ✅     | 401 against 403, roles in the web app                                                   |
-| CSRF              | ✅     | `apps/web/tests/e2e/security.spec.ts` (cross-site form post and foreign Origin refused) |
-| XSS checks        | ✅     | the same (stored markup shown as text, no script runs); ZAP passive scan                |
+| Item              | Status | Where                                                                                                                   |
+| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| CSP headers       | ✅     | `fw/src/checks/headers.ts`                                                                                              |
+| Cookie validation | ✅     | session cookie flags and tampering (web app)                                                                            |
+| HTTPS             | ✅     | `data-framework/tests/http/tls.spec.ts` against the stack's TLS edge: TLS 1.3/1.2 only, certificate, 308 redirect, HSTS |
+| Security headers  | ✅     | headers check, web app headers, ZAP                                                                                     |
+| Authentication    | ✅     | Keycloak, JWT edge cases                                                                                                |
+| Authorization     | ✅     | 401 against 403, roles in the web app                                                                                   |
+| CSRF              | ✅     | `apps/web/tests/e2e/security.spec.ts` (cross-site form post and foreign Origin refused)                                 |
+| XSS checks        | ✅     | the same (stored markup shown as text, no script runs); ZAP passive scan                                                |
 
 Beyond the list: licence gate, `pnpm audit`, OSV-Scanner, ZAP API scan (ADR 0013).
 
@@ -377,19 +380,19 @@ Beyond the list: licence gate, `pnpm audit`, OSV-Scanner, ZAP API scan (ADR 0013
 
 ## 24. AI features
 
-| Item                     | Status | Where                                                                 |
-| ------------------------ | ------ | --------------------------------------------------------------------- |
-| AI locator generation    | ✅     | `fw/tests/ai/locator-generation.spec.ts`                              |
-| AI self-healing locators | ✅     | `self-healing-engine` with a model tie-break                          |
-| AI failure analysis      | ✅     | Triage agent (eval 28/30)                                             |
-| AI bug summary           | ✅     | bug-report task, Run reporter agent                                   |
-| AI test generation       | ✅     | Planner and Generator agents                                          |
-| AI code review           | 🟡     | Healing review writes the pull-request description; no review agent   |
-| AI test data generation  | ✅     | Test data agent                                                       |
-| AI screenshot analysis   | ❌     | a vision model is too slow on this CPU (deferred in the Phase 5 plan) |
-| AI root cause analysis   | ✅     | Triage labels product, test, flaky or environment with evidence       |
-| AI flaky test detection  | ✅     | Flaky hunter agent                                                    |
-| AI prioritization        | 🟡     | the accessibility agent ranks findings; no risk-based test selection  |
+| Item                     | Status | Where                                                                                                                      |
+| ------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| AI locator generation    | ✅     | `fw/tests/ai/locator-generation.spec.ts`                                                                                   |
+| AI self-healing locators | ✅     | `self-healing-engine` with a model tie-break                                                                               |
+| AI failure analysis      | ✅     | Triage agent (eval 28/30)                                                                                                  |
+| AI bug summary           | ✅     | bug-report task, Run reporter agent                                                                                        |
+| AI test generation       | ✅     | Planner and Generator agents                                                                                               |
+| AI code review           | ✅     | `aiqa agents review`: CONTRIBUTING's standards as rules with line numbers, the model for judgement calls; eval `review`    |
+| AI test data generation  | ✅     | Test data agent                                                                                                            |
+| AI screenshot analysis   | ➖     | left out on purpose: a vision model is too slow on this CPU (ADR 0017)                                                     |
+| AI root cause analysis   | ✅     | Triage labels product, test, flaky or environment with evidence                                                            |
+| AI flaky test detection  | ✅     | Flaky hunter agent                                                                                                         |
+| AI prioritization        | ✅     | `aiqa select`: risk-based test selection from the import graph, `test-impact.json` and run history; the model may only add |
 
 ## 25. Playwright MCP
 
@@ -407,7 +410,7 @@ ours for the platform's data. See [Playwright MCP](playwright-mcp.md).
 | AI-assisted debugging      | ✅     | Playwright's healer, our triage                                                                                                    |
 | AI test generation         | ✅     | as above                                                                                                                           |
 | Prompt templates           | ✅     | the agents' system prompts, `docs/agents-vs-playwright.md` prompts                                                                 |
-| Memory integration         | 🟡     | the agent run log is kept; no memory fed back into prompts                                                                         |
+| Memory integration         | ✅     | `aiqa agents feedback`: people's triage labels and declined heals are answered from next time, and shown to the model as examples  |
 
 ## 26. Playwright test agents
 
@@ -460,16 +463,18 @@ ours for the platform's data. See [Playwright MCP](playwright-mcp.md).
 
 ## What is left
 
-Closed in the gap sprint (23 Nov 2026): the ten groups the first audit listed, from browser APIs
-to the Selenium migration guide. Each row above points at its spec or page.
+Closed in the first gap sprint (23 Nov 2026): the ten groups the first audit listed, from browser
+APIs to the Selenium migration guide. Closed in the second (24 Nov): risk-based test selection
+(`aiqa select`), the spec-review agent (`aiqa agents review`), memory of people's decisions (`aiqa
+agents feedback`), the TLS test, the environment matrix (`pnpm test:matrix`) and the console reporter
+choice. Each row above points at its spec or page.
 
-Still missing, on purpose:
+Left out on purpose ([ADR 0017](adr/0017-what-the-platform-leaves-out.md), with what would change
+each decision): Vue and Angular component testing, Excel test data, AI screenshot analysis.
 
-- **Vue and Angular component testing**: there are no such components here; React components are
-  tested with Playwright component testing.
-- **Excel data**: rare in Playwright suites; CSV and YAML cover data-driven tests.
-- **AI screenshot analysis**: a vision model is too slow on a CPU-only laptop.
+Still partial:
 
-Still partial: an environment matrix in one run, a real screen reader, `dot`/`line` reporters, a TLS
-test of our own, a review agent, risk-based test selection, memory fed back into prompts, screenshot
-analysis through the MCP server, and Playwright's healer (set up and scored, not yet run).
+- **A real screen reader**: the accessibility tree, which is what a screen reader reads, is checked;
+  driving NVDA or VoiceOver needs a desktop session per operating system.
+- **Screenshot analysis through the MCP server**: the same vision-model limit as above.
+- **Playwright's healer agent**: set up and scored; it needs a run in Claude Code.

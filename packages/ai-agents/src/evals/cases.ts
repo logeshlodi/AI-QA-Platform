@@ -365,3 +365,92 @@ export const PLANNER_SNAPSHOTS: { id: string; url: string; snapshot: string }[] 
   - text: © 2026 Sauce Labs. All Rights Reserved.`,
   },
 ];
+
+/**
+ * Spec review: files with one planted problem only judgement finds (the rules pass them all), and
+ * clean files. A case passes when the model reports the planted check within a line of where it is,
+ * or reports nothing that should be fixed in a clean file.
+ */
+export const REVIEW_CASES: {
+  id: string;
+  file: string;
+  text: string;
+  expected: { check: string; line: number } | 'clean';
+}[] = [
+  {
+    id: 'title-promises-refusal',
+    file: 'packages/playwright-framework/tests/journeys/refund.spec.ts',
+    expected: { check: 'title-matches-test', line: 2 },
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "test('a refund after 30 days is refused with a reason', async ({ refundPage }) => {",
+      "  await refundPage.open('ORD-1');",
+      '  await refundPage.request();',
+      '  await expect(refundPage.form).toBeVisible();',
+      '});',
+    ].join('\n'),
+  },
+  {
+    id: 'truthy-count',
+    file: 'packages/playwright-framework/tests/journeys/search.spec.ts',
+    expected: { check: 'weak-assertion', line: 4 },
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "test('searching for backpack lists only backpacks', async ({ inventoryPage }) => {",
+      "  await inventoryPage.search('backpack');",
+      '  expect(await inventoryPage.cards.count()).toBeGreaterThanOrEqual(0);',
+      '});',
+    ].join('\n'),
+  },
+  {
+    id: 'only-happy-path',
+    file: 'packages/playwright-framework/tests/journeys/signup.spec.ts',
+    expected: { check: 'missing-negative-case', line: 2 },
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "test('the sign-up form validates the email address', async ({ signupPage }) => {",
+      "  await signupPage.fill({ email: 'ann@example.com', name: 'Ann' });",
+      '  await signupPage.submit();',
+      "  await expect(signupPage.welcome).toHaveText('Welcome, Ann');",
+      '});',
+    ].join('\n'),
+  },
+  {
+    id: 'fixed-record',
+    file: 'packages/api-framework/tests/restful-booker/booking-read.spec.ts',
+    expected: { check: 'shared-data', line: 3 },
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "test('reads back a booking by id', async ({ bookings }) => {",
+      '  const booking = await bookings.get(1);',
+      "  expect(booking.firstname).toBe('Sally');",
+      '});',
+    ].join('\n'),
+  },
+  {
+    id: 'clean-checkout',
+    file: 'packages/playwright-framework/tests/journeys/checkout-clean.spec.ts',
+    expected: 'clean',
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "test('a customer buys two products and sees the confirmation', async ({ checkoutFlow, checkoutPage }) => {",
+      "  await checkoutFlow.buy(['Sauce Labs Backpack', 'Sauce Labs Onesie'], { firstName: 'Ann', lastName: 'Lee', zip: '600001' });",
+      "  await expect(checkoutPage.confirmation).toHaveText('Thank you for your order!');",
+      '});',
+    ].join('\n'),
+  },
+  {
+    id: 'clean-locked-out',
+    file: 'packages/playwright-framework/tests/journeys/login-clean.spec.ts',
+    expected: 'clean',
+    text: [
+      "import { expect, test } from '../../src/fixtures';",
+      "import { SAUCE_PASSWORD, sauceUsers } from '../../src/data/users';",
+      "test('a locked-out user is refused with a reason', async ({ loginPage }) => {",
+      '  await loginPage.goto();',
+      '  await loginPage.login(sauceUsers.lockedOut, SAUCE_PASSWORD);',
+      "  await expect(loginPage.error).toContainText('this user has been locked out');",
+      '});',
+    ].join('\n'),
+  },
+];

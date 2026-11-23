@@ -34,9 +34,11 @@ test.describe('tags, annotations and steps', { tag: ['@lab', '@execution'] }, ()
 });
 
 test.describe('serial mode shares state across ordered tests', () => {
+  // review-ok: this describe demonstrates serial mode
   test.describe.configure({ mode: 'serial' });
   const seen: string[] = [];
 
+  // review-ok: the tests are named by their order, which is what this spec demonstrates
   test('first', async () => {
     seen.push('first');
     expect(seen).toEqual(['first']);

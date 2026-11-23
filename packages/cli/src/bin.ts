@@ -9,6 +9,7 @@ import { ENTITIES, makeData, type Entity } from './commands/data';
 import { formatFlaky, formatHistory, formatPerf, loadRuns } from './commands/history';
 import { formatFiles, renderPage, writeFiles } from './commands/new-page';
 import { formatList, runQuiz } from './commands/quiz';
+import { changedFiles, formatSelection } from './commands/select';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
@@ -39,8 +40,20 @@ import {
   errorSummary,
   generateSpec,
   huntFlaky,
+  buildImportGraph,
+  JsonlDecisionStore,
   JsonlRunLog,
+  fileKind,
+  formatReviewMarkdown,
+  readImpactMap,
+  reviewSpec,
+  runCommands,
+  selectTests,
+  specHistory,
   planApiTests,
+  TRIAGE_LABELS,
+  triageDecision,
+  type TriageLabel,
   rankA11yFindings,
   renderApiSpec,
   reportRun,
@@ -206,6 +219,68 @@ program
   );
 
 program
+  .command('select')
+  .description(
+    'risk-based test selection: the specs a change can affect, riskiest first, with the reason for each',
+  )
+  .option(
+    '--base <ref>',
+    'compare with this branch or commit (the files a pull request would contain)',
+    'origin/main',
+  )
+  .option('--files <paths...>', 'these changed files instead of asking git (repository-relative)')
+  .option(
+    '--budget <minutes>',
+    'stop adding specs past this estimated time (changed specs always run)',
+    Number,
+  )
+  .option('--no-model', 'rules only, even when a model is configured')
+  .option('--wide', 'also run specs that load the changed code through a shared file without using it')
+  .option('--run', 'run the selected specs now')
+  .option('--json', 'print the selection as JSON (for CI)')
+  .action(
+    async (opts: {
+      base: string;
+      files?: string[];
+      budget?: number;
+      model: boolean;
+      wide?: boolean;
+      run?: boolean;
+      json?: boolean;
+    }) => {
+      const root = path.resolve(FRAMEWORK, '..', '..');
+      const change = opts.files
+        ? { files: opts.files, diff: '', base: '(given)' }
+        : changedFiles(root, opts.base);
+      const model = opts.model ? chooseModel(loadEnv()) : undefined;
+      const result = await selectTests(change.files, {
+        root,
+        graph: buildImportGraph(root),
+        impact: readImpactMap(root),
+        history: specHistory(loadRuns(undefined, 200)),
+        budgetMs: opts.budget !== undefined ? opts.budget * 60_000 : undefined,
+        includeShared: opts.wide,
+        diff: change.diff,
+        model,
+        log: new JsonlRunLog(),
+        timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
+      });
+      const commands = runCommands(root, result.selected);
+      if (opts.json) return console.log(JSON.stringify({ ...result, commands }, null, 2));
+      console.log(formatSelection(result, commands, model?.label ?? 'off'));
+      if (opts.run) {
+        if (result.everything)
+          return console.log('\nEverything is affected: run "pnpm test:ui" and the other suites.');
+        for (const command of commands) {
+          console.log(`\n> ${command}`);
+          const r = spawnSync(command, { cwd: root, stdio: 'inherit', shell: true });
+          if (r.status !== 0) process.exitCode = r.status ?? 1;
+        }
+      }
+    },
+  );
+
+program
   .command('quiz')
   .description('interview questions from the learning path: answer, reveal the outline, mark yourself')
   .addOption(new Option('--topic <topic>', 'only this topic').choices(TOPICS))
@@ -255,6 +330,7 @@ agents
         verdict: await triage(ctx, {
           model,
           log,
+          memory: new JsonlDecisionStore(),
           maxToolCalls: loadEnv().AGENT_MAX_TOOL_CALLS,
           timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
         }),
@@ -702,6 +778,8 @@ agents
       },
       log: new JsonlRunLog(),
       timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
+      memory: new JsonlDecisionStore(),
+      reviewer: reviewer(),
     });
     console.log(formatHealingReviews(reviews));
     const written = writeHealPatches(reviews, path.join(root, '.aiqa', 'heal-patches'), packagePath);
@@ -715,6 +793,104 @@ agents
         `\nCommitted on ${branch}. Review it, then: git push -u origin ${branch}  (and open the pull request with the .md text).\nBack to where you were: git switch -`,
       );
     }
+  });
+
+agents
+  .command('review')
+  .description(
+    "review changed specs and page objects against CONTRIBUTING's coding standards (exit code 1 on a must-fix)",
+  )
+  .option('--base <ref>', 'review the files changed since this branch or commit', 'origin/main')
+  .option('--files <paths...>', 'review these files instead (repository-relative)')
+  .option('--no-model', 'rules only, even when a model is configured')
+  .option('--markdown <file>', 'also write the review as Markdown, for a pull-request comment')
+  .action(async (opts: { base: string; files?: string[]; model: boolean; markdown?: string }) => {
+    const root = path.resolve(FRAMEWORK, '..', '..');
+    const files = (opts.files ?? changedFiles(root, opts.base).files)
+      .map((f) => f.replaceAll('\\', '/'))
+      .filter((f) => fileKind(f) !== 'other' && fs.existsSync(path.join(root, f)));
+    if (!files.length) return console.log('No changed specs or page objects to review.');
+    const model = opts.model ? chooseModel(loadEnv()) : undefined;
+    const log = new JsonlRunLog();
+    const reviews = [];
+    for (const file of files)
+      reviews.push(
+        await reviewSpec(file, fs.readFileSync(path.join(root, file), 'utf8'), {
+          model,
+          log,
+          timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
+        }),
+      );
+    const markdown = formatReviewMarkdown(reviews);
+    console.log(markdown.replace(/\*\*/g, '').replace(/^### /m, ''));
+    const notes = reviews.filter((r) => r.modelNote).map((r) => `  ${r.file}: ${r.modelNote}`);
+    if (notes.length && model?.model) console.log(`\nModel notes:\n${notes.join('\n')}`);
+    if (opts.markdown) {
+      fs.mkdirSync(path.dirname(path.resolve(opts.markdown)), { recursive: true });
+      fs.writeFileSync(path.resolve(opts.markdown), markdown);
+    }
+    if (reviews.some((r) => r.findings.some((f) => f.severity === 'must'))) process.exitCode = 1;
+  });
+
+// Who is deciding, for the decision record: the git user, else the OS user.
+function reviewer(): string {
+  const git = spawnSync('git', ['config', 'user.name'], { encoding: 'utf8' }).stdout?.trim();
+  return git || process.env.USERNAME || process.env.USER || 'reviewer';
+}
+
+const feedback = agents
+  .command('feedback')
+  .description("record a person's decision, so the agents answer the same way next time");
+
+feedback
+  .command('triage')
+  .description('the real label of a failed test; triage answers from it next time this failure comes back')
+  .argument('<test-id>', 'the id `aiqa agents triage` prints under each test')
+  .addArgument(new Argument('<label>', 'what it really was').choices([...TRIAGE_LABELS]))
+  .option('--run <id>', 'the run the failure is in (default: the latest run of the suite that has it)')
+  .option('--note <text>', 'why, in a sentence: shown with the verdict and to the model')
+  .action((testId: string, label: TriageLabel, opts: { run?: string; note?: string }) => {
+    const runs = loadRuns()
+      .filter((r) => !opts.run || r.run.id === opts.run)
+      .sort((a, b) => a.run.startedAt.localeCompare(b.run.startedAt));
+    const failure = runs
+      .flatMap((r) => r.results)
+      .filter((r) => r.testId === testId && r.errorMessage)
+      .at(-1);
+    if (!failure)
+      throw new Error(`No recorded failure of test ${testId}${opts.run ? ` in run ${opts.run}` : ''}.`);
+    const said = new JsonlRunLog()
+      .read(500)
+      .find((r) => r.agent === 'triage' && (r.input as { testId?: string }).testId === testId);
+    const agentLabel = (said?.output as { label?: TriageLabel | 'unknown' } | undefined)?.label;
+    const decision = triageDecision({
+      testId,
+      title: failure.title,
+      errorMessage: failure.errorMessage ?? '',
+      label,
+      agentLabel,
+      by: reviewer(),
+      note: opts.note,
+    });
+    new JsonlDecisionStore().record(decision);
+    console.log(
+      `Recorded: "${failure.title}" is ${label}${agentLabel && agentLabel !== label ? ` (triage had said ${agentLabel})` : ''}.\n` +
+        `The same failure is answered from this from now on; failures with the same error in other tests show it to the model.`,
+    );
+  });
+
+feedback
+  .command('list')
+  .description('the decisions recorded so far, newest first')
+  .action(() => {
+    const all = new JsonlDecisionStore().all().reverse();
+    if (!all.length) return console.log('No decisions recorded yet.');
+    for (const d of all)
+      console.log(
+        d.kind === 'triage'
+          ? `${d.at.slice(0, 16).replace('T', ' ')}  triage  ${d.label.padEnd(12)} ${d.title}  (${d.by})${d.note ? ` — ${d.note}` : ''}`
+          : `${d.at.slice(0, 16).replace('T', ' ')}  heal    ${d.verdict.padEnd(12)} ${d.locatorKey}: ${d.suggestion}  (${d.by})`,
+      );
   });
 
 agents

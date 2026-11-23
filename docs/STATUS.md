@@ -40,6 +40,60 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## AI features, audit fixes and a walkthrough (23 to 24 Nov)
+
+Before the mobile sprint: the AI items the audit marked partial, its small fixes, a decision on
+what to leave out, and a way to show the platform in ten minutes. Payments testing is not in scope.
+
+**Built**
+
+- Agents learn from people: `aiqa agents feedback triage <id> <label>` records a decision in
+  `.aiqa/agents/decisions.jsonl`. Triage answers an exact repeat from it before the rules, and gives
+  the model similar past decisions as examples. Healing review skips a fix someone declined before.
+- Risk-based test selection: `aiqa select` reads the import graph and `test-impact.json`, ranks the
+  specs a change can break by run history, fits a time budget, and prints the commands. It names
+  changed files that only unit tests cover, and files nothing covers.
+- Test review: `aiqa agents review` checks changed specs against 12 house rules (fixed waits, XPath,
+  force clicks, tokens in code, and more), adds the model's findings, and writes a pull-request
+  comment. Exit code 1 on a must-fix. The repository has 0 findings across 120 spec files.
+- Small fixes: a TLS edge (Caddy) in front of the order service with a TLS spec (1.3 and 1.2 only,
+  certificate, redirect, HSTS); the same smoke checks against Docker and Kubernetes (`pnpm
+test:matrix`); a console reporter chosen by `PW_CONSOLE_REPORTER`.
+- [ADR 0017](adr/0017-what-the-platform-leaves-out.md): Vue, Angular, Excel and AI screenshot
+  analysis are left out on purpose.
+- [The ten-minute walkthrough](walkthrough.md) and `scripts/demo-frames.mjs`, which captures the
+  demo frames.
+
+**Run on the laptop**
+
+| Check                                     | Result                                                                |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| Type-check, lint, Prettier, licences      | Clean                                                                 |
+| Unit tests                                | 381 passed                                                            |
+| `aiqa select` on this branch              | 66 files changed, includes the lockfile: run everything (correct)     |
+| `aiqa select` for the cart page object    | 1 spec (checkout), with its real history                              |
+| `aiqa agents review` on the changed specs | Nothing to change                                                     |
+| UI specs touched by the review comments   | 31 passed, 1 skipped on purpose                                       |
+| Data suites with the TLS edge             | 69 passed, TLS 5 of 5                                                 |
+| Environment matrix, Docker and kind       | 10 of 10 (9 of 10 before the fix below)                               |
+| Helm render                               | `AUTH_ISSUER` and `AUTH_JWKS_URL` set when Keycloak is on             |
+| In-cluster data Job, auth on              | 64 passed, 5 skipped (the TLS spec: no edge in the cluster)           |
+| Demo frames and `docs/assets/demo.gif`    | 5 frames from real runs; GIF joined with ffmpeg (the laptop has none) |
+
+**What the runs found**
+
+- The matrix found that the order service in kind accepted product writes without a token: the chart
+  never set `AUTH_ISSUER`. The chart now points the service and the test Jobs at the in-cluster
+  Keycloak.
+- The edge's health check called `localhost`, which resolved to IPv6 where Caddy's admin port does
+  not listen. It now calls `127.0.0.1`.
+- The TLS spec ran inside the cluster, where there is no edge. The chart now sets
+  `EDGE_HTTPS_URL=none` and the spec skips there.
+- The token-expiry test in the cluster failed once and passed on retry; it waits for a short-lived
+  token to lapse, so it is timing-sensitive under load.
+- `demo-frames` ran `pnpm` through a shell, which found nvm's old corepack and failed. It now runs
+  the CLI with this node and tsx.
+
 ## CI on the laptop: Docker update, two pipelines at once, a stray folder (23 Nov)
 
 Jenkins #25 to #27, the Azure DevOps Windows run and two Dependabot updates failed on the evening of

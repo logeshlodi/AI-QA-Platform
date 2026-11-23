@@ -158,6 +158,7 @@ test.describe('RabbitMQ: delivery guarantees a consumer relies on', { tag: '@rab
     });
 
     await expect.poll(() => delivered.length).toBe(1);
+    // review-ok: proving nothing else arrives needs a fixed window; there is no event for "no message"
     await new Promise((r) => setTimeout(r, 300));
     expect(delivered.map((d) => d.job)).toEqual([1]); // still one: the first is unacknowledged
     delivered[0]!.ack();

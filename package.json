@@ -37,6 +37,7 @@
     "test:ai": "vitest run --config vitest.live.config.ts",
     "aiqa": "tsx packages/cli/src/bin.ts",
     "test:data": "pnpm --filter @aiqa/data-framework test:history",
+    "test:matrix": "pnpm --filter @aiqa/data-framework test:matrix",
     "test:contract": "pnpm --filter @aiqa/contract-tests test",
     "test:contract:consumer": "pnpm --filter @aiqa/contract-tests test:consumer",
     "stack:up": "node scripts/stack.mjs up",

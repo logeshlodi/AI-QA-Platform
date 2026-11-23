@@ -1,4 +1,10 @@
-import { buildTriageContexts, triage, type ModelChoice, type RunLog } from '@aiqa/ai-agents';
+import {
+  buildTriageContexts,
+  triage,
+  type DecisionStore,
+  type ModelChoice,
+  type RunLog,
+} from '@aiqa/ai-agents';
 import { detectFlaky, metricTrends, outcomesOf, summarize, type StoredRun } from '@aiqa/reporting-engine';
 import type { HealEvent } from '@aiqa/self-healing-engine';
 import { aCustomer, anOrder, aProduct, shop } from '@aiqa/test-data-engine';
@@ -11,6 +17,8 @@ export interface PlatformData {
   heals(): HealEvent[];
   model?: ModelChoice;
   log?: RunLog;
+  /** People's triage decisions; an exact match answers from them. */
+  decisions?: DecisionStore;
 }
 
 const firstLine = (s?: string) =>
@@ -176,7 +184,7 @@ export function createPlatformServer(data: PlatformData): McpServer {
       const contexts = id ? buildTriageContexts(runs, id).slice(0, limit) : [];
       const results = [];
       for (const ctx of contexts) {
-        const verdict = await triage(ctx, { model: data.model, log: data.log });
+        const verdict = await triage(ctx, { model: data.model, log: data.log, memory: data.decisions });
         results.push({
           testId: ctx.testId,
           title: ctx.title,

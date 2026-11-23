@@ -38,6 +38,7 @@ spec:
             - /scripts/order-flow.js
           env:
             - { name: ORDER_SERVICE_URL, value: 'http://order-service:8080' }
+            {{- include "aiqa.tokenEnv" . | nindent 12 }}
             - { name: PROFILE, value: {{ .Values.job.profile | quote }} }
             # OpenTelemetry into Prometheus's OTLP receiver; trends arrive as histograms.
             - { name: K6_OTEL_EXPORTER_PROTOCOL, value: http/protobuf }

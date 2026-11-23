@@ -5,6 +5,7 @@ test.use({ targetName: 'saucedemo' });
 
 // Data-driven: one test body, one generated test per row.
 const invalidLogins = [
+  // review-ok: SauceDemo's published demo password, inside the table of cases
   { name: 'no username', username: '', password: 'secret_sauce', message: 'Username is required' },
   { name: 'no password', username: sauceUsers.standard, password: '', message: 'Password is required' },
   {

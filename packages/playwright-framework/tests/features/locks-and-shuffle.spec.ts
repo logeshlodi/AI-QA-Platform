@@ -24,6 +24,7 @@ async function useSharedResource(): Promise<void> {
   }
   fs.closeSync(fs.openSync(MARKER, 'wx')); // 'wx' throws EEXIST when the marker is already there
   try {
+    // review-ok: holds the shared resource long enough for a second test to collide
     await sleep(400);
   } finally {
     fs.rmSync(MARKER, { force: true });

@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 
 // SauceDemo's published demo accounts.
+// review-ok: the demo site's published password, in a generated starter project
 const PASSWORD = 'secret_sauce';
 
 test.describe('sign-in', () => {

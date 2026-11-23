@@ -26,6 +26,9 @@ spec:
             - { name: ORDER_SERVICE_URL, value: 'http://order-service:8080' }
             - { name: ORDER_METRICS_URL, value: 'http://order-service:9464/metrics' }
             - { name: ORDER_GRPC_ADDRESS, value: 'order-service:50051' }
+            # No TLS edge in the chart: the HTTPS spec skips (it runs against the Docker stack).
+            - { name: EDGE_HTTPS_URL, value: 'none' }
+            {{- include "aiqa.tokenEnv" . | nindent 12 }}
             {{- include "aiqa.testEnv" . | nindent 12 }}
           resources:
             requests: { cpu: 500m, memory: 512Mi }

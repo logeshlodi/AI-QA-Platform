@@ -1,5 +1,6 @@
 export * from './tools';
 export * from './log';
+export * from './memory';
 export * from './model';
 export * from './runtime';
 export * from './eval';
@@ -19,3 +20,8 @@ export * from './reporter/agent';
 export * from './api/agent';
 export * from './evals/cases';
 export * from './evals/index';
+export * from './selection/graph';
+export * from './selection/impact';
+export * from './selection/agent';
+export * from './review/rules';
+export * from './review/agent';

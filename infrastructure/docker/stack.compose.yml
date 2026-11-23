@@ -6,6 +6,7 @@
 # Grafana: http://localhost:3000 (anonymous viewer). Prometheus: http://localhost:9090.
 # Pushgateway (test metrics): http://localhost:9091; set AIQA_PUSHGATEWAY to it to send local runs.
 # Keycloak (tokens for PUT /products): http://localhost:8180, admin / admin; realm in keycloak/.
+# The order service over TLS: https://localhost:8443 (private CA; http://localhost:8089 redirects).
 name: aiqa-stack
 
 services:
@@ -138,6 +139,21 @@ services:
       start_period: 60s
       start_interval: 1s
 
+  # TLS in front of the order service (edge/Caddyfile): HTTPS on 8443, HTTP on 8089 redirects to it.
+  edge:
+    image: caddy:2.11.7-alpine
+    volumes:
+      - ./edge/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports: ['8443:8443', '8089:8089']
+    depends_on:
+      order-service: { condition: service_healthy }
+    healthcheck:
+      # 127.0.0.1, not localhost: in this image localhost is ::1 first, and Caddy's admin API is IPv4.
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   prometheus:
     image: prom/prometheus:v3.16.0
     # The image's own two flags, plus the OTLP receiver: k6 sends its metrics here over OpenTelemetry.
@@ -212,6 +228,8 @@ services:
       ORDER_GRPC_ADDRESS: order-service:50051
       AIQA_PUSHGATEWAY: http://pushgateway:9091
       AUTH_TOKEN_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/token
+      EDGE_HTTPS_URL: https://edge:8443
+      EDGE_HTTP_URL: http://edge:8089
     volumes:
       # Runs are added to your local history, so they appear on the dashboard (pnpm report:dashboard).
       - ../../.aiqa:/work/.aiqa
@@ -219,3 +237,4 @@ services:
       - ../../packages/data-framework/test-results:/work/packages/data-framework/test-results
     depends_on:
       order-service: { condition: service_healthy }
+      edge: { condition: service_healthy }

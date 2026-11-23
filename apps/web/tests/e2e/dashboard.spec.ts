@@ -47,6 +47,7 @@ test('trends switch between suites', async ({ page }) => {
     .getByRole('link', { name: 'api', exact: true })
     .click();
   await expect(page.getByRole('figure').first()).toContainText('Latest 100% (22 Nov 08:30)');
+  // review-ok: every chart has this toggle; the first chart is the pass-rate one
   await page.getByText('Show as a table').first().click();
   await expect(page.getByRole('figure').first().getByRole('row')).toHaveCount(5);
 });

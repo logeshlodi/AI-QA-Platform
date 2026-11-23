@@ -20,6 +20,7 @@ test.describe('files and drag and drop', () => {
   test('downloads a file and saves it', async ({ page }, testInfo) => {
     await page.goto(targetUrl('theInternet', '/download'));
     const downloadPromise = page.waitForEvent('download');
+    // review-ok: any of the demo site's download links will do; their names change
     await page.locator('.example a').first().click();
     const download = await downloadPromise;
     const target = testInfo.outputPath(download.suggestedFilename());

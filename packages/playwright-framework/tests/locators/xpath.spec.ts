@@ -1,5 +1,6 @@
 import { targetUrl } from '@aiqa/shared';
 import { expect, test } from '../../src/fixtures';
+// review-ok-file: no-xpath — this spec shows what XPath does and why the suites avoid it
 
 test.use({ targetName: 'theInternet' });
 

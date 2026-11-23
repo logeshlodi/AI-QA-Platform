@@ -1,4 +1,4 @@
-import { historyReporter } from '@aiqa/reporting-engine';
+import { consoleReporter, historyReporter } from '@aiqa/reporting-engine';
 import { defineConfig, devices } from '@playwright/test';
 import { loadEnv, targetUrl } from '@aiqa/shared';
 import type { Options } from './src/fixtures';
@@ -48,7 +48,7 @@ export default defineConfig<Options>({
     toHaveScreenshot: { maxDiffPixelRatio: 0.01, stylePath: './tests/visual/screenshot.css' },
   },
   reporter: [
-    ['list'],
+    ...consoleReporter(),
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
     ['json', { outputFile: 'test-results/results.json' }],

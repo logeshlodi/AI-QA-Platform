@@ -7,6 +7,7 @@ import {
 } from '@aiqa/self-healing-engine';
 import { z } from 'zod';
 import type { RunLog } from '../log';
+import { recallHeal, type DecisionStore } from '../memory';
 import type { ModelChoice } from '../model';
 import { runAgent, runRecord } from '../runtime';
 import { denyWrites, type Approver } from '../tools';
@@ -33,6 +34,10 @@ export interface HealingReviewOptions {
   apply?: boolean;
   log?: RunLog;
   timeoutMs?: number;
+  /** People's earlier decisions: a fix declined before is not offered again; each new decision is kept. */
+  memory?: DecisionStore;
+  /** Who is approving, for the decision record. Default "reviewer". */
+  reviewer?: string;
 }
 
 const description = z.object({
@@ -86,6 +91,21 @@ export async function reviewHeals(
     }
     const { patch, diff } = proposal;
 
+    // A patch exists only for an event with a suggestion.
+    const suggestion = event.suggestion ?? '';
+    const earlier = recallHeal(options.memory, { locatorKey: event.locatorKey, suggestion });
+    if (earlier?.verdict === 'declined') {
+      reviews.push({
+        locatorKey: event.locatorKey,
+        status: 'declined',
+        reason: `${earlier.by} declined this same fix on ${earlier.at.slice(0, 10)}${earlier.note ? `: ${earlier.note}` : ''}. Not offered again; fix the locator by hand.`,
+        patch,
+        diff,
+        source: 'rules',
+      });
+      continue;
+    }
+
     let text = templateDescription(event, patch);
     let source: HealingReview['source'] = 'rules';
     let fallbackReason: string | undefined = options.model?.model ? undefined : 'no model configured';
@@ -126,6 +146,15 @@ export async function reviewHeals(
       } else {
         status = 'declined';
       }
+      options.memory?.record({
+        kind: 'heal',
+        at: new Date().toISOString(),
+        by: options.reviewer ?? 'reviewer',
+        locatorKey: event.locatorKey,
+        failedSelector: event.failedSelector,
+        suggestion,
+        verdict: status === 'applied' ? 'approved' : 'declined',
+      });
     }
     const review: HealingReview = { locatorKey: event.locatorKey, status, patch, diff, ...text, source };
     reviews.push(review);

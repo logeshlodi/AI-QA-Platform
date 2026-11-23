@@ -9,7 +9,16 @@ import type { ModelChoice } from '../model';
 import { planPage } from '../planner/agent';
 import { reportRun } from '../reporter/agent';
 import { runTriageEval } from '../triage/eval';
-import { A11Y_CASES, FLAKY_CASES, HEAL_CASES, PLANNER_SNAPSHOTS, REPORTER_CASES } from './cases';
+import {
+  A11Y_CASES,
+  FLAKY_CASES,
+  HEAL_CASES,
+  PLANNER_SNAPSHOTS,
+  REPORTER_CASES,
+  REVIEW_CASES,
+} from './cases';
+import { reviewSpec } from '../review/agent';
+import { reviewByRules } from '../review/rules';
 
 export interface EvalContext {
   model: ModelChoice;
@@ -193,6 +202,37 @@ export const AGENT_EVALS: AgentEval[] = [
             text.toLowerCase().includes(field) ||
             text.includes(event.suggestion!.replace(/^page\./, ''));
           return { label: pass(review?.source === 'model' && mentions), source: review?.source ?? 'none' };
+        },
+      ),
+  },
+  {
+    agent: 'review',
+    gate: 0.65,
+    measures: '4 specs with one problem only judgement finds, and 2 clean specs (no false "should" findings)',
+    modelCalls: 6,
+    run: (ctx) =>
+      runEval(
+        REVIEW_CASES.map((c) => ({ id: c.id, input: c, expected: 'pass' as string })),
+        async (c) => {
+          // The planted problems are ones the rules cannot see; a rule finding would spoil the case.
+          if (reviewByRules(c.file, c.text).length) return { label: 'fail', source: 'rules' };
+          const review = await reviewSpec(c.file, c.text, {
+            model: ctx.model,
+            log: ctx.log,
+            timeoutMs: ctx.timeoutMs,
+          });
+          const fromModel = review.findings.filter((f) => f.source === 'model');
+          if (review.modelNote?.startsWith('model failed') || review.modelNote === 'no model configured')
+            return { label: 'unknown', source: 'none' };
+          const ok =
+            c.expected === 'clean'
+              ? !fromModel.some((f) => f.severity === 'should')
+              : fromModel.some(
+                  (f) =>
+                    f.rule === (c.expected as { check: string }).check &&
+                    Math.abs(f.line - (c.expected as { line: number }).line) <= 1,
+                );
+          return { label: pass(ok), source: 'model' };
         },
       ),
   },

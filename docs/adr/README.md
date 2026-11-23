@@ -21,3 +21,4 @@ decided, and what it costs. A new decision gets the next number; a reversed one 
 | [0014](0014-agents-rules-first-on-the-ai-sdk.md)             | Agents: rules first, on the AI SDK, with a budget, approval and a log                     |
 | [0015](0015-one-nextjs-app-and-stories-for-components.md)    | One Next.js app on Keycloak, and component tests on Playwright's stories                  |
 | [0016](0016-chat-over-mcp-with-approval-and-a-stub-model.md) | The chat: MCP tools in process, every write held for a person, a stub model for the specs |
+| [0017](0017-what-the-platform-leaves-out.md)                 | What the platform leaves out, on purpose, and what would change that                      |

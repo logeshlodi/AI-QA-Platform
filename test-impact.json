@@ -1,0 +1,42 @@
+{
+  "$comment": "Black-box coverage for `aiqa select`: suites that test code they do not import. Import links are found by reading the code; these are the ones it cannot see. Globs are repository-relative.",
+  "runEverything": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "tsconfig*.json",
+    "packages/*/playwright.config.ts",
+    "apps/*/playwright.config.ts"
+  ],
+  "ignore": [
+    "docs/**",
+    "**/*.md",
+    ".github/**",
+    ".vscode/**",
+    "apps/documentation/**",
+    "infrastructure/jenkins/**",
+    "infrastructure/azure-devops/**"
+  ],
+  "covers": [
+    {
+      "source": ["apps/order-service/**", "infrastructure/docker/**"],
+      "specs": ["packages/data-framework/tests/**/*.spec.ts"],
+      "why": "the data suites test the order service through its HTTP, gRPC, Kafka, RabbitMQ and database interfaces"
+    },
+    {
+      "source": ["apps/web/src/**", "infrastructure/docker/keycloak/**"],
+      "specs": ["apps/web/tests/**/*.spec.ts"],
+      "why": "the web app's end-to-end specs drive it in a browser"
+    },
+    {
+      "source": ["packages/dashboard/src/**", "packages/reporting-engine/src/dashboard.ts"],
+      "specs": ["packages/dashboard/tests/**/*.spec.ts"],
+      "why": "the dashboard specs open the generated dashboard"
+    },
+    {
+      "source": ["infrastructure/environments.json", "infrastructure/kubernetes/**"],
+      "specs": ["packages/data-framework/tests/environments/**/*.spec.ts"],
+      "why": "the environment matrix runs the same smoke checks against each environment listed there"
+    }
+  ]
+}

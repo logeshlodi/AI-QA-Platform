@@ -1,4 +1,5 @@
 import { renderDashboard, renderPdfReport, type ResultRecord, type StoredRun } from '@aiqa/reporting-engine';
+// review-ok: no page objects or target checks needed: it renders a report from recorded data
 import { expect, test } from '@playwright/test';
 
 /**

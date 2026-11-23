@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { chooseModel, JsonlRunLog } from '@aiqa/ai-agents';
+import { chooseModel, JsonlDecisionStore, JsonlRunLog } from '@aiqa/ai-agents';
 import { HISTORY_DIR, openRunHistory } from '@aiqa/reporting-engine';
 import { createHealRepository } from '@aiqa/self-healing-engine';
 import { loadEnv } from '@aiqa/shared';
@@ -29,5 +29,6 @@ export function localData(): PlatformData {
     },
     model: chooseModel(loadEnv()),
     log: new JsonlRunLog(),
+    decisions: new JsonlDecisionStore(),
   };
 }

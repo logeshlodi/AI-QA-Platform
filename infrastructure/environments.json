@@ -1,0 +1,13 @@
+{
+  "$comment": "Where the order service runs. `pnpm test:matrix` runs the environment smoke suite against every one of these at once, one Playwright project each, in one run and one report; an environment that is not up is skipped with the reason. Only what the host can reach over HTTP is listed.",
+  "docker": {
+    "label": "Docker Compose stack (pnpm stack:up)",
+    "serviceUrl": "http://localhost:8088",
+    "metricsUrl": "http://localhost:9464/metrics"
+  },
+  "kind": {
+    "label": "kind cluster (pnpm k8s:up)",
+    "serviceUrl": "http://localhost:30088",
+    "metricsUrl": "http://localhost:30464/metrics"
+  }
+}

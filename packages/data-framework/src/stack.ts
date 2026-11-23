@@ -12,6 +12,12 @@ export const stack = {
   /** The order service's gRPC API (host:port, no scheme). */
   grpcAddress: process.env.ORDER_GRPC_ADDRESS ?? 'localhost:50051',
   metricsUrl: process.env.ORDER_METRICS_URL ?? 'http://localhost:9464/metrics',
+  /** The TLS edge in front of the order service (infrastructure/docker/edge/Caddyfile). */
+  edgeHttpsUrl: process.env.EDGE_HTTPS_URL ?? 'https://localhost:8443',
+  /** Plain HTTP on the edge: it only redirects to HTTPS. */
+  edgeHttpUrl: process.env.EDGE_HTTP_URL ?? 'http://localhost:8089',
+  /** False where no TLS edge is deployed (the Kubernetes chart sets EDGE_HTTPS_URL to "none"). */
+  hasEdge: process.env.EDGE_HTTPS_URL !== 'none',
   /** Keycloak's token endpoint for the local test realm (client credentials). */
   tokenUrl: process.env.AUTH_TOKEN_URL ?? 'http://localhost:8180/realms/aiqa/protocol/openid-connect/token',
 };

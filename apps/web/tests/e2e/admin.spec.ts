@@ -4,6 +4,7 @@ import { ChatPage } from './chat.page';
 import { quarantinedIds } from './quarantine';
 
 // Signed in as the platform admin. Runs after the dashboard project: it switches chat writes off and on.
+// review-ok: both tests change the one settings file, so they take turns
 test.describe.configure({ mode: 'serial' });
 
 test('the admin area shows the model without its key', async ({ page }) => {

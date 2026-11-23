@@ -28,6 +28,13 @@ spec:
             {{- include "aiqa.stackEnv" . | nindent 12 }}
             - name: PARALLEL_PARTITIONS
               value: {{ .Values.orderService.parallelPartitions | quote }}
+            {{- if .Values.keycloak.enabled }}
+            # Product writes need a catalog-admin token, as in the Docker stack. Tokens name the issuer
+            # the browser sees (KC_HOSTNAME); the signing keys are fetched inside the cluster.
+            # Found by the environment matrix (pnpm test:matrix): without these, writes were open here.
+            - { name: AUTH_ISSUER, value: 'http://localhost:{{ .Values.nodePorts.keycloak }}/realms/aiqa' }
+            - { name: AUTH_JWKS_URL, value: 'http://keycloak:8080/realms/aiqa/protocol/openid-connect/certs' }
+            {{- end }}
             {{- if .Values.observability.traces }}
             - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: 'http://tempo:4318' }
             - { name: OTEL_SERVICE_NAME, value: order-service }

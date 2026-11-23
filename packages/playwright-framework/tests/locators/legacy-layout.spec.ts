@@ -21,6 +21,7 @@ test.describe('legacy layout selectors', { tag: '@legacy' }, () => {
   });
 
   test(':right-of and :left-of', async ({ page }) => {
+    // review-ok: layout pseudo-classes match every element in that direction, nearest first
     await page.locator('input:right-of(:text("Password"))').first().fill('secret');
     await expect(page.locator('#pass')).toHaveValue('secret');
     await expect(page.locator('button:left-of(#cancel)').first()).toHaveText('Sign in');

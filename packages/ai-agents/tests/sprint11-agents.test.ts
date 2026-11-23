@@ -383,13 +383,16 @@ describe('API tester', () => {
 });
 
 describe('agent evals', () => {
-  it('cover all nine agents but the generator, which needs a browser', () => {
+  // The generator's eval needs a browser (CLI only). Test selection has none: its model can only add
+  // specs to the rules' choice, and the rules are covered by selection.test.ts.
+  it('cover every agent but the generator and test selection', () => {
     expect(AGENT_EVALS.map((e) => e.agent).sort()).toEqual([
       'accessibility',
       'api-tester',
       'flaky',
       'healing-review',
       'planner',
+      'review',
       'run-reporter',
       'test-data',
       'triage',

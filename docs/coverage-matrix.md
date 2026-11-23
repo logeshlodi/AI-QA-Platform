@@ -101,18 +101,24 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 
 Paths are relative to the repository root.
 
-| Feature                                                                                                 | Spec                                                                        | Target                     |
-| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
-| Component testing on the stories model (`mount`, `update`, stories with state)                          | `packages/dashboard/tests/components/{tables,chart-and-shell,chat}.spec.ts` | Story gallery (Vite)       |
-| Accessibility of every component state, light and dark (axe, WCAG 2.2 AA)                               | `packages/dashboard/tests/components/a11y.spec.ts`                          | Story gallery              |
-| Visual comparison of every component state                                                              | `packages/dashboard/tests/components/visual.spec.ts`                        | Story gallery, Linux image |
-| OIDC sign-in through a real identity provider, sign-out of both, roles, open redirect, cookie tampering | `apps/web/tests/e2e/auth.spec.ts`                                           | Web app + Keycloak         |
-| Exact numbers from fixed data, drill-down, keyboard, axe on every page                                  | `apps/web/tests/e2e/{dashboard,a11y}.spec.ts`                               | Web app                    |
-| Streamed answers, Stop, answers that vary, prompt injection held for approval, API refusals             | `apps/web/tests/e2e/chat.spec.ts`                                           | Web app + stub model       |
-| Human approval of AI-proposed writes, settings validated on the server                                  | `apps/web/tests/e2e/admin.spec.ts`                                          | Web app + stub model       |
-| CSRF (cross-site form post, foreign Origin) and stored XSS shown as text                                | `apps/web/tests/e2e/security.spec.ts`                                       | Web app + Keycloak         |
-| Playwright MCP (`@playwright/mcp`): all 8 capabilities, 72 tools, each group driven once                | `packages/mcp-server/tests/playwright-mcp.{test.ts,live.ts}`                | Local orders page          |
-| A generated starter project passing its own tests                                                       | CI job `templates` (`packages/templates`)                                   | SauceDemo, Restful-Booker  |
+| Feature                                                                                                 | Spec                                                                           | Target                             |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------- |
+| Component testing on the stories model (`mount`, `update`, stories with state)                          | `packages/dashboard/tests/components/{tables,chart-and-shell,chat}.spec.ts`    | Story gallery (Vite)               |
+| Accessibility of every component state, light and dark (axe, WCAG 2.2 AA)                               | `packages/dashboard/tests/components/a11y.spec.ts`                             | Story gallery                      |
+| Visual comparison of every component state                                                              | `packages/dashboard/tests/components/visual.spec.ts`                           | Story gallery, Linux image         |
+| OIDC sign-in through a real identity provider, sign-out of both, roles, open redirect, cookie tampering | `apps/web/tests/e2e/auth.spec.ts`                                              | Web app + Keycloak                 |
+| Exact numbers from fixed data, drill-down, keyboard, axe on every page                                  | `apps/web/tests/e2e/{dashboard,a11y}.spec.ts`                                  | Web app                            |
+| Streamed answers, Stop, answers that vary, prompt injection held for approval, API refusals             | `apps/web/tests/e2e/chat.spec.ts`                                              | Web app + stub model               |
+| Human approval of AI-proposed writes, settings validated on the server                                  | `apps/web/tests/e2e/admin.spec.ts`                                             | Web app + stub model               |
+| CSRF (cross-site form post, foreign Origin) and stored XSS shown as text                                | `apps/web/tests/e2e/security.spec.ts`                                          | Web app + Keycloak                 |
+| Playwright MCP (`@playwright/mcp`): all 8 capabilities, 72 tools, each group driven once                | `packages/mcp-server/tests/playwright-mcp.{test.ts,live.ts}`                   | Local orders page                  |
+| Risk-based test selection: import graph, `test-impact.json`, run history, model may only add            | `packages/ai-agents/tests/selection.test.ts`, `aiqa select`                    | A small workspace in a temp folder |
+| Spec review against CONTRIBUTING: 12 rules by line, model judgement validated against real lines        | `packages/ai-agents/tests/review.test.ts`, eval `review`, `aiqa agents review` | Spec text                          |
+| Memory: a person's triage label answers next time; declined heals not offered again                     | `packages/ai-agents/tests/memory.test.ts`, `aiqa agents feedback`              | Recorded decisions                 |
+| TLS of our own service: TLS 1.3/1.2 only, certificate and issuer, 308 redirect, HSTS                    | `packages/data-framework/tests/http/tls.spec.ts`                               | Stack's Caddy edge                 |
+| Environment matrix: one smoke suite against every environment in one run                                | `packages/data-framework/tests/environments/smoke.spec.ts`, `pnpm test:matrix` | Docker stack, kind cluster         |
+| Console reporter choice (`list`, `line`, `dot`)                                                         | `consoleReporter()`, `packages/reporting-engine/tests/config.test.ts`          | Any suite                          |
+| A generated starter project passing its own tests                                                       | CI job `templates` (`packages/templates`)                                      | SauceDemo, Restful-Booker          |
 
 ## In the plan, not built yet
 

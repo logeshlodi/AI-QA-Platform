@@ -11,7 +11,7 @@ specs            packages/playwright-framework/tests, api-framework/tests, data-
   │ import
 frameworks       playwright-framework, api-framework, data-framework, load-tests, cli, mcp-server
   │ import
-agents           ai-agents (runtime, nine agents, evals), dashboard (React components)
+agents           ai-agents (runtime, eleven agents, evals, memory), dashboard (React components)
   │ import
 engines          self-healing-engine, ai-engine, reporting-engine, test-data-engine
   │ import
@@ -85,7 +85,7 @@ web app dashboard ────────────────────�
 Keycloak (realm aiqa) ─► sign-in for the web app (dashboard-viewer, platform-admin)
 ```
 
-Each of the nine agents answers from rules when no model is set, and with a model it may call only its
+Each of the eleven agents answers from rules when no model is set, and with a model it may call only its
 own tools, a few times per run ([ADR 0014](adr/0014-agents-rules-first-on-the-ai-sdk.md)). The MCP
 server (`packages/mcp-server`) offers the same read-only tools to any MCP client, and the web app's
 chat calls them in process; the one tool that writes (quarantining a test) waits for a platform admin

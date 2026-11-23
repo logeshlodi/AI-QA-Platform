@@ -1,4 +1,4 @@
-import { historyReporter } from '@aiqa/reporting-engine';
+import { consoleReporter, historyReporter } from '@aiqa/reporting-engine';
 import { defineConfig } from '@playwright/test';
 import { loadEnv } from '@aiqa/shared';
 
@@ -13,7 +13,7 @@ export default defineConfig({
   retries: env.CI ? 2 : 0,
   timeout: 45_000,
   reporter: [
-    ['list'],
+    ...consoleReporter(),
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
     ['allure-playwright', { resultsDir: 'allure-results' }],

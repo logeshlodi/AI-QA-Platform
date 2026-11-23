@@ -15,9 +15,15 @@ export function formatTriage(items: { ctx: TriageContext; verdict: TriageVerdict
       `  why:   ${verdict.reason}`,
       ...verdict.evidence.map((e) => `  seen:  ${clip(e, 140)}`),
       `  next:  ${verdict.nextStep}`,
+      `  id:    ${ctx.testId}`,
     ].join('\n'),
   );
-  return [`Model: ${model}`, '', ...blocks].join('\n\n');
+  return [
+    `Model: ${model}`,
+    '',
+    ...blocks,
+    'Wrong label? Record the right one and triage answers from it next time:\n  pnpm aiqa agents feedback triage <id> <product|test|flaky|environment> --note "why"',
+  ].join('\n\n');
 }
 
 /** The agent run log, newest first. */

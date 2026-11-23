@@ -1,0 +1,22 @@
+# The stack's edge: TLS in front of the order service, the way a production deployment terminates it
+# at a proxy. Its certificate comes from Caddy's own private certificate authority, created inside
+# the container: no internet, no public CA. Tested by packages/data-framework/tests/http/tls.spec.ts.
+{
+	local_certs
+	skip_install_trust
+	# Plain HTTP is handled below, with the port the host uses.
+	auto_https disable_redirects
+}
+
+https://localhost:8443, https://edge:8443 {
+	tls internal {
+		protocols tls1.2 tls1.3
+	}
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy order-service:8080
+}
+
+# Plain HTTP answers only with a permanent redirect to HTTPS, keeping the path and the query.
+http://localhost:8089, http://edge:8089 {
+	redir https://{host}:8443{uri} 308
+}

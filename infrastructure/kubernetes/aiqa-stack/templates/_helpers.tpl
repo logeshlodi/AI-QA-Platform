@@ -45,6 +45,13 @@ spec:
   value: amqp://guest:guest@rabbitmq:5672
 {{- end -}}
 
+{{/* Tests that write products get a catalog-admin token from the chart's Keycloak, inside the cluster. */}}
+{{- define "aiqa.tokenEnv" -}}
+{{- if .Values.keycloak.enabled }}
+- { name: AUTH_TOKEN_URL, value: 'http://keycloak:8080/realms/aiqa/protocol/openid-connect/token' }
+{{- end }}
+{{- end -}}
+
 {{/* The parts every test Job shares: never retried by Kubernetes (Playwright retries tests itself),
      kept a day for `kubectl logs`, results written into the repository's .aiqa folder. */}}
 {{- define "aiqa.jobSpec" -}}
