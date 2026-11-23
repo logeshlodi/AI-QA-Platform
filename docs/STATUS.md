@@ -56,6 +56,13 @@ Jenkins #25 to #27, the Azure DevOps Windows run and two Dependabot updates fail
   takes down. Both now take a machine-wide lock first (`scripts/ci-lock.mjs`, a file created
   atomically in ProgramData, released at the end, taken over after 150 minutes if a build died), so
   the second one waits.
+- **Azure DevOps run 20261123.12**, the first after the fixes above, failed at "order service is
+  unhealthy" 11 seconds after it started; Jenkins #28 straight after it was green (order service ready
+  in 9.5 s, no restarts). The health check had no start period, and `compose --wait` printed no reason.
+  Now the check has `start_period: 60s` (checked every second until the first pass), and `stack:up`
+  (`scripts/stack.mjs`) prints the state and last log lines of every service that is not healthy, then
+  tries once more without rebuilding. On the laptop after the change: stack up first time, data suites
+  64 of 64, unit tests 342.
 - **Dependabot** failed on `/playwright-mcp`: a copy of the Playwright MCP files had been committed in
   a folder of that name, with its own `package.json` and lockfile. The folder is removed.
 

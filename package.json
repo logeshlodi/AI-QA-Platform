@@ -39,7 +39,7 @@
     "test:data": "pnpm --filter @aiqa/data-framework test:history",
     "test:contract": "pnpm --filter @aiqa/contract-tests test",
     "test:contract:consumer": "pnpm --filter @aiqa/contract-tests test:consumer",
-    "stack:up": "docker compose -f infrastructure/docker/stack.compose.yml up -d --build --wait",
+    "stack:up": "node scripts/stack.mjs up",
     "stack:down": "docker compose -f infrastructure/docker/stack.compose.yml down -v",
     "stack:test": "docker compose -f infrastructure/docker/stack.compose.yml --profile test up --build --abort-on-container-exit --exit-code-from data-tests",
     "test:perf": "pnpm --filter @aiqa/playwright-framework test:perf",

@@ -133,6 +133,10 @@ services:
       interval: 3s
       timeout: 3s
       retries: 40
+      # Connecting to Postgres, MongoDB and Kafka takes 5 to 15 s on a busy laptop. Failed checks in
+      # that window do not count, and the check runs every second until the first pass.
+      start_period: 60s
+      start_interval: 1s
 
   prometheus:
     image: prom/prometheus:v3.16.0
