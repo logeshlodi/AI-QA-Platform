@@ -1,0 +1,63 @@
+{{- if .Values.keycloak.enabled }}
+{{- if not .Values.keycloak.realm }}
+{{- fail "keycloak.realm is empty: pass the realm file with --set-file keycloak.realm=infrastructure/docker/keycloak/aiqa-realm.json (pnpm k8s:up does)" }}
+{{- end }}
+# Keycloak with the same local test realm as the Docker Compose stack, for the web app's sign-in.
+# The realm file lives once, in infrastructure/docker/keycloak, and is passed in with --set-file.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  labels:
+    {{- include "aiqa.labels" . | nindent 4 }}
+data:
+  aiqa-realm.json: |
+{{ .Values.keycloak.realm | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: keycloak } }
+  template:
+    metadata:
+      labels: { app: keycloak }
+      annotations:
+        # A changed realm file restarts Keycloak, which imports it again into its fresh dev database.
+        checksum/realm: {{ .Values.keycloak.realm | sha256sum | trunc 16 }}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: keycloak
+          image: {{ .Values.images.keycloak }}
+          args: ['start-dev', '--import-realm']
+          env:
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin }
+            - { name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: admin }
+            # Tokens name the address browsers use; pods reach Keycloak as keycloak:8080.
+            - { name: KC_HOSTNAME, value: 'http://localhost:{{ .Values.nodePorts.keycloak }}' }
+            - { name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC, value: 'true' }
+            - { name: KC_HEALTH_ENABLED, value: 'true' }
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: management, containerPort: 9000 }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            periodSeconds: 5
+            # Keycloak builds itself on first start: minutes on a busy laptop.
+            failureThreshold: 120
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import, readOnly: true }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+      volumes:
+        - name: realm
+          configMap: { name: keycloak-realm }
+---
+{{ include "aiqa.service" (dict "name" "keycloak" "port" 8080 "portName" "http" "nodePort" .Values.nodePorts.keycloak) }}
+{{- end }}

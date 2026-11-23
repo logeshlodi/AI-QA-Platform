@@ -1,0 +1,12 @@
+{
+  "name": "@aiqa/templates",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Starter projects for `aiqa new project`: a UI suite, an API suite, or both, on this platform's patterns",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@playwright/test": "catalog:",
+    "typescript": "catalog:"
+  }
+}

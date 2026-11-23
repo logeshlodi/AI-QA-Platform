@@ -50,3 +50,38 @@ describe('rolesOf', () => {
     expect(rolesOf({})).toEqual([]);
   });
 });
+
+describe('internal issuer address', () => {
+  it('sends server-side calls for the public issuer to the internal one, and nothing else', async () => {
+    const { internalFetch } = await import('../src/lib/oidc');
+    const seen: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => {
+      seen.push(url);
+      return new Response('{}');
+    }) as typeof fetch;
+    try {
+      const f = internalFetch('http://localhost:30180/realms/aiqa', 'http://keycloak:8080/realms/aiqa');
+      await f('http://localhost:30180/realms/aiqa/.well-known/openid-configuration', {
+        method: 'GET',
+        headers: {},
+        body: undefined,
+        redirect: 'manual',
+        signal: undefined,
+      } as never);
+      await f('https://elsewhere.example/x', {
+        method: 'GET',
+        headers: {},
+        body: undefined,
+        redirect: 'manual',
+        signal: undefined,
+      } as never);
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(seen).toEqual([
+      'http://keycloak:8080/realms/aiqa/.well-known/openid-configuration',
+      'https://elsewhere.example/x',
+    ]);
+  });
+});

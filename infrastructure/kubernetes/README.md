@@ -27,12 +27,24 @@ with kind 0.33.0 (Kubernetes 1.37), Helm 4.3.2 and Docker Desktop on Windows.
 | Prometheus        | `prometheus:9090`         | http://localhost:30090 |
 | Pushgateway       | `pushgateway:9091`        | http://localhost:30091 |
 | Playwright server | `playwright-server:3000`  | ws://localhost:30333/  |
+| Web app           | `web:3200`                | http://localhost:30200 |
+| Keycloak          | `keycloak:8080`           | http://localhost:30180 |
 | Postgres          | `postgres:5432`           | localhost:30432        |
 | MongoDB           | `mongo:27017`             | localhost:30017        |
 | Kafka             | `kafka:19092`             | localhost:30092        |
 | Loki, Tempo       | `loki:3100`, `tempo:3200` | through Grafana        |
 
 The 30xxx ports never clash with the Docker Compose stack, so both can run at once.
+
+The web app signs in through the chart's own Keycloak, with the same realm file as the Compose stack
+(`--set-file keycloak.realm=...`, which `k8s:up` passes). Browsers reach Keycloak on
+localhost:30180; the web pod reaches it as `keycloak:8080` (`AUTH_ISSUER_INTERNAL`), while tokens
+keep naming the public address. It reads the run history and agent log the test Jobs write. The chat
+is off in the cluster (`web.agentProvider`): set a provider and its variables to switch it on.
+
+Ports 30180 and 30200 were added with the web app. kind publishes ports only when it creates the
+cluster, so a cluster from before needs `pnpm k8s:down && pnpm k8s:up` (`k8s:up` warns when this is
+the case).
 
 ## How it fits together
 

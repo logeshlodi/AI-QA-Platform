@@ -22,7 +22,7 @@ const CHART = path.join(ROOT, 'infrastructure', 'kubernetes', 'aiqa-stack');
 const DATA = path.join(ROOT, '.aiqa');
 const STATE = path.join(DATA, 'k8s', 'images.json');
 // Keep in step with nodePorts in the chart's values.yaml: kind publishes each on localhost.
-const NODE_PORTS = [30088, 30464, 30432, 30017, 30092, 30090, 30091, 30300, 30333];
+const NODE_PORTS = [30088, 30464, 30432, 30017, 30092, 30090, 30091, 30300, 30333, 30180, 30200];
 const SUITES = ['data', 'ui', 'load'];
 
 /** Runs a command. `capture` returns its output; otherwise output goes straight to the terminal. */
@@ -121,7 +121,24 @@ const imageArgs = (tags) => [
   `images.orderService=${tags.orderService}`,
   '--set',
   `images.tests=${tags.tests}`,
+  ...(tags.web ? ['--set', `images.web=${tags.web}`] : ['--set', 'web.enabled=false']),
+  // One realm file for Compose and Kubernetes; forward slashes because Helm reads backslashes as escapes.
+  '--set-file',
+  `keycloak.realm=${path.join(ROOT, 'infrastructure', 'docker', 'keycloak', 'aiqa-realm.json').replaceAll('\\', '/')}`,
 ];
+
+/** A cluster made before Keycloak and the web app joined the chart lacks their node ports. */
+function missingPorts() {
+  const config = run(
+    'docker',
+    ['inspect', '-f', '{{json .HostConfig.PortBindings}}', `${CLUSTER}-control-plane`],
+    {
+      capture: true,
+      allowFail: true,
+    },
+  );
+  return NODE_PORTS.filter((port) => !config.includes(`"${port}/tcp"`));
+}
 
 function up() {
   run('docker', ['info', '--format', '{{.ServerVersion}}'], { capture: true });
@@ -129,12 +146,20 @@ function up() {
     console.log(`> creating kind cluster "${CLUSTER}"`);
     run('kind', ['create', 'cluster', '--name', CLUSTER, '--config', writeKindConfig(), '--wait', '120s']);
   }
+  const missing = missingPorts();
+  if (missing.length)
+    console.warn(
+      `> This cluster was made before ports ${missing.join(', ')} were added, so they are not published on` +
+        ' localhost. Recreate it to reach the web app and Keycloak: pnpm k8s:down && pnpm k8s:up',
+    );
   const tags = {
     orderService: build('aiqa/order-service', 'apps/order-service/Dockerfile'),
     tests: build('aiqa/tests', 'infrastructure/docker/Dockerfile'),
+    web: build('aiqa/web', 'apps/web/Dockerfile'),
   };
   load(tags.orderService);
   load(tags.tests);
+  load(tags.web);
   console.log('\n> installing the chart (waits until every pod is ready)');
   run('helm', [
     'upgrade',

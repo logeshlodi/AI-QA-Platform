@@ -177,11 +177,11 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:3200/auth/callback"],
-      "webOrigins": ["http://localhost:3200"],
+      "redirectUris": ["http://localhost:3200/auth/callback", "http://localhost:30200/auth/callback"],
+      "webOrigins": ["http://localhost:3200", "http://localhost:30200"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:3200/signed-out"
+        "post.logout.redirect.uris": "http://localhost:3200/signed-out##http://localhost:30200/signed-out"
       },
       "protocolMappers": [
         {

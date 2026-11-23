@@ -65,11 +65,13 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                 | Vitest, MCP client    |
 | `packages/dashboard`            | React components of the web app, a story per state, a gallery for Playwright's `mount`                             | Playwright components |
 | `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
+| `packages/templates`            | Starter projects for `aiqa new project`: UI, API or both, standalone, CI-tested                                    | Vitest, CI smoke      |
 | `packages/interview-learning`   | 43 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
 | `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB writes, Kafka out; OpenAPI at `/openapi.json`; OpenTelemetry | Data suites           |
+| `apps/documentation`            | The docs site (Starlight) built from `docs/`, published to GitHub Pages                                            | Build, link check     |
 | `apps/web`                      | Next.js app: dashboard, chat over the MCP tools with approvals, admin; Keycloak sign-in                            | Playwright e2e, axe   |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
@@ -210,7 +212,7 @@ npx pnpm aiqa agents triage --suite api          # why each failed test of the l
 npx pnpm aiqa agents eval triage                 # score Triage on its 30 labelled failures
 npx pnpm aiqa agents plan inventory --path /inventory.html --logged-in   # a test plan from the live page
 npx pnpm aiqa agents generate specs/inventory.plan.md --scenario 1       # a spec that must pass 3 runs
-npx pnpm aiqa agents heal-review --apply                                 # healed locators as patches, after your yes
+npx pnpm aiqa agents heal-review --apply --branch                        # healed locators as patches on a local heal/* branch, after your yes
 npx pnpm aiqa agents flaky --suite api          # flaky tests, rerun, with the likely cause
 npx pnpm aiqa agents a11y --path /inventory.html --logged-in            # axe findings ranked by user impact
 npx pnpm aiqa agents report --suite ui           # a summary whose every number is checked
@@ -292,7 +294,8 @@ pnpm k8s:down
 UI Jobs do not launch browsers: they connect to one shared `playwright run-server` in the cluster.
 Every Job pushes its results to Prometheus, and Grafana (http://localhost:30300) shows the tests
 next to the service: pass rate, duration, flaky tests, the slowest tests and performance trends.
-Loki holds the logs of every pod and Tempo the order service's traces, linked both ways. Needs
+Loki holds the logs of every pod and Tempo the order service's traces, linked both ways. The web
+app runs there too (http://localhost:30200), signed in through the chart's own Keycloak. Needs
 Docker Desktop, `kind`, `kubectl` and `helm`; see `infrastructure/kubernetes/README.md` and
 `infrastructure/monitoring/README.md`.
 
@@ -334,8 +337,10 @@ The same stages run on **Azure DevOps** (`azure-pipelines.yml`, templates in
 
 ## Learning path
 
-[`docs/learning`](docs/learning/README.md) turns the repository into a course: thirteen stops, each with
-a guide to read, a command to run, a lab to fix and a quiz to check yourself.
+[`docs/learning`](docs/learning/README.md) turns the repository into a course: fifteen stops, each with
+a guide to read, a command to run, a lab to fix and a quiz to check yourself. The same pages, with the
+ADRs, the coverage matrix and the status, are published as a site:
+https://logeshlodi.github.io/AI-QA-Platform/ (`pnpm docs` runs it locally).
 
 ```bash
 pnpm lab                      # list the break-it labs; pnpm lab 03 runs one
@@ -345,18 +350,28 @@ pnpm aiqa quiz --topic api    # interview questions; --list prints them with ans
 
 ## Roadmap
 
-| Phase | Sprints                 | What                                                                                                 | State       |
-| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------- |
-| 1-3   | 1-5                     | Working core: framework, locator and feature labs, API tests, self-healing, the AI layer             | Done        |
-| 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done        |
-| -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done        |
-| -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done        |
-| -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done        |
-| -     | Learning                | Learning path and ten guides, eight break-it labs, interview question bank and `aiqa quiz`           | Done        |
-| 5     | 9-14                    | Nine agents, MCP server, web app (dashboard, then chat and admin), docs site, `templates`            | In progress |
+| Phase | Sprints                 | What                                                                                                 | State |
+| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ----- |
+| 1-3   | 1-5                     | Working core: framework, locator and feature labs, API tests, self-healing, the AI layer             | Done  |
+| 4     | 6-8                     | Run history and dashboard, test data, CLI, data and messaging suites, Azure DevOps, Jenkins, Grafana | Done  |
+| -     | Performance, Kubernetes | Web Vitals and k6 with trends; kind, Helm, test Jobs, test metrics, Loki and Tempo                   | Done  |
+| -     | Contracts               | OpenAPI document and response validation for the order service; Pact consumer and provider           | Done  |
+| -     | Security                | Keycloak OAuth/JWT on product writes; licence, audit and OSV gates; authenticated ZAP API scan       | Done  |
+| -     | Learning                | Learning path and ten guides, eight break-it labs, interview question bank and `aiqa quiz`           | Done  |
+| 5     | 9-14                    | Nine agents, MCP server, web app (dashboard, chat, admin), docs site, project templates              | Done  |
 
-Folders still to be built in Phase 5 have a README that says so. `docs/architecture.md`
-explains how the parts fit together, and `docs/adr/` records the decisions behind them.
+`docs/architecture.md` explains how the parts fit together, and `docs/adr/` records the decisions
+behind them.
+
+## Start your own project
+
+```bash
+pnpm aiqa new project checkout-tests --kind both --dir ../checkout-tests   # ui, api or both
+```
+
+A standalone npm project at this repository's Playwright and TypeScript versions, on its patterns
+(page objects behind fixtures, role locators, no fixed waits). CI generates each kind and runs its
+tests. See `packages/templates`.
 
 ## Status
 

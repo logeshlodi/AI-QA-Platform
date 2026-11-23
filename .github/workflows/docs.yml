@@ -1,0 +1,38 @@
+name: Docs site
+# Builds apps/documentation from docs/ and publishes it to GitHub Pages
+# (https://logeshlodi.github.io/AI-QA-Platform/). Pages must be switched on once in the repository's
+# settings with "GitHub Actions" as the source.
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'apps/documentation/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+# Read-only by default; only the deploy job may write to Pages.
+permissions: { contents: read }
+
+# One deployment at a time; a newer push waits rather than cancelling one half-way.
+concurrency: { group: pages, cancel-in-progress: false }
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # The site is served under the repository name, so every link carries it.
+      - run: pnpm --filter @aiqa/documentation build
+        env: { DOCS_BASE: /AI-QA-Platform }
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: apps/documentation/dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { pages: write, id-token: write }
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

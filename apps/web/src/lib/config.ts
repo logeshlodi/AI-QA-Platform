@@ -20,6 +20,11 @@ export const config = {
   appUrl: env('APP_URL', 'http://localhost:3200').replace(/\/$/, ''),
   auth: {
     issuer: env('AUTH_ISSUER', 'http://localhost:8180/realms/aiqa'),
+    /**
+     * Where the server itself reaches the issuer, when that differs from the address browsers use (in
+     * Kubernetes: http://keycloak:8080/realms/aiqa). Tokens still name the public issuer.
+     */
+    internalIssuer: env('AUTH_ISSUER_INTERNAL', ''),
     clientId: env('AUTH_CLIENT_ID', 'web'),
     // The local realm's published test secret (infrastructure/docker/keycloak); set your own anywhere else.
     clientSecret: env('AUTH_CLIENT_SECRET', 'dev-only-web-secret'),

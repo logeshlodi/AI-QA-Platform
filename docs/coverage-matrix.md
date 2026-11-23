@@ -83,9 +83,24 @@ Paths are relative to `packages/playwright-framework/tests/` unless they start w
 | SOAP                                                                                                                 | `api-framework/tests/soap/calculator.spec.ts`                                                   | DNE Online calculator                                                 |
 | Break-it labs: hard wait, brittle id, strict mode, missing await, shared state, late route, fixed id, unverified JWT | `examples/labs/*/solution.spec.ts` (`pnpm test:labs`)                                           | UI Playground, SauceDemo, Playwright demo, Restful-Booker, local keys |
 
+## The platform's own web app and AI features
+
+Paths are relative to the repository root.
+
+| Feature                                                                                                 | Spec                                                                        | Target                     |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
+| Component testing on the stories model (`mount`, `update`, stories with state)                          | `packages/dashboard/tests/components/{tables,chart-and-shell,chat}.spec.ts` | Story gallery (Vite)       |
+| Accessibility of every component state, light and dark (axe, WCAG 2.2 AA)                               | `packages/dashboard/tests/components/a11y.spec.ts`                          | Story gallery              |
+| Visual comparison of every component state                                                              | `packages/dashboard/tests/components/visual.spec.ts`                        | Story gallery, Linux image |
+| OIDC sign-in through a real identity provider, sign-out of both, roles, open redirect, cookie tampering | `apps/web/tests/e2e/auth.spec.ts`                                           | Web app + Keycloak         |
+| Exact numbers from fixed data, drill-down, keyboard, axe on every page                                  | `apps/web/tests/e2e/{dashboard,a11y}.spec.ts`                               | Web app                    |
+| Streamed answers, Stop, answers that vary, prompt injection held for approval, API refusals             | `apps/web/tests/e2e/chat.spec.ts`                                           | Web app + stub model       |
+| Human approval of AI-proposed writes, settings validated on the server                                  | `apps/web/tests/e2e/admin.spec.ts`                                          | Web app + stub model       |
+| A generated starter project passing its own tests                                                       | CI job `templates` (`packages/templates`)                                   | SauceDemo, Restful-Booker  |
+
 ## In the plan, not built yet
 
-Component testing (deferred to the new stories model). Pact, OpenAPI validation and OAuth/JWT,
+Pact, OpenAPI validation and OAuth/JWT,
 deferred in the plan because no public target qualified, are built against the order service (with a
 local Keycloak for OAuth).
 

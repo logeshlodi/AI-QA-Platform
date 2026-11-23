@@ -15,6 +15,8 @@ export default tseslint.config(
       '**/allure-*/**',
       '**/.aiqa/**',
       '**/.next/**',
+      'apps/documentation/dist/**',
+      'apps/documentation/.astro/**',
       '**/next-env.d.ts',
     ],
   },

@@ -21,3 +21,9 @@ next-env.d.ts
 
 # Playwright sign-in state saved by the web specs (git-ignored too)
 **/playwright/.auth
+
+# The docs site: its build output, and the pages it generates from docs/
+apps/documentation/dist
+apps/documentation/.astro
+apps/documentation/src/content/docs/*
+!apps/documentation/src/content/docs/index.mdx

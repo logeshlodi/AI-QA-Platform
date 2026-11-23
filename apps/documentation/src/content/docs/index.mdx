@@ -1,0 +1,35 @@
+---
+title: AI-QA Platform
+description: An enterprise Playwright and TypeScript platform with self-healing, AI agents and a learning path.
+template: splash
+hero:
+  tagline: Playwright and TypeScript at enterprise scale, with self-healing, nine AI agents behind approval, and a path to learn it all.
+  actions:
+    - text: Start the learning path
+      link: learning/
+      icon: right-arrow
+    - text: Read the decisions
+      link: adr/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Fifteen stops" icon="open-book">
+    From the first spec to tests as Kubernetes Jobs and testing AI features: read, run, break a lab, take the
+    quiz.
+  </Card>
+  <Card title="Why, not only how" icon="list-format">
+    Sixteen ADRs record each big choice, what it costs, and what was rejected.
+  </Card>
+  <Card title="What is covered" icon="approve-check">
+    The coverage matrix maps every Playwright feature to the spec that shows it.
+  </Card>
+  <Card title="What has run" icon="rocket">
+    The status page says what was run, where, with what result, and what is not built.
+  </Card>
+</CardGrid>
+
+The source, the CI and the runnable suites are on [GitHub](https://github.com/logeshlodi/AI-QA-Platform). This site is
+built from the repository's `docs/` folder on every push to `main`.

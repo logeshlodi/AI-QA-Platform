@@ -303,6 +303,47 @@ jobs:
         if: failure()
         with: { name: web-report, path: apps/web/playwright-report, retention-days: 7 }
 
+  docs:
+    name: Docs site builds, every internal link resolves
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @aiqa/documentation build
+        env: { DOCS_BASE: /AI-QA-Platform }
+
+  templates:
+    name: Generated ${{ matrix.kind }} project passes its own tests
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: { kind: [ui, api, both] }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { browsers: chromium }
+      - run: pnpm aiqa new project generated-${{ matrix.kind }} --kind ${{ matrix.kind }} --dir "$RUNNER_TEMP/generated"
+      # A standalone npm project, outside the workspace: what someone gets from the command.
+      - name: Install, typecheck and test the generated project
+        working-directory: ${{ runner.temp }}/generated
+        run: |
+          npm install --no-audit --no-fund
+          npm run typecheck
+          npx playwright install chromium
+          npm test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          {
+            name: 'template-${{ matrix.kind }}-report',
+            path: '${{ runner.temp }}/generated/playwright-report',
+            retention-days: 7,
+          }
+
   labs:
     name: Lab solutions
     needs: quality

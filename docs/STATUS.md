@@ -1,7 +1,7 @@
 # Status
 
-Last full run: 22 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5 has started: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests) and 13 (chat over the MCP tools with approvals, admin area, tests for AI features) are built and have run; the docs site and templates (Sprint 14) are not started.
+Last full run: 23 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests), 13 (chat over the MCP tools with approvals, admin area, tests for AI features) and 14 (docs site, project templates, the web app in Kubernetes, healing patches and branch) are built and have run. Phase 5 is complete.
 
 ## What was run, and the result
 
@@ -39,6 +39,53 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## Sprint 14: docs site, project templates, web app in Kubernetes (23 Nov). Phase 5 complete
+
+Built:
+
+- `apps/documentation`, a Starlight site made from `docs/` (learning path, architecture, ADRs,
+  coverage matrix, status). Links between docs become site links, links to code become GitHub links,
+  and the build fails on any broken internal link. `.github/workflows/docs.yml` publishes it to
+  GitHub Pages; CI builds it on every push.
+- `packages/templates` and `aiqa new project <name> --kind ui|api|both`: a standalone Playwright
+  project (page objects, fixtures, smoke tests on SauceDemo, a read-only API suite on Restful-Booker)
+  pinned to this repository's Playwright and TypeScript. CI generates each kind and runs its tests.
+- `aiqa heal-review` always writes `.patch` and `.md` files to `.aiqa/heal-patches`; with
+  `--apply --branch` it commits the accepted fixes on a new `heal/<date>` branch. Nothing is pushed
+  and no token is needed.
+- The Helm chart now runs Keycloak (realm loaded from the repository's file) and the web app
+  (`apps/web/Dockerfile`, Next.js standalone, port 3200 as user `node`). The web app reaches
+  Keycloak by its in-cluster name while the browser uses `localhost:30180`.
+
+Run on the Windows laptop:
+
+| Check                         | Result                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Typecheck, lint, prettier     | passed; 0 lint errors (the 4 old `expect-expect` warnings)                            |
+| Unit tests                    | 304 passed (heal patches and branch, templates, docs sync, the issuer rewrite)        |
+| Licence gate                  | 857 packages, all allowed (1 named exception)                                         |
+| Docs site build (`DOCS_BASE`) | 36 pages, search index built, every internal link resolves                            |
+| Generated projects            | ui 3 passed, api 3 passed, both 6 passed, each after `npm install` and `tsc --noEmit` |
+| Helm                          | `helm lint` 0 failed; `helm template` renders Keycloak and the web app                |
+| Web app image                 | `aiqa/web` built, 367 MB                                                              |
+| Web app (`pnpm test:web`)     | 40 passed against the recreated Keycloak                                              |
+
+The gate passes: the docs site builds with every link resolving, and each generated project passes
+its own tests.
+
+Fixed on the way:
+
+- The generated UI tests found nothing on SauceDemo: its elements use `data-test`, not Playwright's
+  default `data-testid`. The template now sets `testIdAttribute`, and a unit test checks it.
+- A failed local run of a generated project stopped to serve the HTML report; the template now
+  never opens it.
+- Doc folder links went to GitHub instead of the site page; the site had no favicon (found by the
+  link check).
+
+Not done: the cluster has not been recreated with the new chart (`pnpm k8s:down && pnpm k8s:up`,
+since kind opens its ports only when the cluster is created). GitHub Pages must be switched on in
+the repository settings before the docs workflow can publish.
 
 ## Sprint 13: chat and admin, and tests for AI features (22 Nov)
 

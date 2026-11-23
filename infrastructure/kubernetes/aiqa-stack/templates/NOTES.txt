@@ -5,5 +5,11 @@ The AI-QA-Platform stack is installed in namespace {{ .Release.Namespace }}.
   Prometheus     http://localhost:{{ .Values.nodePorts.prometheus }}
   Pushgateway    http://localhost:{{ .Values.nodePorts.pushgateway }}
   Playwright     ws://localhost:{{ .Values.nodePorts.playwright }}/
+{{- if .Values.web.enabled }}
+  Web app        http://localhost:{{ .Values.nodePorts.web }}   (sign in as qa-viewer or qa-admin)
+{{- end }}
+{{- if .Values.keycloak.enabled }}
+  Keycloak       http://localhost:{{ .Values.nodePorts.keycloak }}   (admin / admin)
+{{- end }}
 
 Run the suites in the cluster:  pnpm k8s:test data | ui | load [smoke|load|stress]

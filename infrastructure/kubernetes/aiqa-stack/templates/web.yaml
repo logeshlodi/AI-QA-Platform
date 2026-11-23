@@ -1,0 +1,66 @@
+{{- if .Values.web.enabled }}
+# The web app (apps/web): dashboard, chat and admin, signed in through the chart's Keycloak.
+# It reads the run history and agent log the test Jobs write into the repository's .aiqa folder.
+{{- $secret := lookup "v1" "Secret" .Release.Namespace "web-session" }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: web-session
+  labels:
+    {{- include "aiqa.labels" . | nindent 4 }}
+type: Opaque
+data:
+  # Made once and kept across upgrades, so signed-in sessions survive a redeploy.
+  SESSION_SECRET: {{ if $secret }}{{ index $secret.data "SESSION_SECRET" }}{{ else }}{{ randAlphaNum 48 | b64enc }}{{ end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      enableServiceLinks: false
+      securityContext: { runAsNonRoot: true, runAsUser: 1000 }
+      {{- if .Values.keycloak.enabled }}
+      initContainers:
+        {{- include "aiqa.waitFor" (dict "name" "keycloak" "image" .Values.images.busybox "host" "keycloak" "port" 8080) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ .Values.images.web }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: APP_URL, value: 'http://localhost:{{ .Values.nodePorts.web }}' }
+            - { name: AUTH_ISSUER, value: 'http://localhost:{{ .Values.nodePorts.keycloak }}/realms/aiqa' }
+            - { name: AUTH_ISSUER_INTERNAL, value: 'http://keycloak:8080/realms/aiqa' }
+            - name: SESSION_SECRET
+              valueFrom: { secretKeyRef: { name: web-session, key: SESSION_SECRET } }
+            - { name: AIQA_HISTORY_DIR, value: '{{ .Values.resultsHostPath }}/history' }
+            - { name: AIQA_AGENT_LOG, value: '{{ .Values.resultsHostPath }}/agents/runs.jsonl' }
+            - { name: AIQA_HEAL_DIR, value: '{{ .Values.resultsHostPath }}/heals' }
+            - { name: AIQA_QUARANTINE_FILE, value: '{{ .Values.resultsHostPath }}/quarantine.json' }
+            - { name: AIQA_WEB_SETTINGS, value: '{{ .Values.resultsHostPath }}/web-settings.json' }
+            # The chat answers only when a model is configured (off by default in the cluster).
+            - { name: AGENT_PROVIDER, value: {{ .Values.web.agentProvider | quote }} }
+          ports:
+            - { name: http, containerPort: 3200 }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 3200 }
+            periodSeconds: 3
+            failureThreshold: 40
+          volumeMounts:
+            - { name: results, mountPath: {{ .Values.resultsHostPath }} }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+      volumes:
+        {{- include "aiqa.resultsVolume" . | nindent 8 }}
+---
+{{ include "aiqa.service" (dict "name" "web" "port" 3200 "portName" "http" "nodePort" .Values.nodePorts.web) }}
+{{- end }}

@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   // The pnpm workspace root, for module resolution and for tracing files into a standalone build.
   turbopack: { root: ROOT },
   outputFileTracingRoot: ROOT,
+  // The container image (apps/web/Dockerfile) sets NEXT_OUTPUT=standalone; local runs use next start.
+  output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   poweredByHeader: false,
   // No image optimiser: it needs sharp (LGPL libvips), and the app serves no photos.
   images: { unoptimized: true },

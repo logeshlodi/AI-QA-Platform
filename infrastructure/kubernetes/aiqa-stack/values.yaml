@@ -3,6 +3,8 @@
 images:
   orderService: aiqa/order-service:dev
   tests: aiqa/tests:dev
+  web: aiqa/web:dev
+  keycloak: quay.io/keycloak/keycloak:26.7.0
   postgres: postgres:17-alpine
   mongo: mongo:8.0
   kafka: apache/kafka:4.3.2
@@ -27,6 +29,8 @@ nodePorts:
   pushgateway: 30091
   grafana: 30300
   playwright: 30333
+  keycloak: 30180
+  web: 30200
 
 orderService:
   # PARALLEL_PARTITIONS: handle Kafka partitions in parallel (false: one message at a time).
@@ -59,3 +63,13 @@ job:
 # The k6 script, passed with --set-file k6.script=packages/load-tests/scripts/order-flow.js.
 k6:
   script: ''
+
+# The web app (dashboard, chat, admin) and the Keycloak it signs in through. Keycloak takes the
+# realm file with --set-file keycloak.realm=infrastructure/docker/keycloak/aiqa-realm.json.
+web:
+  enabled: true
+  # off | ollama | openai-compatible (see .env.example): off means the chat says no model is set.
+  agentProvider: 'off'
+keycloak:
+  enabled: true
+  realm: ''

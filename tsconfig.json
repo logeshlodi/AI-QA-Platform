@@ -9,6 +9,7 @@
       "@aiqa/test-data-engine": ["./packages/test-data-engine/src/index.ts"],
       "@aiqa/cli": ["./packages/cli/src/index.ts"],
       "@aiqa/ai-agents": ["./packages/ai-agents/src/index.ts"],
+      "@aiqa/templates": ["./packages/templates/src/index.ts"],
       "@aiqa/mcp-server": ["./packages/mcp-server/src/index.ts"],
       "@aiqa/playwright-framework": ["./packages/playwright-framework/src/index.ts"],
       "@aiqa/api-framework": ["./packages/api-framework/src/index.ts"],
@@ -28,5 +29,5 @@
     "vitest.live.config.ts"
   ],
   // React code has its own configs (JSX, Next's types): typechecked by the typecheck script.
-  "exclude": ["apps/web", "packages/dashboard"]
+  "exclude": ["apps/web", "packages/dashboard", "apps/documentation"]
 }

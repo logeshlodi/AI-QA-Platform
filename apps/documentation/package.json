@@ -1,0 +1,21 @@
+{
+  "name": "@aiqa/documentation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The docs site: the learning path, ADRs, architecture, coverage matrix and status from docs/, built with Starlight",
+  "type": "module",
+  "scripts": {
+    "sync": "tsx scripts/sync.ts",
+    "dev": "tsx scripts/sync.ts && astro dev",
+    "build": "tsx scripts/sync.ts && astro build && tsx scripts/check-links.ts",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "catalog:",
+    "astro": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

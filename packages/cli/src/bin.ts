@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { PROJECT_KINDS, renderProject, writeProject, type ProjectKind } from '@aiqa/templates';
+import { changedTrackedFiles, commitHealBranch, writeHealPatches } from './commands/heal-branch';
 import { chromium } from '@playwright/test';
 import { targetNames, targetUrl, type TargetName } from '@aiqa/shared';
 import { Argument, Command, InvalidArgumentError, Option } from 'commander';
@@ -584,11 +586,42 @@ agents
     }
   });
 
+const newProject = program.commands.find((c) => c.name() === 'new');
+newProject
+  ?.command('project')
+  .description('start a standalone Playwright project from a template (ui, api or both)')
+  .argument('<name>', 'npm package name, also the folder name, e.g. "checkout-tests"')
+  .addOption(new Option('--kind <kind>', 'which suites').choices([...PROJECT_KINDS]).default('both'))
+  .option('--dir <dir>', 'where to create it (default: ./<name>)')
+  .option('--force', 'write into a folder that is not empty')
+  .action((name: string, opts: { kind: ProjectKind; dir?: string; force?: boolean }) => {
+    const dir = path.resolve(opts.dir ?? name);
+    const files = renderProject({ name, kind: opts.kind });
+    writeProject(dir, files, { force: opts.force });
+    console.log(`Created ${opts.kind} project "${name}" in ${dir} (${files.length} files).\n`);
+    console.log(`  cd ${path.relative(process.cwd(), dir) || '.'}`);
+    console.log('  npm install');
+    console.log('  npx playwright install chromium');
+    console.log('  npm test');
+  });
+
 agents
   .command('heal-review')
   .description('turn healed locators into reviewable patches with a pull-request description')
   .option('--apply', 'ask, patch by patch, whether to write it')
-  .action(async (opts: { apply?: boolean }) => {
+  .option('--branch', 'with --apply: commit the written patches on a new local heal/* branch (you push it)')
+  .action(async (opts: { apply?: boolean; branch?: boolean }) => {
+    const root = path.resolve(FRAMEWORK, '..', '..');
+    const packagePath = path.relative(root, FRAMEWORK);
+    if (opts.branch) {
+      if (!opts.apply) throw new Error('--branch needs --apply: only written patches can be committed.');
+      // Checked before anything is written, so the branch holds the heal fixes and nothing else.
+      const dirty = changedTrackedFiles(root).filter((f) => f.startsWith(packagePath.replaceAll('\\', '/')));
+      if (dirty.length)
+        throw new Error(
+          `Commit or stash these changes first, so the heal branch holds only heal fixes:\n  ${dirty.join('\n  ')}`,
+        );
+    }
     const repo = createHealRepository(FRAMEWORK_STATE);
     const events = repo.listEvents();
     repo.close();
@@ -606,6 +639,17 @@ agents
       timeoutMs: loadEnv().AGENT_TIMEOUT_MS,
     });
     console.log(formatHealingReviews(reviews));
+    const written = writeHealPatches(reviews, path.join(root, '.aiqa', 'heal-patches'), packagePath);
+    if (written.length)
+      console.log(`\nPatches and descriptions: ${path.join('.aiqa', 'heal-patches')} (${written.length})`);
+    if (opts.branch) {
+      const applied = reviews.filter((r) => r.status === 'applied');
+      if (!applied.length) return console.log('No patch was approved, so no branch was made.');
+      const branch = commitHealBranch(root, applied, packagePath);
+      console.log(
+        `\nCommitted on ${branch}. Review it, then: git push -u origin ${branch}  (and open the pull request with the .md text).\nBack to where you were: git switch -`,
+      );
+    }
   });
 
 agents

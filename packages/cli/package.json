@@ -11,6 +11,7 @@
     "@aiqa/interview-learning": "workspace:*",
     "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/self-healing-engine": "workspace:*",
+    "@aiqa/templates": "workspace:*",
     "@aiqa/test-data-engine": "workspace:*",
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
