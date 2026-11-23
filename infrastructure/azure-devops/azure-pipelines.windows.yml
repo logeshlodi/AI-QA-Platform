@@ -40,7 +40,8 @@ variables:
 jobs:
   - job: windows
     displayName: Quality, API, UI and data suites on Windows
-    timeoutInMinutes: 90
+    # Includes waiting for the machine (next steps): up to 90 minutes, then the build itself.
+    timeoutInMinutes: 180
     steps:
       - checkout: self
         fetchDepth: 1
@@ -48,6 +49,11 @@ jobs:
 
       - script: node -v && git --version
         displayName: Tool versions
+
+      # Jenkins on this machine builds the same pushes and uses the same Docker stack. One build at a
+      # time: wait here until it is done (scripts/ci-lock.mjs, released in the last step).
+      - script: node scripts/ci-lock.mjs acquire ado-$(Build.BuildId)
+        displayName: Wait for the machine
 
       # Retries through the intermittent Windows "EPERM ... symlink" link errors.
       - powershell: .\scripts\install-windows.ps1
@@ -108,6 +114,11 @@ jobs:
                 Write-Host "##vso[task.complete result=SucceededWithIssues;]"
               }
             displayName: Check Docker Desktop
+            # Docker writes to stderr when it is down: Windows PowerShell turns that into a terminating
+            # error under the default "stop", and the step would fail on docker's exit code. Both off,
+            # so the step warns and the data steps are skipped.
+            errorActionPreference: continue
+            ignoreLASTEXITCODE: true
           - script: $(PNPM) stack:up && $(PNPM) test:data
             displayName: Start the stack and run the data suites
             condition: and(succeeded(), eq(variables.DOCKER_UP, 'true'))
@@ -144,3 +155,7 @@ jobs:
         artifact: dashboard
         condition: always()
         continueOnError: true
+
+      - script: node scripts/ci-lock.mjs release ado-$(Build.BuildId)
+        displayName: Free the machine
+        condition: always()

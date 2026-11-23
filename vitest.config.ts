@@ -23,6 +23,7 @@ export default defineConfig({
       'apps/order-service/tests/**/*.test.ts',
       'apps/web/tests/**/*.test.ts',
       'apps/documentation/tests/**/*.test.ts',
+      'scripts/tests/**/*.test.ts',
     ],
     environment: 'node',
   },

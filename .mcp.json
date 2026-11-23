@@ -3,14 +3,14 @@
     "aiqa": {
       "command": "node",
       "args": ["node_modules/tsx/dist/cli.mjs", "packages/mcp-server/src/bin.ts"]
+    },
+    "playwright": {
+      "command": "node",
+      "args": [
+        "packages/mcp-server/node_modules/@playwright/mcp/cli.js",
+        "--config",
+        "packages/mcp-server/playwright-mcp.config.json"
+      ]
     }
-  },
-  "playwright": {
-  "command": "node",
-  "args": [
-    "packages/mcp-server/node_modules/@playwright/mcp/cli.js",
-    "--config",
-    "packages/mcp-server/playwright-mcp.config.json"
-  ]
   }
 }

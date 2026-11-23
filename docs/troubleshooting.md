@@ -39,13 +39,21 @@ happened at least once on the Windows laptop or in CI (see [status](STATUS.md)).
 
 ## Local stack and Kubernetes
 
-| Symptom                                              | Cause                                        | Fix                                                                                      |
-| ---------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `stack:up` hangs at "waiting"                        | a container failed its health check          | `docker compose -f infrastructure/docker/stack.compose.yml ps` then `logs <service>`     |
-| Port already in use (5432, 8080, 9092...)            | another container or service holds it        | Stop the other one, or change the host port in the compose file                          |
-| `attempt to write a readonly database` in a k8s step | Jobs wrote `.aiqa` as root on a Linux runner | `sudo chown -R "$(id -u):$(id -g)" .aiqa` before the host step (already in the workflow) |
-| `k8s:test` Job stuck in `Pending`                    | the image was not loaded into kind           | `npx pnpm k8s:up` loads it; check `npx pnpm k8s:status`                                  |
-| Docker Desktop uses most of drive C:                 | its virtual disk only grows                  | Docker Desktop → Troubleshoot → Clean / Purge data, then compact the disk                |
+| Symptom                                                                                    | Cause                                                                                                    | Fix                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stack:up` hangs at "waiting"                                                              | a container failed its health check                                                                      | `docker compose -f infrastructure/docker/stack.compose.yml ps` then `logs <service>`                                                                       |
+| Port already in use (5432, 8080, 9092...)                                                  | another container or service holds it                                                                    | Stop the other one, or change the host port in the compose file                                                                                            |
+| `attempt to write a readonly database` in a k8s step                                       | Jobs wrote `.aiqa` as root on a Linux runner                                                             | `sudo chown -R "$(id -u):$(id -g)" .aiqa` before the host step (already in the workflow)                                                                   |
+| `k8s:test` Job stuck in `Pending`                                                          | the image was not loaded into kind                                                                       | `npx pnpm k8s:up` loads it; check `npx pnpm k8s:status`                                                                                                    |
+| `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`         | Docker Desktop is not running. It also stops itself to install an update and does not always start again | Start Docker Desktop. On a machine that runs CI, turn off Settings → Software updates → "Automatically download updates" and update by hand between builds |
+| Jenkins and Azure DevOps on one laptop fail each other's data suites, or Firefox times out | Both build every push at once: double the browser load, and the first to finish stops the shared stack   | Both pipelines take `scripts/ci-lock.mjs` first, so the second waits; `node scripts/ci-lock.mjs status` shows who holds it                                 |
+| Docker Desktop uses most of drive C:                                                       | its virtual disk only grows                                                                              | Docker Desktop → Troubleshoot → Clean / Purge data, then compact the disk                                                                                  |
+
+## GitHub
+
+| Symptom                                         | Cause                                                                                                                | Fix                                                                                        |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Dependabot fails "npm_and_yarn in /some-folder" | a stray `package.json` or `pnpm-lock.yaml` was committed in that folder, so Dependabot treats it as a second project | Remove the folder (`git rm -r some-folder`); the repository has one workspace, at the root |
 
 ## Web app and Keycloak
 

@@ -16,7 +16,8 @@ pipeline {
   }
 
   options {
-    timeout(time: 60, unit: 'MINUTES')
+    // Includes waiting for the machine (see the first stage): up to 90 minutes, then the build itself.
+    timeout(time: 150, unit: 'MINUTES')
     buildDiscarder(logRotator(numToKeepStr: '30'))
     disableConcurrentBuilds()
   }
@@ -31,6 +32,12 @@ pipeline {
   }
 
   stages {
+    // The Azure DevOps agent on this machine builds the same pushes and uses the same Docker stack.
+    // One build at a time: wait here until it is done (scripts/ci-lock.mjs, released in post).
+    stage('Wait for the machine') {
+      steps { bat "node scripts\\ci-lock.mjs acquire jenkins-${env.BUILD_NUMBER}" }
+    }
+
     stage('Install') {
       steps {
         // Retries through the intermittent Windows "EPERM ... symlink" link errors.
@@ -102,6 +109,7 @@ pipeline {
         'packages/*/playwright-report/**',
         'packages/load-tests/results/**',
       ].join(', ')
+      bat(returnStatus: true, script: "node scripts\\ci-lock.mjs release jenkins-${env.BUILD_NUMBER}")
     }
   }
 }
