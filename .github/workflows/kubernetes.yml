@@ -1,0 +1,73 @@
+name: Kubernetes
+# The whole stack on a kind cluster, as `pnpm k8s:up` builds it on a laptop, and every suite as a
+# Kubernetes Job. Nightly and on request only: it takes about 25 minutes and needs no secrets.
+on:
+  schedule: [{ cron: '0 21 * * *' }] # 02:30 IST, after the nightly CI run has had its turn
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: 'Suites to run, space-separated (data ui load)'
+        default: 'data ui load'
+
+concurrency: { group: kubernetes, cancel-in-progress: false }
+permissions: { contents: read }
+
+env:
+  # Kept in step with the versions the laptop runs (infrastructure/kubernetes/README.md).
+  KIND_VERSION: v0.33.0
+  HELM_VERSION: v4.3.2
+  SUITES: ${{ inputs.suites || 'data ui load' }}
+
+jobs:
+  cluster:
+    name: Stack and suites on kind
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      - name: Install kind and Helm
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSLo "$HOME/.local/bin/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x "$HOME/.local/bin/kind"
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP/linux-amd64/helm" "$HOME/.local/bin/helm"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: kind version && helm version --short && kubectl version --client
+
+      - name: helm lint
+        run: helm lint infrastructure/kubernetes/aiqa-stack --set-file keycloak.realm=infrastructure/docker/keycloak/aiqa-realm.json
+
+      # Creates the cluster, builds and loads the three images, installs the chart and waits for every pod.
+      - run: pnpm k8s:up
+
+      - name: Data suite (Postgres, MongoDB, Kafka)
+        if: contains(env.SUITES, 'data')
+        run: pnpm k8s:test data
+      - name: UI suite on Chromium, Firefox and WebKit through the shared browser server
+        if: (success() || failure()) && contains(env.SUITES, 'ui')
+        run: pnpm k8s:test ui all-browsers
+      - name: Load smoke against the order service
+        if: (success() || failure()) && contains(env.SUITES, 'load')
+        run: pnpm k8s:test load smoke
+
+      - name: What was running
+        if: failure()
+        run: |
+          pnpm k8s:status
+          kubectl --context kind-aiqa -n aiqa get events --sort-by=.lastTimestamp | tail -50
+          for pod in $(kubectl --context kind-aiqa -n aiqa get pods --field-selector=status.phase!=Running,status.phase!=Succeeded -o name); do
+            echo "::group::$pod"; kubectl --context kind-aiqa -n aiqa describe "$pod" | tail -40; kubectl --context kind-aiqa -n aiqa logs "$pod" --all-containers --tail=100 || true; echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kubernetes-results
+          path: |
+            .aiqa/k8s/
+            .aiqa/history/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -94,13 +94,18 @@ describe('generator', () => {
     const log = new MemoryRunLog();
     const result = await generateSpec(
       input,
-      async () => ({ ok: false, errors: 'Error: locator.click: Timeout 5000ms exceeded' }),
+      async () => ({ ok: false, errors: 'Playwright:\n  Error: locator.click: Timeout 5000ms exceeded' }),
       { model: { model: script.model, label: 'mock' }, log },
     );
     expect(result).toMatchObject({ status: 'failed', attempts: 2 });
     expect(JSON.stringify(script.prompts[1])).toContain('Timeout 5000ms exceeded');
     expect(JSON.stringify(script.prompts[1])).toContain('// first');
-    expect(log.records[0]).toMatchObject({ agent: 'generator', output: { status: 'failed', attempts: 2 } });
+    expect(log.records[0]).toMatchObject({
+      agent: 'generator',
+      output: { status: 'failed', attempts: 2 },
+      // The log keeps what went wrong, not the "Playwright:" heading above it.
+      fallbackReason: 'Error: locator.click: Timeout 5000ms exceeded',
+    });
   });
 
   it('strips a Markdown fence the model wrapped around the code', async () => {

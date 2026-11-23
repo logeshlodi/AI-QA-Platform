@@ -15,8 +15,9 @@ Kubernetes cluster use the same files.
 ## Dashboards
 
 - **Order service**: orders by outcome (confirmed, rejected, dead-lettered), processing time p50 and p95.
-- **Load tests (k6)**: k6 pushes its metrics to Prometheus (remote write) during `pnpm perf:load`
-  and `pnpm k8s:test load`, next to the service's own processing time.
+- **Load tests (k6)**: k6 sends its metrics to Prometheus over OpenTelemetry (Prometheus's OTLP
+  receiver) during `pnpm perf:load` and `pnpm k8s:test load`, next to the service's own processing
+  time. Response times arrive as histograms, so the percentiles are worked out in Grafana.
 - **Test runs**: the tests themselves. Pass rate and duration per suite over time, failed and
   flaky counts, performance regressions, the slowest tests and the performance numbers of the
   latest run (web vitals, page weight, k6 percentiles).

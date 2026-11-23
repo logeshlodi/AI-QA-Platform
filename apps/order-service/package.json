@@ -8,6 +8,8 @@
     "start": "tsx src/main.ts"
   },
   "dependencies": {
+    "@grpc/grpc-js": "catalog:",
+    "@grpc/proto-loader": "catalog:",
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/context-async-hooks": "catalog:",
     "@opentelemetry/core": "catalog:",
@@ -22,6 +24,7 @@
     "@opentelemetry/sdk-trace": "catalog:",
     "@opentelemetry/semantic-conventions": "catalog:",
     "@platformatic/kafka": "catalog:",
+    "amqplib": "catalog:",
     "jose": "catalog:",
     "mongodb": "catalog:",
     "pg": "catalog:",

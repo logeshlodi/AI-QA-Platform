@@ -25,6 +25,7 @@ spec:
             {{- include "aiqa.stackEnv" . | nindent 12 }}
             - { name: ORDER_SERVICE_URL, value: 'http://order-service:8080' }
             - { name: ORDER_METRICS_URL, value: 'http://order-service:9464/metrics' }
+            - { name: ORDER_GRPC_ADDRESS, value: 'order-service:50051' }
             {{- include "aiqa.testEnv" . | nindent 12 }}
           resources:
             requests: { cpu: 500m, memory: 512Mi }

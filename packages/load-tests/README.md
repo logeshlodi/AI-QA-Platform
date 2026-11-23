@@ -25,5 +25,8 @@ Notes:
 
 - Arrival-rate executors start orders at a fixed pace whatever the response times, like real
   customers. A fixed number of looping users would slow down with the service and hide the problem.
-- k6 2.x prints a deprecation warning for the Prometheus remote-write output (`experimental-prometheus-rw`):
-  it is planned for removal in k6 3, with OpenTelemetry as the replacement. It works in 2.x.
+- Live metrics go out through k6's OpenTelemetry output (`-o opentelemetry`) to Prometheus's OTLP
+  receiver; the Prometheus remote-write output it replaced is due to be removed in k6 3. Trends
+  (response times) arrive as histograms with OpenTelemetry's default buckets (0, 5, 10, 25, 50, 75,
+  100, 250, 500, 750 ms, then 1, 2.5, 5, 7.5, 10 s), so a percentile in Grafana is an estimate within
+  its bucket. The exact percentiles are in k6's end-of-run summary, which the run history records.

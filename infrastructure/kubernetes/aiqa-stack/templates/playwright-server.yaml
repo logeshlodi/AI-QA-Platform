@@ -24,12 +24,12 @@ spec:
           readinessProbe:
             tcpSocket: { port: 3000 }
           resources:
-            requests: { cpu: 500m, memory: 1Gi }
+            {{- toYaml .Values.playwrightServer.resources | nindent 12 }}
           # Browsers need more shared memory than a container's default 64 MB.
           volumeMounts: [{ name: dshm, mountPath: /dev/shm }]
       volumes:
         - name: dshm
-          emptyDir: { medium: Memory, sizeLimit: 1Gi }
+          emptyDir: { medium: Memory, sizeLimit: {{ .Values.playwrightServer.shmSize }} }
 ---
 {{ include "aiqa.service" (dict "name" "playwright-server" "port" 3000 "nodePort" .Values.nodePorts.playwright) }}
 {{- end }}

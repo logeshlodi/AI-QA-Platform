@@ -41,6 +41,8 @@ spec:
   value: mongodb://mongo:27017
 - name: KAFKA_BROKERS
   value: kafka:19092
+- name: RABBITMQ_URL
+  value: amqp://guest:guest@rabbitmq:5672
 {{- end -}}
 
 {{/* The parts every test Job shares: never retried by Kubernetes (Playwright retries tests itself),

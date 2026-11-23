@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { PROJECT_KINDS, renderProject, writeProject, type ProjectKind } from '@aiqa/templates';
 import { changedTrackedFiles, commitHealBranch, writeHealPatches } from './commands/heal-branch';
+import { formatPlanScore, HEAL_TASK, HEAL_TASK_FILE, scoreHeal, scorePlan } from './commands/compare';
 import { chromium } from '@playwright/test';
 import { targetNames, targetUrl, type TargetName } from '@aiqa/shared';
 import { Argument, Command, InvalidArgumentError, Option } from 'commander';
@@ -12,7 +13,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
-import { createRunRepository, HISTORY_DIR, metricTrends, type ResultRecord } from '@aiqa/reporting-engine';
+import {
+  createRunRepository,
+  HISTORY_DIR,
+  metricTrends,
+  renderPdfReport,
+  reportInput,
+  type ResultRecord,
+} from '@aiqa/reporting-engine';
 import {
   askOnTerminal,
   rerunTest,
@@ -28,6 +36,7 @@ import {
   formatEval,
   AGENT_EVALS,
   edgeCaseData,
+  errorSummary,
   generateSpec,
   huntFlaky,
   JsonlRunLog,
@@ -54,6 +63,7 @@ import {
 } from '@aiqa/interview-learning';
 
 const FRAMEWORK = path.resolve(__dirname, '..', '..', 'playwright-framework');
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 const positiveInt = (value: string): number => {
   const n = Number(value);
@@ -135,6 +145,39 @@ program
   .action((opts: { suite?: string; limit: number }) =>
     console.log(formatHistory(loadRuns(), opts.suite, opts.limit)),
   );
+
+program
+  .command('report')
+  .description('the run history as a PDF report (the dashboard, printed by Chromium)')
+  .argument('[format]', 'pdf', 'pdf')
+  .option('--suite <suite>', 'only this suite, e.g. ui, api, load, agents')
+  .option('--limit <n>', 'how many recent runs to read', positiveInt, 50)
+  .option('--title <title>', 'title on the first page and in the footer')
+  .option('--out <file>', 'where to write it (default .aiqa/reports/test-report-<date>.pdf)')
+  .action(async (format: string, opts: { suite?: string; limit: number; title?: string; out?: string }) => {
+    if (format !== 'pdf') throw new Error(`Unknown format "${format}". Only pdf for now.`);
+    const runs = loadRuns(HISTORY_DIR, opts.limit);
+    const { runs: chosen } = reportInput(runs, opts);
+    if (chosen.length === 0)
+      throw new Error(
+        `No recorded runs${opts.suite ? ` for suite "${opts.suite}"` : ''}. Run a suite first.`,
+      );
+    const out = path.resolve(
+      opts.out ??
+        path.join(REPO_ROOT, '.aiqa', 'reports', `test-report-${new Date().toISOString().slice(0, 10)}.pdf`),
+    );
+    const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined });
+    try {
+      const pdf = await renderPdfReport(browser, runs, opts);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.writeFileSync(out, pdf);
+      console.log(
+        `wrote ${path.relative(process.cwd(), out)} (${chosen.length} runs, ${Math.round(pdf.length / 1024)} KB)`,
+      );
+    } finally {
+      await browser.close();
+    }
+  });
 
 program
   .command('flaky')
@@ -262,7 +305,11 @@ agents
         // Needs a browser and SauceDemo: scenario 1 of the checked-in plan must pass 3 runs.
         const plan = parsePlan(fs.readFileSync(path.join(FRAMEWORK, 'specs/inventory.plan.md'), 'utf8'));
         const file = 'tests/generated/eval-generator.spec.ts';
-        const examples = ['tests/seed.spec.ts', 'tests/journeys/checkout.spec.ts'].map((p) => ({
+        const examples = [
+          'tests/seed.spec.ts',
+          'tests/journeys/checkout.spec.ts',
+          'src/pages/saucedemo/inventory.page.ts',
+        ].map((p) => ({
           path: p,
           code: fs.readFileSync(path.join(FRAMEWORK, p), 'utf8'),
         }));
@@ -271,6 +318,20 @@ agents
           specCheck(FRAMEWORK, file, 3),
           ctx,
         );
+        // A failed spec is kept for review outside the test folders, as `agents generate` does.
+        if (result.status !== 'passed' && result.code) {
+          const rejected = path.join(
+            FRAMEWORK_STATE,
+            'agents',
+            'rejected',
+            `eval-generator-${Date.now()}.spec.ts`,
+          );
+          fs.mkdirSync(path.dirname(rejected), { recursive: true });
+          fs.writeFileSync(rejected, result.code);
+          console.log(
+            `  kept for review at ${path.relative(process.cwd(), rejected)}\n  ${errorSummary(result.errors)}`,
+          );
+        }
         fs.rmSync(path.join(FRAMEWORK, file), { force: true });
         total = 1;
         correct = result.status === 'passed' ? 1 : 0;
@@ -284,7 +345,7 @@ agents
           project: model.label,
           status: correct ? 'passed' : 'failed',
           durationMs: Date.now() - began,
-          errorMessage: result.errors?.split('\n')[0],
+          errorMessage: result.status === 'passed' ? undefined : errorSummary(result.errors),
         });
       } else {
         const e = AGENT_EVALS.find((x) => x.agent === name)!;
@@ -546,7 +607,11 @@ agents
     const model = chooseModel(loadEnv());
     if (!model.model) throw new Error('The generator needs a model: set AI_ENABLED=true or AGENT_PROVIDER.');
     const url = /^Page: (\S+)/m.exec(fs.readFileSync(path.join(FRAMEWORK, planFile), 'utf8'))?.[1] ?? '';
-    const examples = ['tests/seed.spec.ts', 'tests/journeys/checkout.spec.ts'].map((p) => ({
+    const examples = [
+      'tests/seed.spec.ts',
+      'tests/journeys/checkout.spec.ts',
+      'src/pages/saucedemo/inventory.page.ts',
+    ].map((p) => ({
       path: p,
       code: fs.readFileSync(path.join(FRAMEWORK, p), 'utf8'),
     }));
@@ -657,6 +722,89 @@ agents
   .description('the agent run log, newest first')
   .option('--limit <n>', 'how many runs', positiveInt, 20)
   .action((opts: { limit: number }) => console.log(formatAgentLog(new JsonlRunLog().read(opts.limit))));
+
+// Playwright's own planner, generator and healer against ours, on the same tasks and the same checks
+// (docs/agents-vs-playwright.md). The Playwright agents run in Claude Code; these commands set the
+// tasks up and score what either side produced.
+const compare = agents
+  .command('compare')
+  .description("score Playwright's test agents and ours on the same tasks (docs/agents-vs-playwright.md)");
+
+compare
+  .command('plan')
+  .description('score plans against the live page: every quoted element must be on it')
+  .argument(
+    '<plans...>',
+    'plan files, relative to packages/playwright-framework, e.g. specs/inventory.plan.md',
+  )
+  .option('--logged-in', 'read the page with the saved SauceDemo session (pnpm test:ui --project=auth once)')
+  .action(async (plans: string[], opts: { loggedIn?: boolean }) => {
+    let failed = 0;
+    for (const file of plans) {
+      const markdown = fs.readFileSync(path.join(FRAMEWORK, file), 'utf8');
+      const url =
+        /^Page: (\S+)/m.exec(markdown)?.[1] ?? /https?:\/\/\S+/.exec(markdown)?.[0]?.replace(/[).,]+$/, '');
+      if (!url) throw new Error(`${file} names no page (a "Page: <url>" line or any URL).`);
+      const snapshot = await ariaSnapshotOf(url, opts.loggedIn ? SAUCE_SESSION : undefined);
+      const score = scorePlan(markdown, snapshot);
+      if (!score.passed) failed++;
+      console.log(`${formatPlanScore(file, score)}\n  page: ${url}\n`);
+    }
+    process.exitCode = failed ? 1 : 0;
+  });
+
+compare
+  .command('spec')
+  .description('score a spec the way the generator eval does: lints clean and passes N runs in a row')
+  .argument('<spec>', 'spec file, relative to packages/playwright-framework')
+  .option('--runs <n>', 'runs in a row', positiveInt, 3)
+  .action(async (file: string, opts: { runs: number }) => {
+    const code = fs.readFileSync(path.join(FRAMEWORK, file), 'utf8');
+    const result = await specCheck(FRAMEWORK, file, opts.runs)(code, 1);
+    console.log(
+      result.ok
+        ? `${file}: PASS (lint clean, ${opts.runs} runs in a row)`
+        : `${file}: FAIL\n${result.errors}`,
+    );
+    process.exitCode = result.ok ? 0 : 1;
+  });
+
+compare
+  .command('heal-task')
+  .description(`write the healing task (a spec whose locator broke) to ${HEAL_TASK_FILE}`)
+  .action(() => {
+    const target = path.join(FRAMEWORK, HEAL_TASK_FILE);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, HEAL_TASK);
+    console.log(
+      `wrote packages/playwright-framework/${HEAL_TASK_FILE}: it fails until its locator is fixed.\n` +
+        'Give it to a healer, then score the result with "pnpm aiqa agents compare heal".',
+    );
+  });
+
+compare
+  .command('heal')
+  .description('score the healed task: it passes 3 runs, the broken locator is gone, no assertion changed')
+  .action(async () => {
+    const target = path.join(FRAMEWORK, HEAL_TASK_FILE);
+    if (!fs.existsSync(target))
+      throw new Error('No healing task: run "pnpm aiqa agents compare heal-task" first.');
+    const healed = fs.readFileSync(target, 'utf8');
+    const run = await specCheck(FRAMEWORK, HEAL_TASK_FILE, 3)(healed, 1);
+    const score = scoreHeal(healed, run.ok);
+    console.log(`heal task: ${score.passed ? 'PASS' : 'FAIL'}`);
+    console.log(`  runs 3 in a row, lint clean: ${run.ok ? 'yes' : 'no'}`);
+    console.log(`  broken locator replaced:     ${score.locatorChanged ? 'yes' : 'no'}`);
+    console.log(
+      `  assertions untouched:        ${score.assertionsTouched.length ? `no: ${score.assertionsTouched.join(' | ')}` : 'yes'}`,
+    );
+    // The task never stays in the suite: the healed copy is kept for review outside the test folders.
+    const kept = path.join(FRAMEWORK_STATE, 'agents', 'compare', `heal-task-${Date.now()}.spec.ts`);
+    fs.mkdirSync(path.dirname(kept), { recursive: true });
+    fs.renameSync(target, kept);
+    console.log(`  kept at ${path.relative(process.cwd(), kept)}`);
+    process.exitCode = score.passed ? 0 : 1;
+  });
 
 program.parseAsync().catch((error: unknown) => {
   console.error((error as Error).message);

@@ -1,6 +1,9 @@
 import fs from 'node:fs';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { generateText } from 'ai';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { chooseModel, defineTool, JsonlRunLog, runAgent, runRecord } from '../src';
@@ -165,6 +168,46 @@ describe('chooseModel', () => {
     });
     expect(choice.label).toBe('ollama:qwen3:8b');
     expect(choice.model).toBeDefined();
+  });
+
+  it("turns a thinking model's reasoning off when AGENT_THINK=false", async () => {
+    // A stand-in Ollama that records the request and answers like /api/chat does.
+    const bodies: Record<string, unknown>[] = [];
+    const server = http.createServer((req, res) => {
+      let raw = '';
+      req.on('data', (chunk) => (raw += chunk));
+      req.on('end', () => {
+        bodies.push(JSON.parse(raw));
+        res.setHeader('content-type', 'application/json');
+        res.end(
+          JSON.stringify({
+            model: 'qwen3:8b',
+            created_at: new Date().toISOString(),
+            message: { role: 'assistant', content: 'ok' },
+            done: true,
+            done_reason: 'stop',
+            prompt_eval_count: 1,
+            eval_count: 1,
+          }),
+        );
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const choice = chooseModel({
+        ...base,
+        OLLAMA_URL: `http://127.0.0.1:${port}`,
+        AGENT_PROVIDER: 'ollama',
+        AGENT_MODEL: 'qwen3:8b',
+        AGENT_THINK: false,
+      });
+      expect(choice.label).toBe('ollama:qwen3:8b (no thinking)');
+      await generateText({ model: choice.model!, prompt: 'hi' });
+      expect(bodies[0]).toMatchObject({ model: 'qwen3:8b', think: false });
+    } finally {
+      server.close();
+    }
   });
 
   it('needs a base URL and a model name for a hosted model', () => {

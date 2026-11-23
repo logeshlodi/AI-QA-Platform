@@ -23,6 +23,7 @@
     "test:api": "pnpm --filter @aiqa/api-framework test:history",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:ui",
     "report:dashboard": "node scripts/open-dashboard.mjs",
+    "report:pdf": "tsx packages/cli/src/bin.ts report pdf",
     "report:html": "pnpm --filter @aiqa/playwright-framework exec playwright show-report",
     "licenses": "pnpm licenses list",
     "security": "pnpm security:licences && pnpm security:audit && pnpm security:osv",

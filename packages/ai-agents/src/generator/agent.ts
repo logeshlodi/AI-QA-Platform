@@ -59,7 +59,7 @@ const specSchema = z.object({
 export const GENERATOR_SYSTEM = `You write one Playwright Test spec in TypeScript for one test scenario, in the style of the examples.
 Rules:
 - Import { expect, test } from the same fixtures module the examples use, at the same relative path; keep test.use({ targetName: ... }) as they do.
-- Use the examples' fixtures and page objects where they fit (loginFlow, loginPage, inventoryPage and so on); use page.getByRole, getByLabel or getByTestId otherwise.
+- Use the examples' fixtures and page objects where they fit (loginFlow, loginPage, inventoryPage and so on), calling only the members the examples show; use page.getByRole, getByLabel or getByTestId otherwise.
 - Web-first assertions only (await expect(locator).toHaveText(...) etc.). Never waitForTimeout, never a CSS class selector when a role or test id exists.
 - One test.describe with one test per scenario. No comments that restate the code.
 - Titles are plain words with no quote characters inside them.
@@ -140,8 +140,7 @@ export async function generateSpec(
       durationMs: Date.now() - started,
       model: model.label,
       source: 'model',
-      fallbackReason:
-        result.status === 'failed' ? (result.errors ?? '').split('\n')[0]?.slice(0, 200) : undefined,
+      fallbackReason: result.status === 'failed' ? errorSummary(result.errors) : undefined,
       input: { scenario: input.scenario.title, file: input.file },
       output: { status: result.status, attempts: result.attempts },
       toolCalls: [],
@@ -149,4 +148,19 @@ export async function generateSpec(
     }),
   );
   return result;
+}
+
+/**
+ * The part of a check's output worth keeping in the run log: the lines after the "ESLint:" or
+ * "Playwright:" heading that say what went wrong, up to 600 characters.
+ */
+export function errorSummary(errors: string | undefined): string {
+  const lines = (errors ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !/^(ESLint|TypeScript|Playwright):$/.test(l) && !/^[─-]+$/.test(l));
+  const useful = lines.filter((l) =>
+    /error|expected|received|timeout|locator|not found|failed|does not exist/i.test(l),
+  );
+  return (useful.length ? useful : lines).join(' | ').slice(0, 600);
 }

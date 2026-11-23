@@ -7,6 +7,7 @@ one Helm chart, and the test suites running as Kubernetes Jobs inside it.
 npx pnpm k8s:up                  # create the cluster (once), build and load the images, install the chart
 npx pnpm k8s:test data           # Postgres, MongoDB and Kafka suites, as a Job
 npx pnpm k8s:test ui             # UI suite (Chromium) on the shared Playwright browser server
+npx pnpm k8s:test ui all-browsers   # the same on Chromium, Firefox and WebKit
 npx pnpm k8s:test ui --project=firefox --grep @smoke   # any Playwright arguments
 npx pnpm k8s:test load stress    # k6 against the order service: smoke | load | stress
 npx pnpm k8s:status              # pods, Jobs and services
@@ -45,6 +46,13 @@ is off in the cluster (`web.agentProvider`): set a provider and its variables to
 Ports 30180 and 30200 were added with the web app. kind publishes ports only when it creates the
 cluster, so a cluster from before needs `pnpm k8s:down && pnpm k8s:up` (`k8s:up` warns when this is
 the case).
+
+## In GitHub Actions
+
+`.github/workflows/kubernetes.yml` does the same on a GitHub runner every night (and from the Actions
+tab, with a choice of suites): installs kind and Helm at the versions above, runs `pnpm k8s:up`, then
+each suite. Reports and the run history are kept as the `kubernetes-results` artifact; when something
+fails, the log shows the pods, recent events and the logs of any pod that is not running.
 
 ## How it fits together
 

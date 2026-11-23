@@ -5,6 +5,8 @@ import pg from 'pg';
 import { clientToken, CLIENTS } from './auth';
 import { KafkaBus } from './bus';
 import { ContractChecker, type OpenApiDocument } from './openapi';
+import { OrdersClient } from './grpc';
+import { RabbitBus } from './rabbit';
 import { stack, TOPICS } from './stack';
 
 interface WorkerFixtures {
@@ -23,6 +25,10 @@ interface TestFixtures {
   catalogAdmin: APIRequestContext;
   /** Puts products in the catalogue for this test only, with unique SKUs, and removes them after. */
   stockProducts: (products: Product[]) => Promise<Product[]>;
+  /** The order service's gRPC API. */
+  orders: OrdersClient;
+  /** RabbitMQ for this test: its queues and exchanges are deleted when it ends. */
+  rabbit: RabbitBus;
   /** A seed for this test's data, recorded on the test so a failure can be replayed with AIQA_SEED. */
   seed: number;
 }
@@ -85,6 +91,17 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     const request = await playwright.request.newContext({ baseURL: stack.serviceUrl });
     await use(request);
     await request.dispose();
+  },
+  orders: async ({}, use) => {
+    const client = new OrdersClient(stack.grpcAddress);
+    await use(client);
+    client.close();
+  },
+  rabbit: async ({}, use) => {
+    const rabbit = new RabbitBus(stack.rabbitmqUrl);
+    await rabbit.connect();
+    await use(rabbit);
+    await rabbit.disconnect();
   },
   seed: async ({}, use, testInfo) => {
     const fromEnv = Number(process.env.AIQA_SEED);

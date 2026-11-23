@@ -4,6 +4,7 @@
 //   pnpm k8s:up                      create the cluster (once), build and load the images, install the chart
 //   pnpm k8s:test data               Postgres, MongoDB and Kafka suites, inside the cluster
 //   pnpm k8s:test ui [playwright args]   UI suite on the shared browser server (default --project=chromium)
+//   pnpm k8s:test ui all-browsers         the same on Chromium, Firefox and WebKit
 //   pnpm k8s:test load [smoke|load|stress]   k6 against the order service
 //   pnpm k8s:status                  what is running
 //   pnpm k8s:down                    delete the cluster
@@ -24,6 +25,8 @@ const STATE = path.join(DATA, 'k8s', 'images.json');
 // Keep in step with nodePorts in the chart's values.yaml: kind publishes each on localhost.
 const NODE_PORTS = [30088, 30464, 30432, 30017, 30092, 30090, 30091, 30300, 30333, 30180, 30200];
 const SUITES = ['data', 'ui', 'load'];
+// `ui all-browsers`: every desktop engine the browser server has (the tests image holds all three).
+const ALL_BROWSERS = ['--project=chromium', '--project=firefox', '--project=webkit'];
 
 /** Runs a command. `capture` returns its output; otherwise output goes straight to the terminal. */
 function run(command, args, { capture = false, input, allowFail = false, env } = {}) {
@@ -221,6 +224,7 @@ async function test(suite, extra) {
   const id = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
   const job = `aiqa-${suite}-${id}`;
   const set = ['--set', `job.name=${suite}`, '--set', `job.id=${id}`, ...imageArgs(tags)];
+  if (suite === 'ui' && extra[0] === 'all-browsers') extra = [...ALL_BROWSERS, ...extra.slice(1)];
   if (suite === 'ui' && extra.length > 0) set.push('--set-string', `job.args=${extra.join(' ')}`);
   const profile = suite === 'load' ? (extra[0] ?? 'smoke') : undefined;
   if (profile) {

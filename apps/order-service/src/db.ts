@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { MongoClient, type Collection } from 'mongodb';
 import { config } from './config';
+import type { OrderView } from './api';
 import type { PlacedOrder } from './contract';
 import { transactionRetries } from './metrics';
 
@@ -138,4 +139,27 @@ export async function recordAudit(event: Omit<AuditEvent, 'at'>): Promise<void> 
   } catch (error) {
     if ((error as { code?: number }).code !== 11000) throw error; // 11000 = duplicate key
   }
+}
+
+/** One order with its lines, as both APIs return it; undefined when there is none. */
+export async function readOrder(id: string): Promise<OrderView | undefined> {
+  const order = await pool.query(
+    'SELECT id, customer_id, status, total_cents, currency, rejection_reason FROM orders WHERE id = $1',
+    [id],
+  );
+  if (order.rowCount === 0) return undefined;
+  const lines = await pool.query(
+    'SELECT sku, quantity, unit_price_cents FROM order_lines WHERE order_id = $1 ORDER BY line_no',
+    [id],
+  );
+  const o = order.rows[0];
+  return {
+    id: o.id,
+    customerId: o.customer_id,
+    status: o.status,
+    totalCents: o.total_cents,
+    currency: o.currency.trim(),
+    rejectionReason: o.rejection_reason,
+    lines: lines.rows.map((l) => ({ sku: l.sku, quantity: l.quantity, unitPriceCents: l.unit_price_cents })),
+  };
 }

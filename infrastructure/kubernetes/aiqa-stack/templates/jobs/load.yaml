@@ -34,13 +34,18 @@ spec:
             - run
             - --summary-export=/results/k8s/load-{{ .Values.job.id }}/summary.json
             - -o
-            - experimental-prometheus-rw
+            - opentelemetry
             - /scripts/order-flow.js
           env:
             - { name: ORDER_SERVICE_URL, value: 'http://order-service:8080' }
             - { name: PROFILE, value: {{ .Values.job.profile | quote }} }
-            - { name: K6_PROMETHEUS_RW_SERVER_URL, value: 'http://prometheus:9090/api/v1/write' }
-            - { name: K6_PROMETHEUS_RW_TREND_STATS, value: 'p(50),p(95),p(99),max' }
+            # OpenTelemetry into Prometheus's OTLP receiver; trends arrive as histograms.
+            - { name: K6_OTEL_EXPORTER_PROTOCOL, value: http/protobuf }
+            - { name: K6_OTEL_HTTP_EXPORTER_ENDPOINT, value: 'prometheus:9090' }
+            - { name: K6_OTEL_HTTP_EXPORTER_URL_PATH, value: /api/v1/otlp/v1/metrics }
+            - { name: K6_OTEL_HTTP_EXPORTER_INSECURE, value: 'true' }
+            - { name: K6_OTEL_METRIC_PREFIX, value: k6_ }
+            - { name: K6_OTEL_EXPORT_INTERVAL, value: 5s }
           resources:
             requests: { cpu: 500m, memory: 256Mi }
           volumeMounts:

@@ -192,6 +192,8 @@ function suiteSection(suite: string, runs: StoredRun[]): string {
 export interface DashboardOptions {
   title?: string;
   generatedAt?: Date;
+  /** For a printed or PDF copy: no hover hint, no tooltip script. The print styles apply either way. */
+  print?: boolean;
 }
 
 /**
@@ -354,13 +356,26 @@ code { font: 12px ui-monospace, Consolas, monospace; word-break: break-word; }
 .icon { display: inline-grid; place-items: center; width: 18px; height: 18px; line-height: 1; flex: none; border-radius: 50%; font-size: 11px; font-weight: 700; color: #fff; background: var(--text-2); }
 .spark { display: block; } .spark .dot { stroke-width: 1.5; }
 .good .icon { background: var(--good); } .warning .icon { background: var(--warning); color: #0b0b0b; } .critical .icon { background: var(--critical); }
+@media print {
+  /* Paper is light whatever the screen prefers, sections stay whole, tables keep their headers. */
+  :root { color-scheme: light; --surface: #fff; --panel: #fff; --border: #d8d7d2; --grid: #e4e3df; --text: #0b0b0b; --text-2: #52514e; --series: #2a78d6; }
+  body { padding: 0; font-size: 11px; } main { max-width: none; }
+  section { break-inside: avoid-page; border-radius: 0; padding: 10px; margin-top: 10px; }
+  section:has(table) { break-inside: auto; } tr { break-inside: avoid; } thead { display: table-header-group; }
+  h2 { break-after: avoid-page; } th, td { padding: 4px 6px; } th { white-space: normal; } .scroll { overflow: visible; } #tip { display: none !important; }
+  .tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); padding: 6px 8px; border-radius: 4px; font-size: 12px; display: none; max-width: 320px; z-index: 1; }
 </style></head>
 <body><main>
 <h1>${esc(title)}</h1>
-<div class="sub">${runs.length} run${runs.length === 1 ? '' : 's'} recorded · generated ${esc(when((options.generatedAt ?? new Date()).toISOString()))} UTC · hover or tab to a point for its run</div>
+<div class="sub">${runs.length} run${runs.length === 1 ? '' : 's'} recorded · generated ${esc(when((options.generatedAt ?? new Date()).toISOString()))} UTC${options.print ? '' : ' · hover or tab to a point for its run'}</div>
 ${body}
-</main><div id="tip" role="status"></div>
+</main>${
+    options.print
+      ? '</body></html>'
+      : `<div id="tip" role="status"></div>
 <script>
 const tip = document.getElementById('tip');
 const show = (el) => { const r = el.getBoundingClientRect(); tip.textContent = el.dataset.tip; tip.style.display = 'block';
@@ -368,5 +383,6 @@ const show = (el) => { const r = el.getBoundingClientRect(); tip.textContent = e
 const hide = () => { tip.style.display = 'none'; };
 for (const el of document.querySelectorAll('[data-tip]')) { el.addEventListener('mouseenter', () => show(el)); el.addEventListener('focus', () => show(el));
   el.addEventListener('mouseleave', hide); el.addEventListener('blur', hide); }
-</script></body></html>`;
+</script></body></html>`
+  }`;
 }

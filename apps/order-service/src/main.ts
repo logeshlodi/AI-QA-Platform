@@ -11,18 +11,24 @@ import {
   type MessagesStream,
 } from '@platformatic/kafka';
 import { config, TOPICS } from './config';
-import { openApiDocument, type OrderAccepted, type OrderView, type ProductView } from './api';
+import { openApiDocument, type OrderAccepted, type ProductView } from './api';
 import { authConfigFromEnv, challenge, createAuthorizer } from './auth';
 import { placedOrder, productUpsert } from './contract';
 import { confirmedEvent, deadLetterEvent, rejectedEvent } from './events';
-import { migrate, mongo, pool, recordAudit, saveOrder } from './db';
+import { migrate, mongo, pool, readOrder, recordAudit, saveOrder } from './db';
 import { ordersProcessed, processingSeconds, shutdownMetrics } from './metrics';
 import { PartitionWorkers } from './partitions';
+import { startGrpc } from './grpc';
+import { rabbitNotifier, ROUTING_KEYS, silentNotifier } from './notifications';
 
 const kafka = { clientId: 'order-service', bootstrapBrokers: config.kafkaBrokers };
 const producer = new Producer({ ...kafka, idempotent: true, serializers: stringSerializers });
 const consumer = new Consumer({ ...kafka, groupId: 'order-service', deserializers: stringDeserializers });
 let ready = false;
+
+const notifier = config.rabbitmqUrl
+  ? rabbitNotifier(config.rabbitmqUrl, (m, e) => log(m, e))
+  : silentNotifier;
 
 // Product writes need a Keycloak token with the catalog-admin role when AUTH_ISSUER is set.
 const authConfig = authConfigFromEnv();
@@ -48,7 +54,9 @@ async function handle(raw: string | undefined, key: string | undefined): Promise
   const parsed = placedOrder.safeParse(json);
   if (!parsed.success) {
     const reason = json === undefined ? 'not JSON' : parsed.error.issues.map((i) => i.message).join('; ');
-    await publish(TOPICS.deadLetter, key ?? 'unknown', deadLetterEvent(reason, raw));
+    const event = deadLetterEvent(reason, raw);
+    await publish(TOPICS.deadLetter, key ?? 'unknown', event);
+    await notifier.publish(ROUTING_KEYS.deadLettered, key ?? 'unknown', event, traceHeaders());
     ordersProcessed.add(1, { outcome: 'invalid' });
     log('order rejected to DLQ', { key, reason });
     return;
@@ -63,10 +71,14 @@ async function handle(raw: string | undefined, key: string | undefined): Promise
   }
   if (outcome.kind === 'confirmed') {
     await recordAudit({ orderId: order.id, event: 'confirmed' });
-    await publish(TOPICS.confirmed, order.id, confirmedEvent(order));
+    const event = confirmedEvent(order);
+    await publish(TOPICS.confirmed, order.id, event);
+    await notifier.publish(ROUTING_KEYS.confirmed, order.id, event, traceHeaders());
   } else {
     await recordAudit({ orderId: order.id, event: 'rejected', detail: outcome.reason });
-    await publish(TOPICS.rejected, order.id, rejectedEvent(order, outcome.reason));
+    const event = rejectedEvent(order, outcome.reason);
+    await publish(TOPICS.rejected, order.id, event);
+    await notifier.publish(ROUTING_KEYS.rejected, order.id, event, traceHeaders());
   }
   processingSeconds.record((performance.now() - started) / 1000, { outcome: outcome.kind });
   log(`order ${outcome.kind}`, { orderId: order.id });
@@ -162,29 +174,8 @@ const server = http.createServer(async (req, res) => {
 
     const match = /^\/orders\/([0-9a-f-]{36})$/i.exec(req.url ?? '');
     if (req.method === 'GET' && match) {
-      const order = await pool.query(
-        'SELECT id, customer_id, status, total_cents, currency, rejection_reason FROM orders WHERE id = $1',
-        [match[1]],
-      );
-      if (order.rowCount === 0) return json(res, 404, { error: 'order not found' });
-      const lines = await pool.query(
-        'SELECT sku, quantity, unit_price_cents FROM order_lines WHERE order_id = $1 ORDER BY line_no',
-        [match[1]],
-      );
-      const o = order.rows[0];
-      return json(res, 200, {
-        id: o.id,
-        customerId: o.customer_id,
-        status: o.status,
-        totalCents: o.total_cents,
-        currency: o.currency.trim(),
-        rejectionReason: o.rejection_reason,
-        lines: lines.rows.map((l) => ({
-          sku: l.sku,
-          quantity: l.quantity,
-          unitPriceCents: l.unit_price_cents,
-        })),
-      } satisfies OrderView);
+      const order = await readOrder(match[1]!);
+      return order ? json(res, 200, order) : json(res, 404, { error: 'order not found' });
     }
     return json(res, 404, { error: 'not found' });
   } catch (error) {
@@ -276,6 +267,19 @@ const workers = new PartitionWorkers<PlacedMessage>(
 );
 
 server.listen(config.port);
+let stopGrpc: (() => Promise<void>) | undefined;
+startGrpc(config.grpcPort, {
+  isReady: () => ready,
+  place: (order) => publish(TOPICS.placed, order.id, order).then(() => undefined),
+  read: readOrder,
+  log,
+}).then(
+  (stop) => (stopGrpc = stop),
+  (error: unknown) => {
+    log('grpc start-up failed', { error: (error as Error).message });
+    process.exit(1);
+  },
+);
 start().catch((error: unknown) => {
   log('start-up failed', { error: (error as Error).message });
   process.exit(1);
@@ -290,6 +294,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     await commitHandled();
     await consumer.close(true).catch(() => undefined);
     await producer.close().catch(() => undefined);
+    await notifier.close();
+    await stopGrpc?.();
     await Promise.allSettled([pool.end(), mongo.close(), shutdownMetrics(), shutdownTracing()]);
     server.close(() => process.exit(0));
   });

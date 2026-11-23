@@ -1,7 +1,7 @@
 # Status
 
 Last full run: 23 Nov 2026, Windows laptop (Dell Latitude 7420), Node 24.22.3 LTS, Playwright 1.65.1, k6 2.4.0.
-Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests), 13 (chat over the MCP tools with approvals, admin area, tests for AI features) and 14 (docs site, project templates, the web app in Kubernetes, healing patches and branch) are built and have run. Phase 5 is complete.
+Sprints 1 to 8 of the plan, the performance sprint, the Kubernetes and monitoring sprint, the contracts sprint, the security sprint and the learning sprint are built and have run on the laptop. Phase 5: Sprints 9 (agent runtime, Triage agent, MCP server), 10 (Planner, Generator, Healing review), 11 (Flaky hunter, API tester, Test data, Accessibility, Run reporter, and live evals for all nine agents), 12 (the web app's dashboard, Keycloak sign-in, shared components with component tests), 13 (chat over the MCP tools with approvals, admin area, tests for AI features) and 14 (docs site, project templates, the web app in Kubernetes, healing patches and branch) are built and have run. Phase 5 is complete. After it: a nightly cluster workflow, RabbitMQ and gRPC suites, PDF reports, k6 over OpenTelemetry, three engines in the cluster, and the agents measured on `qwen3:8b`.
 
 ## What was run, and the result
 
@@ -39,6 +39,89 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 1. Smoke run green in three browsers   | Passed, plus two mobile device profiles and real Chrome and Edge                                  |
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
+
+## After Phase 5: six improvements (23 Nov)
+
+Built, then run on the Windows laptop:
+
+1. **A nightly cluster workflow** (`.github/workflows/kubernetes.yml`): kind and Helm on a GitHub
+   runner, `pnpm k8s:up`, then the data, UI (Chromium, Firefox, WebKit) and load suites as Jobs, with
+   the reports kept as an artifact. `actionlint` passes it; it has not run on GitHub yet.
+2. **The nine agent evals on `qwen3:8b`**, thinking off (`AGENT_THINK=false`, new: qwen3 reasons
+   before every answer by default, several times slower on a CPU).
+3. **Playwright's planner, generator and healer against ours**: `pnpm aiqa agents compare plan | spec
+| heal-task | heal` scores both sides with the checks our evals use; the healing score also fails a
+   fix that weakens an assertion. Runbook: [agents-vs-playwright.md](agents-vs-playwright.md).
+4. **k6 metrics over OpenTelemetry** into Prometheus's OTLP receiver, replacing the remote-write
+   output k6 3 removes. The "Load tests" dashboard now works its percentiles out from histograms.
+5. **Firefox and WebKit in the cluster**: `pnpm k8s:test ui all-browsers`; the browser server gets
+   1 CPU and 2 GiB for three engines.
+6. **The items the Phase 5 plan deferred**: RabbitMQ (the order service fans each outcome out on
+   the topic exchange `orders.events`; suites for its notifications and for dead-lettering, expiry,
+   redelivery, mandatory returns and prefetch), a gRPC API (`proto/orders.proto`: place, read, and a
+   stream that follows an order until it is decided; suites for status codes, deadlines and
+   agreement with HTTP), and PDF reports (`pnpm report:pdf`, the run-history dashboard printed by
+   Chromium in a print layout).
+
+| Check                                  | Result                                                                                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Typecheck, lint, prettier, docs build  | passed                                                                                        |
+| Unit tests                             | passed (319 in the workspace: gRPC handlers, compare scoring, PDF input, agent fixes)         |
+| Licence gate                           | all allowed (873 packages in the workspace, with `amqplib` and `@grpc/*`)                     |
+| Data suite, Docker (`pnpm test:data`)  | 64 tests; the 9 RabbitMQ ones passed after the fix below, gRPC passed first time              |
+| Data suite in the cluster              | 55 passed, 9 skipped (the Keycloak tests; the cluster's order service has no auth, as before) |
+| UI smoke in the cluster, three engines | passed on Chromium, Firefox and WebKit through the shared browser server                      |
+| k6 smoke, Docker and cluster           | 61 of 61 orders confirmed, 0 failed requests; every `k6_*` metric in Prometheus               |
+| Grafana's p95 against k6's own         | 49.7 ms (from the histogram) against 46 ms (exact)                                            |
+| PDF report                             | spec passed; `report:pdf` wrote the full (46 runs) and data-suite (14 runs) reports           |
+| Helm                                   | `helm lint` passed; the chart now renders RabbitMQ and the gRPC port                          |
+
+Agent evals, `qwen3:8b` (thinking off) against `qwen2.5-coder:7b` (Sprint 11), same cases and gates:
+
+| Agent          | qwen3:8b        | qwen2.5-coder:7b | Notes                                                                              |
+| -------------- | --------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| Triage         | 27/30, 6.0 min  | 28/30, 9.7 min   |                                                                                    |
+| Flaky hunter   | 6/8, 6.3 min    | 8/8, 10.3 min    | at the 75% gate exactly                                                            |
+| Accessibility  | 9/10, 3.5 min   | 9/10, 10.1 min   |                                                                                    |
+| Run reporter   | 4/5, 3.5 min    | 4/5, 4.8 min     |                                                                                    |
+| Test data      | 8/8, 5.0 min    | 8/8, 3.3 min     | after the fix below; the first run scored 4/8, every miss a made-up UUID           |
+| Healing review | 3/3, 3.6 min    | 3/3, 2.3 min     |                                                                                    |
+| Planner        | 2/2, 5.3 min    | 2/2, 5.3 min     |                                                                                    |
+| Generator      | 0/1, 6.7 min    | 1/1, 3.0 min     | after the type check below; qwen3 now writes code that compiles but never signs in |
+| API tester     | 11/13, 10.1 min | 11/11, 35.8 min  | one case broke the schema, one called `/orders/` with no id                        |
+
+`qwen3:8b` with thinking off scores the same as `qwen2.5-coder:7b` on six agents, one lower on
+triage, and two lower on the flaky hunter (still at its gate), and it is two to three times faster on
+most. Its weak spot is writing code against an API it has only seen in examples; both changes it
+prompted are to the agents, not to the evals.
+
+Fixed on the way:
+
+- **RabbitMQ 4 refuses transient queues that are not exclusive** (`transient_nonexcl_queues` is a
+  removed feature). The suite's helper now makes durable queues and deletes them after each test.
+- **A ratio panel showed "no data" instead of 0%** when nothing failed (no `condition="nonzero"`
+  series exists then); the queries add `or vector(0)`.
+- **The test data agent now fills ids and timestamps itself** from the seeded builder; no edge is
+  about them, and a small model writes them badly. The model writes only the fields the edges are about.
+- **A failed generator run now logs its real error** (the lines under "Playwright:" or "ESLint:") and
+  the eval keeps the failed spec in `.aiqa/agents/rejected/` for review.
+
+- **Generated specs are now type-checked before they run.** With the error now in the log, qwen3's
+  generator failure was plain: it called `inventoryPage.sortCombobox`, `sortOption()` and
+  `addToCartFirstProduct()`, none of which exist, and the run failed with a TypeError. The check now
+  runs `tsc` between lint and the test run, so the model gets "Property 'sortCombobox' does not exist
+  on type 'InventoryPage'" with the line; and the inventory page object is one of its examples.
+
+Not done yet:
+
+- **qwen3:8b still fails the generator eval.** After the type check its spec uses only real
+  page-object members (`sort`, `prices()`, `card(...).addToCart`) but skips the sign-in the seed spec
+  shows, so the first click times out on the login page. `qwen2.5-coder:7b` passes on the first
+  attempt (3.0 min, down from 9.0). For writing specs, keep `qwen2.5-coder:7b` or use a hosted model.
+- Playwright's side of the agent comparison: it needs a person in Claude Code (the runbook has the
+  prompts). Ours: the plan passes (21 named elements, one, "Remove", only on the page after a product
+  is added); the healing gate spec passes; the generator results are above.
+- The nightly cluster workflow's first run on GitHub.
 
 ## Review after Phase 5 (23 Nov)
 
@@ -503,12 +586,11 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
   been confirmed from here. The root `Jenkinsfile` (Linux Jenkins with Docker) has not run; the
   Windows one has.
 - **The Playwright test agents** are initialised (`.claude/agents`, `.mcp.json`, `tests/seed.spec.ts`,
-  which passes). No plan or test has been generated with them yet.
+  which passes) and the comparison with ours is ready (`docs/agents-vs-playwright.md`,
+  `pnpm aiqa agents compare`). Our side has run; theirs needs a person in Claude Code.
 - **Firefox and WebKit run journeys and smoke only**; the labs run on Chromium by design.
-- **No CI job runs the cluster yet.** Everything Kubernetes has run on the laptop only; a manual or
-  nightly GitHub job with kind is possible but not built.
-- **The UI Job runs Chromium only.** The browser server runs one Playwright version and serves any
-  browser it has installed, but only the `chromium` project has run against it.
+- **The nightly cluster workflow** (`.github/workflows/kubernetes.yml`) has not run on GitHub yet: it
+  runs at 02:30 IST after the next push, or now from the Actions tab.
 
 ## Known gaps and honest notes
 
@@ -536,9 +618,9 @@ Not yet seen: both Azure pipelines' new jobs and the Jenkins `RUN_PERF` / `LOAD_
 - **The cluster keeps no data.** Postgres, MongoDB, Kafka, Prometheus, Loki and Tempo use
   `emptyDir`, so `pnpm k8s:down` (or a pod restart) starts them empty. Test reports and k6
   summaries are kept: they are written to `.aiqa/k8s/` on the laptop through a kind mount.
-- **k6's Prometheus remote-write output is deprecated** (planned for removal in k6 3, with
-  OpenTelemetry as the replacement). It works in k6 2.4; moving to OpenTelemetry means reading
-  histograms instead of ready-made percentiles in Grafana.
+- **k6's live percentiles in Grafana are estimates.** Over OpenTelemetry a trend arrives as a histogram
+  with fixed buckets, so a p95 is placed within its bucket (49.7 ms in Grafana against k6's exact 46 ms
+  in one smoke run). The run history records k6's exact summary.
 - **The browser performance specs measure public sites over the internet.** Their timing budgets are
   Google's "poor" thresholds, not "good", so a slow connection does not fail them; the trends catch drift.
 - **The project carries pnpm as a dev dependency** (corepack failed on Node 23.3); `npx pnpm ...` works

@@ -51,11 +51,12 @@ export function specCheck(framework: string, file: string, runs: number): SpecCh
   const repoRoot = path.resolve(framework, '..', '..');
   const eslint = path.join(repoRoot, 'node_modules', 'eslint', 'bin', 'eslint.js');
   const playwright = require.resolve('@playwright/test/cli', { paths: [framework] });
+  const tsc = path.join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
   return async (code, attempt) => {
     const target = path.join(framework, file);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, code);
-    console.log(`  attempt ${attempt}: wrote ${file}; linting and running it ${runs} times…`);
+    console.log(`  attempt ${attempt}: wrote ${file}; linting, type-checking and running it ${runs} times…`);
     const lint = spawnSync(process.execPath, [eslint, '--no-warn-ignored', target], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -67,6 +68,23 @@ export function specCheck(framework: string, file: string, runs: number): SpecCh
         .map((m) => Number(m[1]))
         .map((n) => `line ${n}: ${source[n - 1]?.trim() ?? ''}`);
       return { ok: false, errors: `ESLint:\n${tail(lint.stdout + lint.stderr, 40)}\n${cited.join('\n')}` };
+    }
+    // Type-check before running: a page-object member the model made up ("Property 'sortCombobox'
+    // does not exist on type 'InventoryPage'") is a clear error here, and only a TypeError at run time.
+    const types = spawnSync(process.execPath, [tsc, '-p', 'tsconfig.json', '--noEmit', '--pretty', 'false'], {
+      cwd: framework,
+      encoding: 'utf8',
+    });
+    const ours = (types.stdout + types.stderr)
+      .split('\n')
+      .filter((line) => line.replaceAll('\\', '/').includes(file));
+    if (ours.length > 0) {
+      const source = code.split('\n');
+      const cited = ours
+        .map((l) => /\((\d+),\d+\)/.exec(l)?.[1])
+        .filter(Boolean)
+        .map((n) => `line ${n}: ${source[Number(n) - 1]?.trim() ?? ''}`);
+      return { ok: false, errors: `TypeScript:\n${ours.slice(0, 20).join('\n')}\n${cited.join('\n')}` };
     }
     const run = spawnSync(
       process.execPath,

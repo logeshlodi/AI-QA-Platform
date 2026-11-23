@@ -22,7 +22,7 @@ RUN pnpm install --frozen-lockfile --filter @aiqa/order-service --ignore-scripts
 COPY apps/order-service apps/order-service
 WORKDIR /work/apps/order-service
 ENV NODE_ENV=production
-EXPOSE 8080 9464
+EXPOSE 8080 9464 50051
 # Node itself is the container's main process, so the service's own SIGTERM handler closes Kafka,
 # Postgres and MongoDB and exits 0. Through pnpm and the tsx CLI, a clean stop was reported as exit 1.
 CMD ["node", "--import", "tsx", "src/main.ts"]

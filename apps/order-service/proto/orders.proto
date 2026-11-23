@@ -1,0 +1,62 @@
+// The order service's gRPC API: the same orders as the HTTP API (GET /orders/:id, POST /orders),
+// checked against the same contract, plus a stream that follows one order until it is decided.
+syntax = "proto3";
+
+package aiqa.orders.v1;
+
+service Orders {
+  // Accepts an order for processing (it travels on orders.placed, like POST /orders).
+  // INVALID_ARGUMENT when it breaks the contract, UNAVAILABLE before the service is ready.
+  rpc PlaceOrder(PlaceOrderRequest) returns (OrderAccepted);
+  // One order. NOT_FOUND when there is none (yet), INVALID_ARGUMENT for an id that is not a UUID.
+  rpc GetOrder(GetOrderRequest) returns (Order);
+  // PENDING while the order has not been decided, then CONFIRMED or REJECTED, then the stream ends.
+  // The client's deadline bounds the wait.
+  rpc WatchOrder(GetOrderRequest) returns (stream OrderUpdate);
+}
+
+message OrderLine {
+  string sku = 1;
+  int32 quantity = 2;
+  int32 unit_price_cents = 3;
+}
+
+message PlaceOrderRequest {
+  string id = 1;
+  string customer_id = 2;
+  string currency = 3;
+  int32 total_cents = 4;
+  repeated OrderLine lines = 5;
+}
+
+message OrderAccepted {
+  string order_id = 1;
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_CONFIRMED = 2;
+  ORDER_STATUS_REJECTED = 3;
+}
+
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  OrderStatus status = 3;
+  int32 total_cents = 4;
+  string currency = 5;
+  // Empty unless the order was rejected.
+  string rejection_reason = 6;
+  repeated OrderLine lines = 7;
+}
+
+message OrderUpdate {
+  string order_id = 1;
+  OrderStatus status = 2;
+  string rejection_reason = 3;
+}

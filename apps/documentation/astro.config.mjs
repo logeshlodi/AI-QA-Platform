@@ -23,6 +23,7 @@ export default defineConfig({
         { label: 'Architecture', link: '/architecture/' },
         { label: 'Decisions (ADRs)', items: [{ autogenerate: { directory: 'adr' } }] },
         { label: 'Coverage matrix', link: '/coverage-matrix/' },
+        { label: 'Agents vs Playwright', link: '/agents-vs-playwright/' },
         { label: 'Status', link: '/status/' },
       ],
     }),

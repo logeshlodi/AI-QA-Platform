@@ -5,7 +5,7 @@
 An AI-assisted Playwright + TypeScript automation platform, built as a pnpm monorepo and tested
 against live public demo applications. It has cross-browser UI tests, API tests, a self-healing
 engine with an audit trail, an optional local-model layer, run history with trends and flaky-test
-detection, seeded test data, a code generator, Postgres/MongoDB/Kafka suites against a real service,
+detection, seeded test data, a code generator, Postgres/MongoDB/Kafka/RabbitMQ/gRPC suites against a real service,
 browser performance checks and k6 load tests, the whole stack on Kubernetes with the tests running as
 Jobs, test results, logs and traces in Grafana, and the same pipeline for GitHub Actions, Azure
 DevOps and Jenkins. Every dependency is open source; nothing here needs a paid service.
@@ -24,12 +24,13 @@ npx pnpm test:smoke             # SauceDemo smoke on every browser and device pr
 npx pnpm test:ui                # everything: journeys, locator labs, feature labs, healing, visual
 npx pnpm report:html            # open the last HTML report
 npx pnpm report:dashboard       # open the run-history dashboard (trends, flaky tests, failures)
+npx pnpm report:pdf             # the same as a PDF (--suite ui for one suite), in .aiqa/reports
 
 npx pnpm test:chrome            # smoke in your installed Chrome   (test:edge for Edge)
 npx pnpm test:lighthouse        # Lighthouse audit of the SauceDemo login page
 npx pnpm test:shuffle           # Chromium run in a random order; prints the seed to replay it
 
-npx pnpm stack:up               # Postgres, MongoDB, Kafka, the order service, Prometheus, Grafana (Docker)
+npx pnpm stack:up               # Postgres, MongoDB, Kafka, RabbitMQ, the order service, Prometheus, Grafana (Docker)
 npx pnpm test:data              # the data and messaging suites against that stack
 npx pnpm stack:test             # one command: build, start, run the data suites in a container, stop
 npx pnpm stack:down             # stop the stack and delete its data
@@ -51,28 +52,28 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 
 ## Packages
 
-| Package                         | What it owns                                                                                                       | Tests                 |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| `packages/shared`               | Typed env config (zod), demo-target registry, logger, error types                                                  | Vitest                |
-| `packages/ai-engine`            | `LlmProvider` interface, Ollama adapter, prompt templates, and five tasks (see "Optional: a local model")          | Vitest, fake provider |
-| `packages/self-healing-engine`  | Fingerprints, four rule strategies plus a model tie-breaker, scoring, stores (memory, JSON, SQLite), heal report   | Vitest                |
-| `packages/playwright-framework` | Fixtures, page objects, components, flows, checks, the Playwright healing adapter, all UI specs                    | Playwright            |
-| `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                            | Playwright            |
-| `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard        | Vitest                |
-| `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records     | Vitest                |
-| `packages/cli`                  | `aiqa`: page and project generators, history, flaky, data, quiz, and the agents (`aiqa agents ...`)                | Vitest                |
-| `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and nine agents, each with a rules fallback    | Vitest, mock models   |
-| `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                 | Vitest, MCP client    |
-| `packages/dashboard`            | React components of the web app, a story per state, a gallery for Playwright's `mount`                             | Playwright components |
-| `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                  | Playwright            |
-| `packages/templates`            | Starter projects for `aiqa new project`: UI, API or both, standalone, CI-tested                                    | Vitest, CI smoke      |
-| `packages/interview-learning`   | 51 interview questions by topic and level, each pointing at the files that answer it                               | Vitest                |
-| `packages/data-framework`       | Postgres, MongoDB and Kafka suites, the service's HTTP API, Kafka adapter, stack fixtures                          | Playwright, Docker    |
-| `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check            | Vitest, Pact          |
-| `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                               | Vitest, k6 in Docker  |
-| `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB writes, Kafka out; OpenAPI at `/openapi.json`; OpenTelemetry | Data suites           |
-| `apps/documentation`            | The docs site (Starlight) built from `docs/`, published to GitHub Pages                                            | Build, link check     |
-| `apps/web`                      | Next.js app: dashboard, chat over the MCP tools with approvals, admin; Keycloak sign-in                            | Playwright e2e, axe   |
+| Package                         | What it owns                                                                                                        | Tests                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `packages/shared`               | Typed env config (zod), demo-target registry, logger, error types                                                   | Vitest                |
+| `packages/ai-engine`            | `LlmProvider` interface, Ollama adapter, prompt templates, and five tasks (see "Optional: a local model")           | Vitest, fake provider |
+| `packages/self-healing-engine`  | Fingerprints, four rule strategies plus a model tie-breaker, scoring, stores (memory, JSON, SQLite), heal report    | Vitest                |
+| `packages/playwright-framework` | Fixtures, page objects, components, flows, checks, the Playwright healing adapter, all UI specs                     | Playwright            |
+| `packages/api-framework`        | REST, GraphQL and SOAP clients, booking builder, zod schemas, API specs                                             | Playwright            |
+| `packages/reporting-engine`     | History reporter, run stores (JSON, SQLite), pass-rate and duration trends, flaky detection, HTML dashboard and PDF | Vitest                |
+| `packages/test-data-engine`     | Seeded customer, product and order builders on zod schemas; `shop()` scenarios; optional model-written records      | Vitest                |
+| `packages/cli`                  | `aiqa`: page and project generators, history, flaky, data, quiz, and the agents (`aiqa agents ...`)                 | Vitest                |
+| `packages/ai-agents`            | Agent runtime on the AI SDK (tool budget, approval, run log, evals) and nine agents, each with a rules fallback     | Vitest, mock models   |
+| `packages/mcp-server`           | The platform's MCP server: runs, failures, flaky tests, perf trends, heal audit, test data, triage                  | Vitest, MCP client    |
+| `packages/dashboard`            | React components of the web app, a story per state, a gallery for Playwright's `mount`                              | Playwright components |
+| `packages/examples`             | Eight break-it labs: a spec with one planted mistake and a reference solution that CI keeps green                   | Playwright            |
+| `packages/templates`            | Starter projects for `aiqa new project`: UI, API or both, standalone, CI-tested                                     | Vitest, CI smoke      |
+| `packages/interview-learning`   | 51 interview questions by topic and level, each pointing at the files that answer it                                | Vitest                |
+| `packages/data-framework`       | Postgres, MongoDB, Kafka, RabbitMQ and gRPC suites, the service's HTTP API, adapters, stack fixtures                | Playwright, Docker    |
+| `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check             | Vitest, Pact          |
+| `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                                | Vitest, k6 in Docker  |
+| `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB, Kafka and RabbitMQ out; HTTP and gRPC APIs; OpenTelemetry    | Data suites           |
+| `apps/documentation`            | The docs site (Starlight) built from `docs/`, published to GitHub Pages                                             | Build, link check     |
+| `apps/web`                      | Next.js app: dashboard, chat over the MCP tools with approvals, admin; Keycloak sign-in                             | Playwright e2e, axe   |
 
 Import rule, enforced by ESLint: `shared` never imports Playwright, and the two engines never
 import the test runner (the reporting engine may import its reporter types). Specs import the framework; the framework imports the engines; the
@@ -96,7 +97,7 @@ Two halves, because Playwright measures one user in great detail but cannot gene
 **Many users, against our own service** (`pnpm perf:load [smoke|load|stress]`, `packages/load-tests/`):
 k6 places orders through `POST /orders` and times each one until `GET /orders/:id` reads
 confirmed, through Kafka, Postgres and MongoDB. Thresholds fail the run; k6 streams its metrics
-to Prometheus, where the **Load tests (k6)** Grafana dashboard shows them next to the service's own
+to Prometheus over OpenTelemetry, where the **Load tests (k6)** Grafana dashboard shows them next to the service's own
 processing time. Load is only ever aimed at the order service, never at a public demo site.
 
 Both record their numbers in the run history. `aiqa perf` and the dashboard compare each metric's
@@ -286,6 +287,7 @@ The whole stack also runs on a local [kind](https://kind.sigs.k8s.io) cluster fr
 pnpm k8s:up                 # create the cluster, build and load the images, install the chart
 pnpm k8s:test data          # data suites as a Job
 pnpm k8s:test ui            # UI specs as a Job, browsers on the shared Playwright server
+pnpm k8s:test ui all-browsers   # the same on Chromium, Firefox and WebKit
 pnpm k8s:test load smoke    # k6 as a Job (smoke, load or stress)
 pnpm k8s:status
 pnpm k8s:down
@@ -313,6 +315,10 @@ suites on the Docker stack, and the Pact contracts (kept as an artifact). Every 
 (`.github/actions/setup`): Node, pnpm, a cached install, and Playwright browsers matched to the
 installed Playwright version and cached per version, so a Playwright update never needs a workflow
 change. Each run page shows a summary with the recent runs and the flaky list.
+
+A second workflow (`.github/workflows/kubernetes.yml`) runs nightly and on request: it builds the
+whole stack on a kind cluster with `pnpm k8s:up`, exactly as on a laptop, then runs the data, UI and
+load suites as Kubernetes Jobs and keeps their reports as an artifact.
 
 Dependabot pull requests can merge themselves once CI is green (patch and minor only): set the
 repository variable `DEPENDABOT_AUTOMERGE` to `true` (Settings > Secrets and variables > Actions >

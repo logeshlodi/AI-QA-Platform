@@ -75,13 +75,13 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(k6_order_end_to_end_p95)",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(k6_order_end_to_end_milliseconds_bucket[$__range])))",
           "legendFormat": ""
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "ms"
         },
         "overrides": []
       },
@@ -116,7 +116,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(k6_http_req_failed_rate)",
+          "expr": "(sum(increase(k6_http_req_failed_total{condition=\"nonzero\"}[$__range])) or vector(0)) / sum(increase(k6_http_req_failed_total[$__range]))",
           "legendFormat": ""
         }
       ],
@@ -158,7 +158,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "min(k6_orders_confirmed_rate)",
+          "expr": "(sum(increase(k6_orders_confirmed_total{condition=\"nonzero\"}[$__range])) or vector(0)) / sum(increase(k6_orders_confirmed_total[$__range]))",
           "legendFormat": ""
         }
       ],
@@ -332,13 +332,13 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (name) (k6_http_req_duration_p95{scenario=\"orders\"})",
+          "expr": "histogram_quantile(0.95, sum by (le, name) (rate(k6_http_req_duration_milliseconds_bucket{scenario=\"orders\"}[1m])))",
           "legendFormat": "{{name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "ms",
           "min": 0,
           "custom": {
             "lineWidth": 2,
@@ -412,7 +412,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(k6_order_end_to_end_p50)",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(k6_order_end_to_end_milliseconds_bucket[1m])))",
           "legendFormat": "p50"
         },
         {
@@ -421,7 +421,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(k6_order_end_to_end_p95)",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(k6_order_end_to_end_milliseconds_bucket[1m])))",
           "legendFormat": "p95"
         },
         {
@@ -430,13 +430,13 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max(k6_order_end_to_end_p99)",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(k6_order_end_to_end_milliseconds_bucket[1m])))",
           "legendFormat": "p99"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "ms",
           "min": 0,
           "custom": {
             "lineWidth": 2,

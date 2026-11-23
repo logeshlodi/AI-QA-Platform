@@ -1,0 +1,47 @@
+# RabbitMQ: the order service fans order outcomes out on it as notifications (exchange
+# orders.events). emptyDir, like the other stores. Reached inside the cluster only; for the management
+# UI: kubectl -n aiqa port-forward svc/rabbitmq 15672
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: rabbitmq } }
+  template:
+    metadata: { labels: { app: rabbitmq } }
+    spec:
+      # The pod's own hostname names RabbitMQ's node; keep it fixed so its data folder matches.
+      hostname: rabbitmq
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.images.rabbitmq }}
+          ports:
+            - { name: amqp, containerPort: 5672 }
+            - { name: management, containerPort: 15672 }
+          readinessProbe:
+            exec: { command: ['rabbitmq-diagnostics', '-q', 'check_port_connectivity'] }
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+          volumeMounts: [{ name: data, mountPath: /var/lib/rabbitmq }]
+      volumes: [{ name: data, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    {{- include "aiqa.labels" . | nindent 4 }}
+spec:
+  selector: { app: rabbitmq }
+  ports:
+    - { name: amqp, port: 5672, targetPort: 5672 }
+    - { name: management, port: 15672, targetPort: 15672 }

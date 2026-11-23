@@ -159,6 +159,22 @@ describe('test data agent', () => {
     ]);
   });
 
+  it('fills in ids and timestamps itself, so a made-up UUID cannot sink a good record', async () => {
+    const record = {
+      id: 'customer-1', // not a UUID, as qwen3:8b wrote them
+      email: 'qa+tag@example.com',
+      firstName: 'A',
+      lastName: "O'Brien",
+      address: { line1: '1 Main St', city: 'Leeds', postcode: 'LS1 1AA', country: 'GB' },
+    };
+    const result = await edgeCaseData('customer', { model: mock([{ answer: { records: [record] } }]) });
+    expect(result.rejected).toEqual([]);
+    const [mine] = result.records.filter((r) => r.source === 'model');
+    expect(customerSchema.safeParse(mine!.record).success).toBe(true);
+    expect(mine!.record.id).not.toBe('customer-1');
+    expect(mine!.boundaries.sort()).toEqual(['email-plus', 'first-name-shortest', 'name-apostrophe']);
+  });
+
   it('without a model, builds every edge from the builders', async () => {
     const result = await edgeCaseData('customer');
     expect(result.records.every((r) => r.source === 'builder')).toBe(true);

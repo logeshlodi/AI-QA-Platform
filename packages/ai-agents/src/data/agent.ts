@@ -23,6 +23,12 @@ interface EntitySpec<T> {
   boundaries: Boundary<T>[];
   /** What the model is told about the record's fields. */
   fields: string;
+  /**
+   * Fields the agent fills in itself, from the seeded builder: identities and timestamps that no edge
+   * is about. A small model writes them badly (qwen3:8b made up UUIDs that are not UUIDs), and asking
+   * for them spends its attention on the wrong thing.
+   */
+  assigned?: (keyof T & string)[];
 }
 
 const nonAscii = (s: string) => [...s].some((ch) => ch.charCodeAt(0) > 127);
@@ -70,7 +76,8 @@ const CUSTOMER: EntitySpec<Customer> = {
   schema: customerSchema,
   build: (seed) => aCustomer(seed).build(),
   fields:
-    'id: a UUID; email: a valid email; firstName and lastName: 1 to 60 characters; address: { line1, city, postcode: non-empty, country: two-letter ISO code }; createdAt: ISO 8601 date-time with Z.',
+    'email: a valid email; firstName and lastName: 1 to 60 characters; address: { line1, city, postcode: non-empty, country: two-letter ISO code }. Leave out id and createdAt: they are filled in for you.',
+  assigned: ['id', 'createdAt'],
   boundaries: [
     {
       id: 'first-name-shortest',
@@ -152,7 +159,10 @@ export async function edgeCaseData<E extends DataEntity>(
 
   const records: EdgeDataResult<T>['records'] = [];
   const rejected: EdgeDataResult<T>['rejected'] = [];
-  for (const candidate of output?.records ?? []) {
+  let assignSeed = (options.seed ?? 1) + 1000;
+  for (const proposed of output?.records ?? []) {
+    const fresh = spec.build(assignSeed++) as Record<string, unknown>;
+    const candidate = { ...proposed, ...Object.fromEntries((spec.assigned ?? []).map((f) => [f, fresh[f]])) };
     const parsed = spec.schema.safeParse(candidate);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];

@@ -26,7 +26,7 @@ regression, not flakiness. `pnpm aiqa flaky` lists them; `pnpm report:dashboard`
 | Signal                                                                      | Where it goes                                        |
 | --------------------------------------------------------------------------- | ---------------------------------------------------- |
 | Service metrics (orders, processing time)                                   | Prometheus, Grafana "Order service"                  |
-| k6 load metrics                                                             | Prometheus remote write, "Load tests"                |
+| k6 load metrics                                                             | OpenTelemetry into Prometheus, "Load tests"          |
 | Test results (pass rate, duration, flaky, performance numbers)              | Pushgateway, then Prometheus, "Test runs" (ADR 0010) |
 | Logs of every pod                                                           | Loki, through Alloy                                  |
 | Traces: one order from `POST /orders` through Kafka to Postgres and MongoDB | Tempo, linked to the logs                            |

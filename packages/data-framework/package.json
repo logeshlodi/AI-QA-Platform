@@ -13,10 +13,13 @@
     "@aiqa/reporting-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "@aiqa/test-data-engine": "workspace:*",
+    "@grpc/grpc-js": "catalog:",
+    "@grpc/proto-loader": "catalog:",
     "@platformatic/kafka": "catalog:",
     "@playwright/test": "catalog:",
     "ajv": "catalog:",
     "ajv-formats": "catalog:",
+    "amqplib": "catalog:",
     "mongodb": "catalog:",
     "pg": "catalog:",
     "zod": "catalog:"

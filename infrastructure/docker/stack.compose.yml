@@ -59,6 +59,18 @@ services:
       retries: 30
       start_period: 180s
 
+  # Order outcomes fanned out as notifications (topic exchange orders.events). Management UI:
+  # http://localhost:15672, guest / guest (the official image lets guest connect from other hosts).
+  rabbitmq:
+    image: rabbitmq:4.4.1-management
+    ports: ['5672:5672', '15672:15672']
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
   # OAuth 2.0 / OpenID Connect for the product API: a local test realm with service clients only.
   # The issuer is fixed to http://localhost:8180 however a token is requested (from your machine or from
   # inside the network), so a token's `iss` always matches what the order service expects.
@@ -101,13 +113,15 @@ services:
       # Product writes need a token with the catalog-admin role. Keys come from inside the network.
       AUTH_ISSUER: http://localhost:8180/realms/aiqa
       AUTH_JWKS_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/certs
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     # Host port 8088, not 8080: Jenkins and many dev tools already listen on 8080.
-    ports: ['8088:8080', '9464:9464']
+    ports: ['8088:8080', '9464:9464', '50051:50051']
     depends_on:
       postgres: { condition: service_healthy }
       mongo: { condition: service_healthy }
       kafka: { condition: service_healthy }
       keycloak: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
     healthcheck:
       test:
         [
@@ -122,11 +136,11 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.16.0
-    # The image's own two flags, plus the remote-write receiver: k6 pushes its metrics here.
+    # The image's own two flags, plus the OTLP receiver: k6 sends its metrics here over OpenTelemetry.
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --web.enable-remote-write-receiver
+      - --web.enable-otlp-receiver
     volumes: ['../kubernetes/aiqa-stack/files/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro']
     ports: ['9090:9090']
     depends_on: [order-service]
@@ -155,14 +169,20 @@ services:
   k6:
     profiles: [perf]
     image: grafana/k6:2.4.0
-    command: run --summary-export=/results/summary.json -o experimental-prometheus-rw /scripts/order-flow.js
+    command: run --summary-export=/results/summary.json -o opentelemetry /scripts/order-flow.js
     environment:
       ORDER_SERVICE_URL: http://order-service:8080
       PROFILE: smoke
       # setup() creates products, which needs a catalog-admin token.
       AUTH_TOKEN_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/token
-      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
-      K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),max
+      # OpenTelemetry metrics straight into Prometheus's OTLP receiver. Trends arrive as histograms
+      # (k6_<name>_milliseconds_bucket), so Grafana works out the percentiles.
+      K6_OTEL_EXPORTER_PROTOCOL: http/protobuf
+      K6_OTEL_HTTP_EXPORTER_ENDPOINT: prometheus:9090
+      K6_OTEL_HTTP_EXPORTER_URL_PATH: /api/v1/otlp/v1/metrics
+      K6_OTEL_HTTP_EXPORTER_INSECURE: 'true'
+      K6_OTEL_METRIC_PREFIX: k6_
+      K6_OTEL_EXPORT_INTERVAL: 5s
     # Root, so it can write the summary into a folder owned by whoever runs the tests.
     user: '0'
     volumes:
@@ -182,8 +202,10 @@ services:
       DATABASE_URL: postgres://aiqa:aiqa@postgres:5432/shop
       MONGO_URL: mongodb://mongo:27017
       KAFKA_BROKERS: kafka:19092
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       ORDER_SERVICE_URL: http://order-service:8080
       ORDER_METRICS_URL: http://order-service:9464/metrics
+      ORDER_GRPC_ADDRESS: order-service:50051
       AIQA_PUSHGATEWAY: http://pushgateway:9091
       AUTH_TOKEN_URL: http://keycloak:8080/realms/aiqa/protocol/openid-connect/token
     volumes:

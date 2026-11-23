@@ -8,6 +8,7 @@ images:
   postgres: postgres:17-alpine
   mongo: mongo:8.0
   kafka: apache/kafka:4.3.2
+  rabbitmq: rabbitmq:4.4.1-management
   prometheus: prom/prometheus:v3.16.0
   pushgateway: prom/pushgateway:v1.11.4
   grafana: grafana/grafana:13.2.6
@@ -44,8 +45,12 @@ observability:
 
 playwrightServer:
   # A shared browser server (`playwright run-server`) that UI test Jobs connect to. It runs in the
-  # tests image, so its Playwright version always equals the tests'.
+  # tests image, so its Playwright version always equals the tests'. It launches whichever engine a
+  # Job asks for (Chromium, Firefox, WebKit), so a run on all three needs room for all three.
   enabled: true
+  resources:
+    requests: { cpu: '1', memory: 2Gi }
+  shmSize: 2Gi
 
 # Where test Jobs write reports and run history on the node; the kind config mounts the repository's
 # .aiqa folder there, so results land on your machine.

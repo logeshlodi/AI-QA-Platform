@@ -27,6 +27,9 @@ export const envSchema = z.object({
   AGENT_MODEL: z.string().min(1).optional(),
   AGENT_BASE_URL: z.url().optional(),
   AGENT_API_KEY: z.string().min(1).optional(),
+  // Thinking models (qwen3) reason before answering. Unset = the model's default; false = answer
+  // straight away, much faster on a CPU.
+  AGENT_THINK: flag.optional(),
   AGENT_MAX_TOOL_CALLS: z.coerce.number().int().min(0).max(30).default(6),
   // How long one model answer may take. A 7B model on CPU needs minutes for a plan or a spec.
   AGENT_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),

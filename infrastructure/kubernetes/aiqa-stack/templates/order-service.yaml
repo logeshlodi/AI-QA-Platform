@@ -19,6 +19,7 @@ spec:
         {{- include "aiqa.waitFor" (dict "name" "postgres" "image" .Values.images.busybox "host" "postgres" "port" 5432) | nindent 8 }}
         {{- include "aiqa.waitFor" (dict "name" "mongo" "image" .Values.images.busybox "host" "mongo" "port" 27017) | nindent 8 }}
         {{- include "aiqa.waitFor" (dict "name" "kafka" "image" .Values.images.busybox "host" "kafka" "port" 19092) | nindent 8 }}
+        {{- include "aiqa.waitFor" (dict "name" "rabbitmq" "image" .Values.images.busybox "host" "rabbitmq" "port" 5672) | nindent 8 }}
       containers:
         - name: order-service
           image: {{ .Values.images.orderService }}
@@ -34,6 +35,7 @@ spec:
           ports:
             - { name: http, containerPort: 8080 }
             - { name: metrics, containerPort: 9464 }
+            - { name: grpc, containerPort: 50051 }
           readinessProbe:
             httpGet: { path: /health, port: 8080 }
             periodSeconds: 3
@@ -52,3 +54,5 @@ spec:
   ports:
     - { name: http, port: 8080, nodePort: {{ .Values.nodePorts.orderService }} }
     - { name: metrics, port: 9464, nodePort: {{ .Values.nodePorts.orderMetrics }} }
+    # Inside the cluster only: kind publishes node ports only when it creates the cluster.
+    - { name: grpc, port: 50051, appProtocol: grpc }
