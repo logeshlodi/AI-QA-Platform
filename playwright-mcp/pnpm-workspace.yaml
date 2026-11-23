@@ -1,0 +1,123 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# The `pnpm` dev dependency's install script only self-installs a global copy; not wanted here.
+# Next.js's image optimiser (sharp) ships LGPL-3.0 libvips binaries; the web app has no images to
+# optimise (images.unoptimized), so the optional dependency is not installed at all.
+ignoredOptionalDependencies:
+  - sharp
+
+ignoredBuiltDependencies:
+  - pnpm
+  # Pact's usage-analytics package phones home from its install script; never run it.
+  - '@scarf/scarf'
+
+# Playwright MCP pins an alpha build of Playwright in every release. The MCP server code is also in
+# stable Playwright (playwright-core's tools bundle), so it runs on ours: one Playwright, one set of
+# browsers. 0.0.84 is the release built on 1.65.
+overrides:
+  '@playwright/mcp>playwright': 1.65.1
+  '@playwright/mcp>playwright-core': 1.65.1
+
+# Versions are pinned once here; packages refer to them as "catalog:".
+catalog:
+  # Test runner and Playwright plugins
+  '@playwright/test': 1.65.1
+  'allure-playwright': 3.15.0
+  'allure': 3.33.0
+  '@axe-core/playwright': 4.14.0
+  'lighthouse': 13.6.0
+  # Google's Core Web Vitals library, injected into pages by the performance specs.
+  'web-vitals': 6.2.3
+
+  # API testing and test data
+  'zod': 4.6.7
+
+  # Contract testing: OpenAPI checks (JSON Schema 2020-12) and consumer-driven contracts
+  'ajv': 8.20.0
+  'ajv-formats': 3.0.1
+  '@seriousme/openapi-schema-validator': 2.12.0
+  '@pact-foundation/pact': 17.1.4
+  # JWT checks in the order service (signature, expiry, issuer, audience)
+  'jose': 6.2.18
+  'fast-xml-parser': 5.12.1
+  '@faker-js/faker': 10.6.0
+
+  # Agents (packages/ai-agents) and the platform's MCP server (packages/mcp-server)
+  'ai': 7.0.179
+  'ai-sdk-ollama': 4.6.3
+  '@ai-sdk/openai-compatible': 3.0.94
+  '@modelcontextprotocol/server': 2.4.0
+  '@modelcontextprotocol/client': 2.4.0
+  '@playwright/mcp': 0.0.84
+
+  # Web app (apps/web) and its shared components (packages/dashboard)
+  'next': 16.4.6
+  'react': 19.3.1
+  'react-dom': 19.3.1
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
+  # OpenID Connect sign-in through the stack's Keycloak
+  'openid-client': 6.9.1
+  # Serves the component-test story gallery (Playwright's stories model needs a dev server)
+  'vite': 8.3.8
+  '@vitejs/plugin-react': 6.3.0
+
+  # Docs site (apps/documentation): Astro with Starlight, built from docs/
+  'astro': 7.4.13
+  '@astrojs/starlight': 0.43.1
+
+  # Runtime utilities
+  'pino': 10.4.0
+  'dotenv': 18.0.10
+  # Lighthouse's dependency intl-messageformat requires it but pnpm on Windows did not link it for it.
+  # A root copy lets Node's upward lookup find it.
+  'tslib': 2.9.1
+  'cross-env': 10.1.0
+  'tsx': 4.23.15
+  'commander': 15.1.0
+
+  # Data and messaging suites, and the order service they test
+  'pg': 8.23.1
+  '@types/pg': 8.23.1
+  'mongodb': 7.9.1
+  # Maintained, pure-TypeScript Kafka client (replaced kafkajs, unmaintained since 2023).
+  # Needs Node 22.22+ or 24.6+. Tests reach it only through KafkaBus in data-framework.
+  '@platformatic/kafka': 2.17.0
+  'amqplib': 2.4.1
+  'yaml': 2.9.1
+  '@grpc/grpc-js': 1.14.7
+  '@grpc/proto-loader': 0.8.1
+  '@opentelemetry/api': 1.10.0
+  '@opentelemetry/sdk-metrics': 3.1.1
+  '@opentelemetry/exporter-prometheus': 0.301.2
+  # Tracing (order service -> Tempo). SDK 3: @opentelemetry/sdk-trace replaces the deprecated
+  # sdk-trace-node; contrib instrumentations 0.78 match instrumentation 0.301.
+  '@opentelemetry/context-async-hooks': 3.1.1
+  '@opentelemetry/core': 3.1.1
+  '@opentelemetry/exporter-trace-otlp-http': 0.301.2
+  '@opentelemetry/instrumentation': 0.301.2
+  '@opentelemetry/instrumentation-http': 0.301.2
+  '@opentelemetry/instrumentation-mongodb': 0.78.0
+  '@opentelemetry/instrumentation-pg': 0.78.0
+  '@opentelemetry/resources': 3.1.1
+  '@opentelemetry/sdk-trace': 3.1.1
+  '@opentelemetry/semantic-conventions': 1.45.0
+
+  # Language, unit tests, quality gates
+  # typescript-eslint supports TypeScript up to 6.0; 7.0 also has no programmatic API yet.
+  # Dependabot skips TypeScript majors until that changes (.github/dependabot.yml).
+  'typescript': 6.0.3
+  # Types match the oldest Node the project runs on (22, as in CI), so code cannot use newer APIs by mistake.
+  '@types/node': ^22.0.0
+  'vitest': 5.1.1
+  'eslint': 10.15.0
+  'typescript-eslint': 8.73.0
+  'eslint-plugin-playwright': 2.12.2
+  'eslint-plugin-react-hooks': 7.1.1
+  'prettier': 3.10.1
+  'husky': 9.1.7
+  'lint-staged': 17.6.2
+  '@commitlint/cli': 21.2.4
+  '@commitlint/config-conventional': 21.2.4

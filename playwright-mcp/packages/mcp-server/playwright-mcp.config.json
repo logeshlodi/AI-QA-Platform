@@ -1,0 +1,26 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "isolated": true,
+    "launchOptions": {
+      "headless": false
+    },
+    "contextOptions": {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      }
+    }
+  },
+  "capabilities": ["core", "network", "storage", "testing", "vision", "pdf", "devtools", "config"],
+  "testIdAttribute": "data-test",
+  "outputDir": ".aiqa/playwright-mcp",
+  "console": {
+    "level": "warning"
+  },
+  "codegen": "typescript",
+  "timeouts": {
+    "action": 5000,
+    "navigation": 30000
+  }
+}
