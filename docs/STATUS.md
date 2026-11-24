@@ -73,7 +73,7 @@ every call the framework uses, so the current versions were kept; Appium 3.9.1 w
 | Unit tests (whole repository)        | Laptop, Node 24.22 | 394 passed                                                                                                              |
 | Fake-driver suite                    | Laptop             | 8 passed                                                                                                                |
 | `pnpm mobile doctor --accel`         | Laptop             | SDK, JDK 26, driver and emulator found; WHPX usable. Missing: the system image, the `aiqa_api34` emulator, the two apps |
-| Android suite on the emulator        | Laptop             | Not run yet: needs the system image and the emulator                                                                    |
+| Android suite on the emulator, twice | Laptop, API 34     | 22 passed both times (7.0 min, then 4.7 min)                                                                            |
 
 **Found on the way**
 
@@ -82,6 +82,32 @@ every call the framework uses, so the current versions were kept; Appium 3.9.1 w
   drivers skips there.
 - WebdriverIO 10 no longer has `isW3C` (every session is W3C), and Appium returns capabilities
   without the `appium:` prefix. The fake-driver suite caught both.
+
+**On the emulator (24 Nov).** Each finding was checked against the app's real UI tree, saved by a
+probe that opens every screen, not guessed from the app's source:
+
+- **Speed.** UiAutomator2 waits for the app to go idle before every step; a React Native app with
+  animations never does, so each step waited for the timeout. `settings[waitForIdleTimeout]: 0`
+  took a five-screen tour from minutes to 36 s.
+- **Alerts.** React Native shows AndroidX dialogs: the title's ID is the app's own
+  (`com.wdiodemoapp:id/alert_title`), not `android:id/alertTitle`, and Android draws button labels
+  in capitals.
+- **An accessibility bug in the app.** The Inactive button is disabled in React Native only;
+  Android reports it enabled, so a screen reader announces it as usable. The test checks what the
+  user gets (a tap does nothing) and the comment records the bug.
+- **Carousel.** Titles are upper-cased by the app, and sit next to the `card` view rather than
+  inside it. Hand-built W3C touch moves did not move the carousel or scroll the page;
+  UiAutomator2's own `mobile: swipeGesture` and `mobile: scrollGesture` do, and stay away from
+  the screen edges.
+- **The notification shade.** One stray swipe from the top edge pulled it down and hid the app from
+  every later test. Each test now starts by collapsing it (`mobile: statusBar`).
+- **Puzzle.** The success view fires confetti drawn over it, which swallows taps for about 3 s and
+  makes "is displayed" flicker. Retry taps until the puzzle is back; "solved" checks presence.
+- **Cold start.** After a reboot, loading the UiAutomator2 driver took 109 s (cold disk cache,
+  Windows Defender scanning each file) against 15 s warm; the server now gets 3 minutes.
+- **A cold emulator boot** can take longer than Appium's wait; the run script boots the emulator
+  first and waits for `sys.boot_completed` (64 s on the laptop).
+- **The laptop shut itself down at 12:18** (a Windows-initiated power off, not a crash), mid-run.
 
 ## AI features, audit fixes and a walkthrough (23 to 24 Nov)
 

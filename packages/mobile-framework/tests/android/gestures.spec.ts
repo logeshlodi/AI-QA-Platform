@@ -7,13 +7,14 @@ test.describe('Swipe, scroll and drag', { tag: ['@mobile', '@android'] }, () => 
   }) => {
     await screens.nav.open('Swipe');
     await screens.swipe.waitUntilShown();
-    expect(await screens.swipe.currentCardTitle()).toBe('Fully Open Source');
+    // The app shows card titles in capitals (SliderEntry upper-cases them).
+    expect(await screens.swipe.currentCardTitle()).toBe('FULLY OPEN SOURCE');
 
     await screens.swipe.swipeCarousel('left');
-    await expect.poll(() => screens.swipe.currentCardTitle()).toBe('Great community');
+    await expect.poll(() => screens.swipe.currentCardTitle()).toBe('GREAT COMMUNITY');
 
     await screens.swipe.swipeCarousel('right');
-    await expect.poll(() => screens.swipe.currentCardTitle()).toBe('Fully Open Source');
+    await expect.poll(() => screens.swipe.currentCardTitle()).toBe('FULLY OPEN SOURCE');
   });
 
   test('scrolling down finds what is hidden below the fold', async ({ screens }) => {

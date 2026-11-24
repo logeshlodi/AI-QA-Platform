@@ -23,7 +23,14 @@ export class AppiumServer {
     readonly logFile: string,
   ) {}
 
-  static async start(options: { logFile: string; allowInsecure?: string[] }): Promise<AppiumServer> {
+  static async start(options: {
+    logFile: string;
+    allowInsecure?: string[];
+    /** How long to wait for /status. Loading the UiAutomator2 driver reads thousands of files: about
+     * 15 s warm, but nearly two minutes on the first start after a reboot (cold disk cache, and
+     * Windows Defender scanning each file), measured on the laptop. */
+    readyTimeoutMs?: number;
+  }): Promise<AppiumServer> {
     const port = await freePort();
     fs.mkdirSync(path.dirname(options.logFile), { recursive: true });
     const main = path.join(PACKAGE_DIR, 'node_modules', 'appium', 'index.js');
@@ -46,7 +53,7 @@ export class AppiumServer {
     child.stdout?.on('data', keep);
     child.stderr?.on('data', keep);
     child.once('exit', () => log.end());
-    await server.waitUntilReady();
+    await server.waitUntilReady(options.readyTimeoutMs ?? 180_000);
     return server;
   }
 
@@ -70,7 +77,7 @@ export class AppiumServer {
     return count > 0 ? this.lines.slice(-count).join('\n') : '';
   }
 
-  private async waitUntilReady(timeoutMs = 60_000): Promise<void> {
+  private async waitUntilReady(timeoutMs: number): Promise<void> {
     const until = Date.now() + timeoutMs;
     while (Date.now() < until) {
       if (this.child.exitCode !== null) {

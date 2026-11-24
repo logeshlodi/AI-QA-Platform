@@ -154,14 +154,9 @@ export class FormsScreen extends Screen {
     await this.byId('button-Inactive').click();
   }
 
-  async isInactiveEnabled(): Promise<boolean> {
-    await this.scrollToButtons();
-    return this.byId('button-Inactive').isEnabled();
-  }
-
-  /** The buttons sit below the fold on a phone-sized screen. */
+  /** The buttons can sit below the fold on a small screen; the scroll target is the form itself. */
   private async scrollToButtons(): Promise<void> {
-    await this.byId('button-Active').scrollIntoView({ direction: 'down', maxScrolls: 5 });
+    await this.scrollUntilShown(this.byId('button-Active'), this.byId('Forms-screen'), 5);
   }
 }
 
@@ -173,39 +168,54 @@ export class SwipeScreen extends Screen {
     return this.byResourceId('Carousel');
   }
 
+  /**
+   * Swipes the carousel with UiAutomator2's own gesture (`mobile: swipeGesture`): `left` brings the
+   * next card. Checked on the emulator, where hand-built W3C touch moves did not move this carousel.
+   */
   async swipeCarousel(direction: 'left' | 'right'): Promise<void> {
-    await this.driver.swipe({ direction, scrollableElement: this.carousel, percent: 0.8, duration: 600 });
+    await this.driver.execute('mobile: swipeGesture', {
+      elementId: await this.carousel.elementId,
+      direction,
+      percent: 0.75,
+    });
   }
 
   /**
-   * The title on the card in the middle of the screen. The carousel keeps its neighbours in the
-   * UI tree (partly visible), so "is this text displayed" is not enough to say which card is current.
+   * The title of the card in the middle of the screen. The carousel keeps its neighbours in the UI
+   * tree (partly visible), so "is this text displayed" cannot say which card is current: the item
+   * nearest the centre is. Each item (`__CAROUSEL_ITEM_n__`) holds the `card` view, an icon glyph,
+   * the title (upper-cased by the app) and a line of text, side by side rather than nested.
    */
   async currentCardTitle(): Promise<string> {
     const { width } = await this.driver.getWindowSize();
-    const cards = await this.driver.$$('~card');
+    const items = await this.driver.$$(
+      'android=new UiSelector().resourceIdMatches("__CAROUSEL_ITEM_[0-9]+__")',
+    );
     const rects = [];
-    for (const card of cards)
-      rects.push({ card, rect: { ...(await card.getLocation()), ...(await card.getSize()) } });
-    const centre = pickNearestToCentre(
-      rects.map((r) => r.rect),
-      width,
-    );
-    if (centre < 0) throw new Error('No carousel card on screen');
-    const title = rects[centre]!.card.$(
-      'android=new UiSelector().className("android.widget.TextView").instance(0)',
-    );
-    return title.getText();
+    for (const item of items) rects.push({ ...(await item.getLocation()), ...(await item.getSize()) });
+    const centre = pickNearestToCentre(rects, width);
+    if (centre < 0) throw new Error('No carousel item on screen');
+    const texts = await items[centre]!.$$('android=new UiSelector().className("android.widget.TextView")');
+    for (const text of texts) {
+      const value = await text.getText();
+      if (isCardTitle(value)) return value;
+    }
+    throw new Error('The centre carousel item has no title');
   }
 
-  /** Scrolls down until the hidden logo is on screen. */
+  /** Scrolls the screen down until the hidden logo shows. */
   async scrollToHiddenLogo(): Promise<void> {
-    await this.byId('WebdriverIO logo').scrollIntoView({ direction: 'down', maxScrolls: 6 });
+    await this.scrollUntilShown(this.byId('WebdriverIO logo'), this.byId('Swipe-screen'));
   }
 
   async isLogoShown(): Promise<boolean> {
     return this.byId('WebdriverIO logo').isDisplayed();
   }
+}
+
+/** A card title: upper-case words, not an icon glyph (a single private-use character). */
+export function isCardTitle(text: string): boolean {
+  return /[A-Z]{2}/.test(text) && text === text.toUpperCase();
 }
 
 /** Index of the rectangle whose horizontal centre is closest to the screen's, or -1 when none. */
@@ -237,44 +247,61 @@ export class DragScreen extends Screen {
     await this.byId(`drag-${piece}`).dragAndDrop(this.byId(`drop-${to}`), { duration: 400 });
   }
 
+  /**
+   * The success view is in the UI tree only while all nine pieces are placed. Presence is checked,
+   * not visibility: the confetti drawn over it makes "displayed" flicker.
+   */
   async isSolved(): Promise<boolean> {
-    return this.byText('Congratulations').isDisplayed();
+    return this.byText('Congratulations').isExisting();
   }
 
+  /**
+   * Taps Retry until the puzzle comes back. The success view fires a confetti animation drawn on
+   * top of it, which swallows taps for about three seconds, so a single tap can land on the confetti.
+   */
   async retry(): Promise<void> {
-    await this.byId('button-Retry').click();
+    await this.driver.waitUntil(
+      async () => {
+        if (await this.byId('button-Retry').isExisting()) await this.byId('button-Retry').click();
+        return !(await this.isSolved());
+      },
+      { timeout: 12_000, interval: 1_500, timeoutMsg: 'Retry did not bring the puzzle back' },
+    );
   }
 }
 
 /**
- * Android's system alert. Its views belong to the platform, so they are found by Android's own
- * resource IDs. Buttons: button1 is positive (the last one given), button2 negative, button3 neutral.
+ * The app's alert dialog. React Native shows it with AndroidX, so the title's ID belongs to the app
+ * (`com.wdiodemoapp:id/alert_title`, checked on the emulator) while the message and the buttons keep
+ * Android's own IDs: button1 is positive (the last one given), button2 negative, button3 neutral.
+ * Android draws button labels in capitals, and UiAutomator2 reports them as drawn.
  */
 export class NativeAlert extends Screen {
-  /** Not used: an alert has no accessibility ID of the app's; the methods below find it by resource ID. */
+  /** Not used: the dialog has no accessibility ID; the methods below find it by resource ID. */
   protected readonly marker = 'alert';
 
+  private get titleView() {
+    return this.driver.$('android=new UiSelector().resourceIdMatches(".*:id/(alert_title|alertTitle)")');
+  }
+
   override async waitUntilShown(timeout = 10_000): Promise<this> {
-    await this.byResourceId('android:id/alertTitle').waitForDisplayed({
-      timeout,
-      timeoutMsg: 'No alert appeared',
-    });
+    await this.titleView.waitForDisplayed({ timeout, timeoutMsg: 'No alert appeared' });
     return this;
   }
 
   override async isShown(): Promise<boolean> {
-    return this.byResourceId('android:id/alertTitle').isDisplayed();
+    return this.titleView.isDisplayed();
   }
 
   async title(): Promise<string> {
-    return this.byResourceId('android:id/alertTitle').getText();
+    return this.titleView.getText();
   }
 
   async message(): Promise<string> {
     return this.byResourceId('android:id/message').getText();
   }
 
-  /** The labels of the buttons on the alert, left to right as Android lays them out. */
+  /** The button labels, left to right, as drawn (capitals). */
   async buttons(): Promise<string[]> {
     const labels: string[] = [];
     for (const id of ['android:id/button3', 'android:id/button2', 'android:id/button1']) {
@@ -284,10 +311,12 @@ export class NativeAlert extends Screen {
     return labels;
   }
 
+  /** Taps a button by its label, in any letter case. */
   async tap(label: string): Promise<void> {
+    const pattern = `(?i)^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`;
     await this.driver
       .$(
-        `android=new UiSelector().resourceIdMatches("android:id/button[123]").text(${JSON.stringify(label)})`,
+        `android=new UiSelector().resourceIdMatches("android:id/button[123]").textMatches(${JSON.stringify(pattern)})`,
       )
       .click();
   }

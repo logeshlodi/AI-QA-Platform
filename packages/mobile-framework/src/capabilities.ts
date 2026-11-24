@@ -29,6 +29,10 @@ export function androidCapabilities(app: AppSpec, apk: string, config: MobileCon
     'appium:newCommandTimeout': 300,
     'appium:uiautomator2ServerInstallTimeout': 120_000,
     'appium:adbExecTimeout': 60_000,
+    // UiAutomator2 waits up to 10 s for the app to go idle before every find and every page source.
+    // A React Native app with running animations never does, so each step took seconds on the
+    // emulator. Steps still wait for what they need (waitForDisplayed, expect.poll).
+    'appium:settings[waitForIdleTimeout]': 0,
     // The soft keyboard stays real (UiAutomator2's `hideKeyboard` capability would remove it for
     // the whole session); screens hide it themselves when it covers a button.
   };

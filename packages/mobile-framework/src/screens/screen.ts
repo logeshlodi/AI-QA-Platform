@@ -52,6 +52,29 @@ export abstract class Screen {
     return this.byText(text).isDisplayed();
   }
 
+  /**
+   * Scrolls a container until a target shows, with UiAutomator2's own scroll gesture
+   * (`mobile: scrollGesture`): Android performs it inside the container, away from the screen edges
+   * where a swipe would open the notification shade or go home. Hand-built W3C touch moves did not
+   * scroll this React Native app on the emulator; the native gesture does.
+   */
+  protected async scrollUntilShown(
+    target: ReturnType<Screen['byId']>,
+    container: ReturnType<Screen['byId']>,
+    maxScrolls = 6,
+  ): Promise<void> {
+    for (let i = 0; i < maxScrolls; i++) {
+      if (await target.isDisplayed()) return;
+      const canScrollMore = await this.driver.execute('mobile: scrollGesture', {
+        elementId: await container.elementId,
+        direction: 'down',
+        percent: 0.75,
+      });
+      if (canScrollMore === false && !(await target.isDisplayed())) break;
+    }
+    if (!(await target.isDisplayed())) throw new Error(`Not on screen after ${maxScrolls} scrolls`);
+  }
+
   /** The soft keyboard covers the lower half of the screen; buttons under it cannot be tapped. */
   async hideKeyboard(): Promise<void> {
     if (await this.driver.isKeyboardShown()) await this.driver.hideKeyboard();

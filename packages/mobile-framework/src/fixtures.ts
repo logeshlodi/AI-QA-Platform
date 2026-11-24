@@ -60,7 +60,7 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
       await use(server);
       await server.stop();
     },
-    { scope: 'worker', timeout: 90_000 },
+    { scope: 'worker', timeout: 200_000 },
   ],
 
   driver: [
@@ -91,11 +91,14 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
       const id = spec.appPackage;
       const control: AppControl = {
         spec,
-        terminate: async () => void (await driver.terminateApp(id)),
+        terminate: async () => void (await stopApp(driver, id)),
         activate: async () => void (await driver.activateApp(id)),
         state: async () => Number(await driver.queryAppState(id)),
         relaunch: async () => {
-          await driver.terminateApp(id);
+          // A stray swipe from the top edge opens the notification shade, which stays over the app
+          // and hides it from every later test. Close it first (Android's `cmd statusbar collapse`).
+          await driver.execute('mobile: statusBar', { command: 'collapse' }).catch(() => undefined);
+          await stopApp(driver, id);
           await driver.activateApp(id);
         },
         background: async (seconds) => void (await driver.background(seconds)),
@@ -128,6 +131,14 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
     { auto: true },
   ],
 });
+
+/**
+ * Stops the app. Appium's default wait is 500 ms, and on the emulator the app sometimes took longer
+ * (seen after the puzzle's confetti), which failed the next test before it started.
+ */
+async function stopApp(driver: Browser, appId: string): Promise<void> {
+  await driver.execute('mobile: terminateApp', { appId, timeout: 5_000 });
+}
 
 /** Recording is best effort: an emulator without screenrecord support still runs the test. */
 async function startRecording(driver: Browser): Promise<boolean> {

@@ -7,7 +7,7 @@ import { APPS, appPath, appState, download, sha256, type AppSpec } from '../../s
 import { androidCapabilities, fakeCapabilities } from '../../src/capabilities';
 import { mobileConfig, PACKAGE_DIR } from '../../src/config';
 import { formatChecks, installedDrivers } from '../../src/doctor';
-import { pickNearestToCentre } from '../../src/screens/demo-app';
+import { isCardTitle, pickNearestToCentre } from '../../src/screens/demo-app';
 
 const temps: string[] = [];
 function temp(): string {
@@ -175,5 +175,13 @@ describe('pickNearestToCentre', () => {
     expect(pickNearestToCentre(rects, 400)).toBe(1);
     expect(pickNearestToCentre([{ x: 0, width: 0 }], 400)).toBe(-1);
     expect(pickNearestToCentre([], 400)).toBe(-1);
+  });
+});
+
+describe('isCardTitle', () => {
+  it('takes the upper-cased title and skips the icon glyph and the body text', () => {
+    expect(isCardTitle('FULLY OPEN SOURCE')).toBe(true);
+    expect(isCardTitle('\u{f02a4}')).toBe(false);
+    expect(isCardTitle('WebdriverIO is fully open source')).toBe(false);
   });
 });
