@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A pretend app for Appium's fake driver (@appium/fake-driver). It lets the framework's own
+  plumbing (server, session, locators, alerts, contexts, gestures, evidence) be tested on any
+  machine, CI included, without a phone or an emulator.
+-->
+<app width="400" height="852">
+    <MockNavBar id="nav" top="0" left="0" width="400" height="60">
+        <MockTextField id="Shop" />
+    </MockNavBar>
+    <MockInputField id="input-email" name="email" />
+    <MockInputField id="input-password" name="password" />
+    <MockButton id="button-LOGIN" showAlert="logged-in" />
+    <MockButton id="button-Inactive" enabled="false" />
+    <MockButton id="button-Hidden" visible="false" />
+    <MockListView id="products" top="200" left="0" width="400" height="400">
+        <MockListItem id="product" />
+        <MockListItem id="product" />
+        <MockListItem id="product" />
+    </MockListView>
+    <MockWebView id="help" top="620" left="0" width="400" height="200">
+        <html>
+            <head>
+                <title>Help</title>
+            </head>
+            <body>
+                <h1>How can we help?</h1>
+            </body>
+        </html>
+    </MockWebView>
+    <alert id="logged-in" text="You are logged in!" hasPrompt="false" />
+</app>

@@ -45,6 +45,8 @@ export default tseslint.config(
       'packages/playwright-framework/tests/**/*.ts',
       'packages/api-framework/tests/**/*.ts',
       'packages/data-framework/tests/**/*.ts',
+      'packages/mobile-framework/tests/**/*.spec.ts',
+      'packages/mobile-framework/tests/setup/**/*.ts',
       'packages/dashboard/tests/**/*.ts',
       'apps/web/tests/e2e/**/*.ts',
       // Lab solutions are model answers, so they meet the rules; the exercises break them on purpose.
@@ -64,6 +66,12 @@ export default tseslint.config(
         { assertFunctionNames: ['expect', 'expectList', 'expectSchema', 'expectToMatch', 'expectRefused'] },
       ],
     },
+  },
+  {
+    // Mobile specs hold WebdriverIO elements, not Playwright locators: there is no web-first
+    // assertion to prefer. They poll with expect.poll instead (see packages/mobile-framework).
+    files: ['packages/mobile-framework/tests/**/*.ts'],
+    rules: { 'playwright/prefer-web-first-assertions': 'off' },
   },
   {
     // Setup projects prepare state (health checks, sign-in); they record results, not assertions.

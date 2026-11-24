@@ -40,6 +40,49 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## Mobile Sprint M1: the foundation (24 Nov)
+
+The plan is [docs/mobile-plan.md](mobile-plan.md): Appium 4.0.1 and the UiAutomator2 driver 10.0.0,
+driven by WebdriverIO 10.2 inside Playwright Test fixtures, on an Android emulator, against
+WebdriverIO's native demo app (MIT) and Appium's ApiDemos (Apache-2.0).
+
+**Built:** `packages/mobile-framework`. An Appium server per worker, started from the package's own
+`node_modules` with `APPIUM_HOME` pointing at the package, so the pinned drivers are the ones
+loaded and nothing is installed globally. One session per worker; the app is relaunched before
+each test. On failure the report gets a screenshot, the UI tree, logcat, that test's Appium log
+and the screen recording. Screen objects for the demo app (accessibility IDs from its source).
+21 Android tests: navigation, sign-in and sign-up, form controls, system alerts, swipe, scroll,
+drag and drop, and the app lifecycle. 8 framework tests against Appium's fake driver, which need
+no device. 13 unit tests. `pnpm mobile doctor | apps | emulator`.
+
+**Checked before choosing:** WebdriverIO 10 names Appium 3 as its minimum and says nothing about
+Appium 4, which went stable on 15 Nov. A WebdriverIO 10.2 session against Appium 4.0.1 passed
+every call the framework uses, so the current versions were kept; Appium 3.9.1 with UiAutomator2
+8.7.3 is the fallback. Both app downloads match their published SHA-256.
+
+**Run**
+
+| Check                                | Where              | Result                                                                                                                  |
+| ------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Fake-driver suite                    | Linux workspace    | 8 passed                                                                                                                |
+| Unit tests (whole repository)        | Linux workspace    | 393 passed, 1 skipped                                                                                                   |
+| Type-check, lint, Prettier, licences | Linux workspace    | Clean; 3 new licence exceptions, each with its reason                                                                   |
+| `pnpm mobile apps`                   | Linux workspace    | Both apps downloaded, hashes verified, second run skips                                                                 |
+| Android project without a device     | Linux workspace    | Stops at the `device` setup step with the list of fixes                                                                 |
+| Install, type-check, lint, licences  | Laptop             | Clean (1003 packages, 4 named licence exceptions)                                                                       |
+| Unit tests (whole repository)        | Laptop, Node 24.22 | 394 passed                                                                                                              |
+| Fake-driver suite                    | Laptop             | 8 passed                                                                                                                |
+| `pnpm mobile doctor --accel`         | Laptop             | SDK, JDK 26, driver and emulator found; WHPX usable. Missing: the system image, the `aiqa_api34` emulator, the two apps |
+| Android suite on the emulator        | Laptop             | Not run yet: needs the system image and the emulator                                                                    |
+
+**Found on the way**
+
+- The test image does a frozen install of the packages it lists; the mobile package is left out on
+  purpose (Appium and the driver would add about 50 MB), and the one unit test that needs the
+  drivers skips there.
+- WebdriverIO 10 no longer has `isW3C` (every session is W3C), and Appium returns capabilities
+  without the `appium:` prefix. The fake-driver suite caught both.
+
 ## AI features, audit fixes and a walkthrough (23 to 24 Nov)
 
 Before the mobile sprint: the AI items the audit marked partial, its small fixes, a decision on

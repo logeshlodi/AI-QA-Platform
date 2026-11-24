@@ -1,0 +1,26 @@
+{
+  "name": "@aiqa/mobile-framework",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Android apps through Appium and WebdriverIO, run by Playwright Test",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "playwright test --project=android",
+    "test:fake": "playwright test --project=fake",
+    "test:history": "cross-env AIQA_HISTORY=mobile playwright test --project=android"
+  },
+  "dependencies": {
+    "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/shared": "workspace:*",
+    "@playwright/test": "catalog:",
+    "appium": "catalog:",
+    "appium-uiautomator2-driver": "catalog:",
+    "webdriverio": "catalog:"
+  },
+  "devDependencies": {
+    "@appium/fake-driver": "catalog:",
+    "allure-playwright": "catalog:",
+    "cross-env": "catalog:"
+  }
+}

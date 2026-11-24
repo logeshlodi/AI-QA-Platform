@@ -1,0 +1,142 @@
+import path from 'node:path';
+import { test as base, expect } from '@playwright/test';
+import { remote, type Browser } from 'webdriverio';
+import { AppiumServer } from './appium-server';
+import { APPS, appPath, type AppName, type AppSpec } from './apps';
+import { androidCapabilities, fakeCapabilities } from './capabilities';
+import { mobileConfig } from './config';
+import { attachEvidence } from './evidence';
+import { demoApp, type DemoApp } from './screens/demo-app';
+
+export type Platform = 'android' | 'fake';
+
+/** Android's answer to queryAppState. */
+export const APP_STATE = { notInstalled: 0, notRunning: 1, background: 3, foreground: 4 } as const;
+
+export interface AppControl {
+  spec: AppSpec;
+  /** Stops the app and starts it again from its launch screen. */
+  relaunch(): Promise<void>;
+  /** Sends the app to the background for a while, as pressing Home would, then brings it back. */
+  background(seconds: number): Promise<void>;
+  terminate(): Promise<void>;
+  activate(): Promise<void>;
+  state(): Promise<number>;
+}
+
+interface WorkerOptions {
+  /** Set per project: a real Android device or emulator, or Appium's fake driver. */
+  platform: Platform;
+  /** The app the worker's session installs. */
+  appName: AppName;
+}
+
+interface WorkerFixtures {
+  appium: AppiumServer;
+  /** One session per worker: creating one installs the UiAutomator2 server and takes seconds. */
+  driver: Browser;
+}
+
+interface TestFixtures {
+  /** The app, relaunched before every test so each one starts from the same screen. */
+  app: AppControl;
+  /** The demo app's screen objects. */
+  screens: DemoApp;
+  /** Screen recording, and on failure a screenshot, the UI tree and the logs (automatic). */
+  evidence: void;
+}
+
+const config = mobileConfig();
+
+export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
+  platform: ['android', { scope: 'worker', option: true }],
+  appName: ['demo', { scope: 'worker', option: true }],
+
+  appium: [
+    async ({}, use, workerInfo) => {
+      const server = await AppiumServer.start({
+        logFile: path.join(workerInfo.project.outputDir, `appium-worker-${workerInfo.workerIndex}.log`),
+      });
+      await use(server);
+      await server.stop();
+    },
+    { scope: 'worker', timeout: 90_000 },
+  ],
+
+  driver: [
+    async ({ appium, platform, appName }, use) => {
+      const capabilities =
+        platform === 'fake'
+          ? fakeCapabilities()
+          : androidCapabilities(APPS[appName], await appPath(APPS[appName], config.appsDir), config);
+      const driver = await remote({
+        hostname: '127.0.0.1',
+        port: appium.port,
+        path: '/',
+        logLevel: 'warn',
+        // The first session may boot the emulator and install the UiAutomator2 server.
+        connectionRetryTimeout: config.bootTimeoutMs + 120_000,
+        connectionRetryCount: 0,
+        capabilities: capabilities as WebdriverIO.Capabilities,
+      });
+      await use(driver);
+      await driver.deleteSession();
+    },
+    { scope: 'worker', timeout: config.bootTimeoutMs + 180_000 },
+  ],
+
+  app: [
+    async ({ driver, platform, appName }, use) => {
+      const spec = APPS[appName];
+      const id = spec.appPackage;
+      const control: AppControl = {
+        spec,
+        terminate: async () => void (await driver.terminateApp(id)),
+        activate: async () => void (await driver.activateApp(id)),
+        state: async () => Number(await driver.queryAppState(id)),
+        relaunch: async () => {
+          await driver.terminateApp(id);
+          await driver.activateApp(id);
+        },
+        background: async (seconds) => void (await driver.background(seconds)),
+      };
+      if (platform === 'android') await control.relaunch();
+      await use(control);
+    },
+    { auto: true },
+  ],
+
+  screens: async ({ driver, app, platform }, use) => {
+    const screens = demoApp(driver);
+    if (platform === 'android' && app.spec.name === 'demo') await screens.home.waitUntilShown(30_000);
+    await use(screens);
+  },
+
+  evidence: [
+    async ({ driver, appium, platform }, use, testInfo) => {
+      const mark = appium.mark();
+      const recording = platform === 'android' && (await startRecording(driver));
+      await use();
+      const failed = testInfo.status !== testInfo.expectedStatus;
+      const video = recording ? await driver.stopRecordingScreen().catch(() => undefined) : undefined;
+      if (failed) {
+        await attachEvidence(testInfo, { driver, serverLog: () => appium.since(mark), video });
+      } else if (video && config.videoAlways) {
+        await testInfo.attach('screen.mp4', { body: Buffer.from(video, 'base64'), contentType: 'video/mp4' });
+      }
+    },
+    { auto: true },
+  ],
+});
+
+/** Recording is best effort: an emulator without screenrecord support still runs the test. */
+async function startRecording(driver: Browser): Promise<boolean> {
+  try {
+    await driver.startRecordingScreen({ timeLimit: '180', videoSize: '720x1280', bitRate: '2000000' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export { expect };

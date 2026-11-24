@@ -12,6 +12,10 @@ ignoredBuiltDependencies:
   - pnpm
   # Pact's usage-analytics package phones home from its install script; never run it.
   - '@scarf/scarf'
+  # WebdriverIO's browser drivers download Edge and Firefox drivers on install. The mobile package
+  # uses WebdriverIO only for Appium sessions, so they are never needed.
+  - edgedriver
+  - geckodriver
 
 # Playwright MCP pins an alpha build of Playwright in every release. The MCP server code is also in
 # stable Playwright (playwright-core's tools bundle), so it runs on ours: one Playwright, one set of
@@ -104,6 +108,14 @@ catalog:
   '@opentelemetry/resources': 3.1.1
   '@opentelemetry/sdk-trace': 3.1.1
   '@opentelemetry/semantic-conventions': 1.45.0
+
+  # Mobile (packages/mobile-framework): Appium server and drivers, driven from Playwright Test by
+  # WebdriverIO's standalone client. Drivers are found through APPIUM_HOME (the package's own
+  # package.json), so there is no `appium driver install`. docs/mobile-plan.md has the reasons.
+  'appium': 4.0.1
+  'appium-uiautomator2-driver': 10.0.0
+  '@appium/fake-driver': 7.0.1
+  'webdriverio': 10.2.0
 
   # Language, unit tests, quality gates
   # typescript-eslint supports TypeScript up to 6.0; 7.0 also has no programmatic API yet.

@@ -75,6 +75,7 @@ Requires Node 24 LTS (22.22+ also works; see `.nvmrc`). If your global `pnpm` wo
 | `packages/templates`            | Starter projects for `aiqa new project`: UI, API or both, standalone, CI-tested                                      | Vitest, CI smoke      |
 | `packages/interview-learning`   | 51 interview questions by topic and level, each pointing at the files that answer it                                 | Vitest                |
 | `packages/data-framework`       | Postgres, MongoDB, Kafka, RabbitMQ and gRPC suites, the service's HTTP API, adapters, stack fixtures                 | Playwright, Docker    |
+| `packages/mobile-framework`     | Native Android apps: Appium 4 and WebdriverIO in Playwright Test fixtures, screen objects, evidence                  | Appium, emulator      |
 | `packages/contract-tests`       | Pact consumer tests (a storefront over HTTP, a notifications service over Kafka) and the provider check              | Vitest, Pact          |
 | `packages/load-tests`           | k6 load test of the order service (smoke, load, stress), recorded in the run history                                 | Vitest, k6 in Docker  |
 | `apps/order-service`            | The system under test: Kafka in, Postgres and MongoDB, Kafka and RabbitMQ out; HTTP and gRPC APIs; OpenTelemetry     | Data suites           |

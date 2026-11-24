@@ -36,6 +36,15 @@ const EXCEPTIONS = {
     'FSL-1.1-Apache-2.0 (source-available, becomes Apache-2.0 after two years). Not ours to drop: ' +
     'Lighthouse -> @sentry/node -> @sentry/bundler-plugins -> sentry. Only installed for the Lighthouse ' +
     'audit; nothing in this repository calls it and nothing of it is distributed.',
+  'css-value':
+    'MIT, stated in its Readme; its package.json has no licence field, so pnpm reports "Unknown". ' +
+    'webdriverio -> css-value (mobile package).',
+  'spdx-exceptions':
+    'CC-BY-3.0, data only: the list of SPDX licence-exception names. appium -> @appium/docutils -> ' +
+    'normalize-package-data -> spdx-expression-parse -> spdx-exceptions.',
+  'truncate-utf8-bytes':
+    'WTFPL, a permissive public-domain-style licence (free software by the FSF). appium -> ' +
+    '@appium/support -> sanitize-filename -> truncate-utf8-bytes.',
 };
 
 /** "(MIT OR CC0-1.0)" is fine when any one side is allowed; "(A AND B)" needs both. */
