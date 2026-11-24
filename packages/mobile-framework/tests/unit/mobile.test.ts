@@ -7,6 +7,7 @@ import { APPS, appPath, appState, download, sha256, type AppSpec } from '../../s
 import { androidCapabilities, fakeCapabilities } from '../../src/capabilities';
 import { mobileConfig, PACKAGE_DIR } from '../../src/config';
 import { formatChecks, installedDrivers } from '../../src/doctor';
+import { shellQuote, xpathLiteral } from '../../src/screens/apidemos';
 import { isCardTitle, pickNearestToCentre } from '../../src/screens/demo-app';
 
 const temps: string[] = [];
@@ -183,5 +184,18 @@ describe('isCardTitle', () => {
     expect(isCardTitle('FULLY OPEN SOURCE')).toBe(true);
     expect(isCardTitle('\u{f02a4}')).toBe(false);
     expect(isCardTitle('WebdriverIO is fully open source')).toBe(false);
+  });
+});
+
+describe('quoting for the device', () => {
+  it('quotes a shell argument so spaces and quotes survive', () => {
+    expect(shellQuote('Order 1042 shipped')).toBe("'Order 1042 shipped'");
+    expect(shellQuote("it's here")).toBe("'it'\\''s here'");
+  });
+
+  it('writes any text as an XPath literal', () => {
+    expect(xpathLiteral('Short notification')).toBe('"Short notification"');
+    expect(xpathLiteral('say "hi"')).toBe(`'say "hi"'`);
+    expect(xpathLiteral(`it's "x"`)).toBe(`concat("it's ", '"', "x", '"', "")`);
   });
 });

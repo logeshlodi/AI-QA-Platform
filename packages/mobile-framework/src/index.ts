@@ -6,3 +6,4 @@ export * from './config';
 export * from './evidence';
 export * from './screens/screen';
 export * from './screens/demo-app';
+export * from './screens/apidemos';

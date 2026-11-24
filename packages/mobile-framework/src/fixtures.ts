@@ -6,6 +6,7 @@ import { APPS, appPath, type AppName, type AppSpec } from './apps';
 import { androidCapabilities, fakeCapabilities } from './capabilities';
 import { mobileConfig } from './config';
 import { attachEvidence } from './evidence';
+import { apiDemos, type ApiDemos } from './screens/apidemos';
 import { demoApp, type DemoApp } from './screens/demo-app';
 
 export type Platform = 'android' | 'fake';
@@ -22,6 +23,14 @@ export interface AppControl {
   terminate(): Promise<void>;
   activate(): Promise<void>;
   state(): Promise<number>;
+  /** Opens one of the app's activities directly (`.view.Controls1`), as a launcher shortcut would. */
+  open(activity: string): Promise<void>;
+  /** Wipes the app's data and runtime permissions (Android's "Clear storage"), then starts it. */
+  reset(): Promise<void>;
+  /** Opens a deep link in this app (`wdio://forms`), the way a link in an email or a browser would. */
+  deepLink(url: string): Promise<void>;
+  /** The activity in front, as Android names it (`.view.Controls1`). */
+  activity(): Promise<string>;
 }
 
 interface WorkerOptions {
@@ -42,6 +51,8 @@ interface TestFixtures {
   app: AppControl;
   /** The demo app's screen objects. */
   screens: DemoApp;
+  /** ApiDemos' screen objects (the android-apidemos project). */
+  api: ApiDemos;
   /** Screen recording, and on failure a screenshot, the UI tree and the logs (automatic). */
   evidence: void;
 }
@@ -56,6 +67,10 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
     async ({}, use, workerInfo) => {
       const server = await AppiumServer.start({
         logFile: path.join(workerInfo.project.outputDir, `appium-worker-${workerInfo.workerIndex}.log`),
+        // `mobile: shell` (adb shell) is off by default because it runs any command on the device.
+        // Enabled for this server only: it listens on 127.0.0.1, is started and stopped by the tests,
+        // and the specs use it to post a notification (the shade tests).
+        allowInsecure: ['uiautomator2:adb_shell'],
       });
       await use(server);
       await server.stop();
@@ -102,6 +117,25 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
           await driver.activateApp(id);
         },
         background: async (seconds) => void (await driver.background(seconds)),
+        open: async (activity) => {
+          await driver.execute('mobile: startActivity', { intent: `${id}/${activity}`, wait: true });
+        },
+        reset: async () => {
+          await driver.execute('mobile: clearApp', { appId: id });
+          // Right after "Clear storage" a start request is sometimes ignored while Android finishes
+          // clearing; ask again until the app is actually in front.
+          await driver.waitUntil(
+            async () => {
+              await driver.activateApp(id);
+              return Number(await driver.queryAppState(id)) === APP_STATE.foreground;
+            },
+            { timeout: 20_000, interval: 2_000, timeoutMsg: `${id} did not start after Clear storage` },
+          );
+        },
+        deepLink: async (url) => {
+          await driver.execute('mobile: deepLink', { url, package: id });
+        },
+        activity: async () => driver.getCurrentActivity(),
       };
       if (platform === 'android') await control.relaunch();
       await use(control);
@@ -112,6 +146,12 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
   screens: async ({ driver, app, platform }, use) => {
     const screens = demoApp(driver);
     if (platform === 'android' && app.spec.name === 'demo') await screens.home.waitUntilShown(30_000);
+    await use(screens);
+  },
+
+  api: async ({ driver, app, platform }, use) => {
+    const screens = apiDemos(driver);
+    if (platform === 'android' && app.spec.name === 'apidemos') await screens.home.waitUntilShown(30_000);
     await use(screens);
   },
 

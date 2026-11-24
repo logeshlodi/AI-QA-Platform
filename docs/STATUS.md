@@ -40,6 +40,62 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## Mobile Sprint M2: native depth (24 Nov)
+
+**Built:** screen objects for ApiDemos (`src/screens/apidemos.ts`) and 26 new tests. Against
+ApiDemos: check boxes, radio buttons, star, toggles, spinner, seek bar and rating bar; a popup menu,
+its submenu, a long-press context menu, toasts; scrolling a list to an item with `UiScrollable`, and
+the same screen reached through the menus and by its activity; the notification shade; device
+state (orientation, clipboard, geolocation, Wi-Fi off and on, device and battery info); uninstall
+and reinstall. Against the demo app: the permission dialog (deny, allow while using, granted from
+outside the app), data kept or lost across a restart and after "Clear storage", and deep links.
+Hybrid WebView and pinch move to M3; [the plan](mobile-plan.md) lists what else did.
+
+**Run**
+
+| Check                                       | Where           | Result                                       |
+| ------------------------------------------- | --------------- | -------------------------------------------- |
+| Unit tests (whole repository)               | Linux workspace | 396 passed, 1 skipped                        |
+| Fake-driver suite                           | Linux workspace | 8 passed                                     |
+| Type-check, lint, Prettier, `agents review` | Linux workspace | Clean (one title reworded)                   |
+| Whole mobile suite on the emulator, twice   | Laptop, API 34  | 48 passed both times (8.3 min, then 8.2 min) |
+
+**Found on the emulator**
+
+- **A defect in ApiDemos.** It targets SDK 33 but does not declare `POST_NOTIFICATIONS`, so Android
+  13 and later block every notification it posts. The shade test posts from Android's shell
+  instead (`cmd notification post`), which needs the Appium server's `adb_shell` feature. That
+  feature runs any shell command on the device, so it is switched on for this server only, which
+  listens on 127.0.0.1.
+- **Shell arguments.** `mobile: shell` joins its arguments into one command line on the device, so
+  a title with spaces arrived as "Order" with the text "shipped". Each argument is now quoted for
+  the device's shell.
+- **Bundled notifications.** Once an app has several notifications, System UI groups them and the
+  title moves from `android:id/title` to `com.android.systemui:id/notification_title`. The test
+  looks for both and uses a new order number each run, so a leftover cannot pass it.
+- **Dropped gestures.** In the first two-run sign-off, two tests failed once each and passed in the
+  other run: the shade ignored a dismiss swipe (the recording shows the notification still there),
+  and the carousel ignored a swipe (the M1 test, which had passed in every earlier run). Both now check the
+  result and repeat the gesture only if nothing changed: the carousel swipe once more, the
+  notification fling up to three times. A gesture that worked is never doubled, and the tests still
+  check the exact card and that the notification is gone. Each passed three times in a row; the
+  two-run sign-off was then started again from the beginning.
+- **Evidence timing.** The failure evidence is taken after `afterEach`, which had already closed the
+  shade, so the screenshot showed ApiDemos instead of the shade; the screen recording showed it.
+- **Toasts** are found by their text in the locator and checked for presence. Reading the text of
+  a toast element found earlier fails, because the toast has already gone.
+- **Menus.** "Edit" in the popup menu is a submenu (Edit header, Share), not a plain item; the
+  context menu's header is `android:id/title`.
+- **Deep links** sent before React Native has loaded are dropped; the test waits for the home
+  screen first. Right after "Clear storage", Android can ignore the first launch, so the reset
+  retries it.
+- **The demo app's empty texts differ:** memory shows "— empty —", the disk stores "— nothing saved
+  yet —".
+- **Permissions** can be read and changed with `mobile: getPermissions` and `changePermissions` on
+  the Google Play image, which has no root.
+- **Jenkins #31's Firefox failure** was load on the laptop from the Android SDK install that ran at
+  the same time; the same tests passed locally and Jenkins #32 passed (Firefox 21 of 21).
+
 ## Mobile Sprint M1: the foundation (24 Nov)
 
 The plan is [docs/mobile-plan.md](mobile-plan.md): Appium 4.0.1 and the UiAutomator2 driver 10.0.0,

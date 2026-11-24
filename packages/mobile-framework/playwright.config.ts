@@ -1,6 +1,7 @@
 import { consoleReporter, historyReporter } from '@aiqa/reporting-engine';
 import { defineConfig } from '@playwright/test';
 import { loadEnv } from '@aiqa/shared';
+import type { AppName } from './src/apps';
 import type { Platform } from './src/fixtures';
 
 const env = loadEnv();
@@ -9,7 +10,7 @@ const env = loadEnv();
  * Native apps through Appium, run by Playwright's runner: fixtures, retries, reports and the run
  * history are the same as for every other suite. No browser is launched.
  */
-export default defineConfig<object, { platform: Platform }>({
+export default defineConfig<object, { platform: Platform; appName: AppName }>({
   testDir: './tests',
   testIgnore: /unit\//,
   // One emulator, one session: tests share the device, so they run one at a time.
@@ -37,6 +38,13 @@ export default defineConfig<object, { platform: Platform }>({
       dependencies: ['device'],
       testMatch: /android\/.*\.spec\.ts/,
       use: { platform: 'android' },
+    },
+    // ApiDemos: classic Android views, toasts, the notification shade. Its own worker and session.
+    {
+      name: 'android-apidemos',
+      dependencies: ['device'],
+      testMatch: /apidemos\/.*\.spec\.ts/,
+      use: { platform: 'android', appName: 'apidemos' },
     },
   ],
 });

@@ -38,14 +38,89 @@ export class HomeScreen extends Screen {
   protected readonly marker = 'Home-screen';
 }
 
-/** Reached from the side menu only (not pinned in the tab bar by default). */
+export type AppPermission = 'camera' | 'microphone' | 'location' | 'photos';
+
+/**
+ * Four switches that show the app's runtime permissions as Android reports them; the app re-reads
+ * them when the screen opens and when it comes back to the foreground. Turning one on asks Android
+ * (the system dialog); turning a granted one off only explains that revoking is done in Settings.
+ * Reached from the side menu or the `wdio://permissions` deep link.
+ */
 export class PermissionsScreen extends Screen {
   protected readonly marker = 'Permissions-screen';
+
+  private switchFor(permission: AppPermission) {
+    return this.byId(`permission-switch-${permission}`);
+  }
+
+  async isOn(permission: AppPermission): Promise<boolean> {
+    return (await this.switchFor(permission).getAttribute('checked')) === 'true';
+  }
+
+  async toggle(permission: AppPermission): Promise<void> {
+    await this.switchFor(permission).click();
+  }
 }
 
-/** Reached from the side menu only: data kept in memory, AsyncStorage, SQLite and secure storage. */
+/**
+ * Android's runtime-permission dialog. It belongs to the permission controller, not to the app, so it
+ * is found by that package's resource IDs (Android 11 and later).
+ */
+export class PermissionDialog extends Screen {
+  protected readonly marker = 'unused';
+  private static readonly BUTTONS = {
+    whileUsing: 'com.android.permissioncontroller:id/permission_allow_foreground_only_button',
+    onlyThisTime: 'com.android.permissioncontroller:id/permission_allow_one_time_button',
+    deny: 'com.android.permissioncontroller:id/permission_deny_button',
+  } as const;
+
+  override async waitUntilShown(timeout = 10_000): Promise<this> {
+    await this.message.waitForDisplayed({ timeout, timeoutMsg: 'No permission dialog appeared' });
+    return this;
+  }
+
+  override async isShown(): Promise<boolean> {
+    return this.message.isDisplayed();
+  }
+
+  private get message() {
+    return this.byResourceId('com.android.permissioncontroller:id/permission_message');
+  }
+
+  async text(): Promise<string> {
+    return this.message.getText();
+  }
+
+  async answer(choice: keyof typeof PermissionDialog.BUTTONS): Promise<void> {
+    await this.byResourceId(PermissionDialog.BUTTONS[choice]).click();
+  }
+}
+
+export type Store = 'memory' | 'async' | 'sqlite' | 'secure';
+
+/**
+ * Four ways an app keeps data: in memory (gone when the app stops), a key-value table and SQLite
+ * (kept on disk until the app's data is cleared), and the Android Keystore. Each has an input, a
+ * Save and a Clear button, and a read-out. Reached from the side menu or `wdio://data-management`.
+ */
 export class DataScreen extends Screen {
   protected readonly marker = 'DataManagement-screen';
+  /** What an empty read-out says: memory and the disk-backed stores word it differently. */
+  static readonly EMPTY_MEMORY = '— empty —';
+  static readonly NOTHING_SAVED = '— nothing saved yet —';
+
+  async save(store: Store, value: string): Promise<void> {
+    await this.scrollUntilShown(this.byId(`data-${store}-input`), this.byId(this.marker));
+    await this.byId(`data-${store}-input`).setValue(value);
+    await this.hideKeyboard();
+    await this.scrollUntilShown(this.byId(`button-data-${store}-save`), this.byId(this.marker));
+    await this.byId(`button-data-${store}-save`).click();
+  }
+
+  async value(store: Store): Promise<string> {
+    await this.scrollUntilShown(this.byId(`data-${store}-readout`), this.byId(this.marker));
+    return this.byId(`data-${store}-readout`).getText();
+  }
 }
 
 export class LoginScreen extends Screen {
@@ -173,11 +248,20 @@ export class SwipeScreen extends Screen {
    * next card. Checked on the emulator, where hand-built W3C touch moves did not move this carousel.
    */
   async swipeCarousel(direction: 'left' | 'right'): Promise<void> {
-    await this.driver.execute('mobile: swipeGesture', {
-      elementId: await this.carousel.elementId,
-      direction,
-      percent: 0.75,
-    });
+    const before = await this.currentCardTitle();
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      await this.driver.execute('mobile: swipeGesture', {
+        elementId: await this.carousel.elementId,
+        direction,
+        percent: 0.75,
+      });
+      // Once in 6 runs on the emulator, the carousel ignored a swipe and stayed on its card. Swipe
+      // once more only if the card did not change, so a swipe that worked is never doubled.
+      const moved = await this.driver
+        .waitUntil(async () => (await this.currentCardTitle()) !== before, { timeout: 3_000, interval: 300 })
+        .catch(() => false);
+      if (moved) return;
+    }
   }
 
   /**
@@ -328,6 +412,7 @@ export function demoApp(driver: Browser) {
     nav: new Navigation(driver),
     home: new HomeScreen(driver),
     permissions: new PermissionsScreen(driver),
+    permissionDialog: new PermissionDialog(driver),
     data: new DataScreen(driver),
     login: new LoginScreen(driver),
     forms: new FormsScreen(driver),

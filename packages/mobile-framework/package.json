@@ -6,9 +6,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "playwright test --project=android",
+    "test": "playwright test --project=android --project=android-apidemos",
     "test:fake": "playwright test --project=fake",
-    "test:history": "cross-env AIQA_HISTORY=mobile playwright test --project=android"
+    "test:history": "cross-env AIQA_HISTORY=mobile playwright test --project=android --project=android-apidemos"
   },
   "dependencies": {
     "@aiqa/reporting-engine": "workspace:*",
