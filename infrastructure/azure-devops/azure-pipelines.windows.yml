@@ -28,6 +28,10 @@ parameters:
     type: string
     default: none
     values: [none, smoke, load, stress]
+  - name: runMobile
+    displayName: Android suite on this machine's emulator (about 15 minutes; needs the Android SDK and aiqa_api34)
+    type: boolean
+    default: false
 
 pool:
   name: Default
@@ -36,6 +40,10 @@ pool:
 variables:
   CI: 'true'
   PNPM: node_modules\.bin\pnpm.cmd
+  # The apps and Chromedrivers the Android suite needs, kept between builds (filled once by
+  # pnpm mobile apps and pnpm mobile chromedriver; later builds verify the hashes and reuse them).
+  AIQA_APPS_DIR: '~/.aiqa/mobile/apps'
+  AIQA_CHROMEDRIVER_DIR: '~/.aiqa/mobile/chromedriver'
 
 jobs:
   - job: windows
@@ -99,6 +107,27 @@ jobs:
               testResultsFormat: JUnit
               testResultsFiles: packages/playwright-framework/test-results/junit.xml
               testRunTitle: Browser performance (Windows)
+
+      - ${{ if eq(parameters.runMobile, true) }}:
+          # The machine is this build's (the lock step), so nothing else uses the emulator meanwhile.
+          - script: $(PNPM) mobile doctor && $(PNPM) mobile apps && $(PNPM) mobile emulator --wait && $(PNPM) mobile chromedriver
+            displayName: Android SDK, apps, emulator and Chromedriver
+          - script: $(PNPM) test:mobile
+            displayName: Android suite
+          - script: $(PNPM) mobile emulator stop
+            displayName: Stop the emulator
+            condition: always()
+          - task: PublishTestResults@2
+            displayName: Android results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/mobile-framework/test-results/junit.xml
+              testRunTitle: Android suite (Windows)
+          - publish: packages/mobile-framework/playwright-report
+            artifact: android-html-report
+            condition: always()
+            continueOnError: true
 
       - ${{ if eq(parameters.runData, true) }}:
           # Docker Desktop's CLI is not on the agent's PATH by default; add it, and skip with a warning

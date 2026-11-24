@@ -6,16 +6,18 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "playwright test --project=android --project=android-apidemos",
+    "test": "playwright test --project=android --project=android-apidemos --project=android-chrome --project=android-playwright",
     "test:fake": "playwright test --project=fake",
-    "test:history": "cross-env AIQA_HISTORY=mobile playwright test --project=android --project=android-apidemos"
+    "test:history": "cross-env AIQA_HISTORY=mobile playwright test --project=android --project=android-apidemos --project=android-chrome --project=android-playwright"
   },
   "dependencies": {
     "@aiqa/reporting-engine": "workspace:*",
+    "@aiqa/self-healing-engine": "workspace:*",
     "@aiqa/shared": "workspace:*",
     "@playwright/test": "catalog:",
     "appium": "catalog:",
     "appium-uiautomator2-driver": "catalog:",
+    "fast-xml-parser": "catalog:",
     "webdriverio": "catalog:"
   },
   "devDependencies": {

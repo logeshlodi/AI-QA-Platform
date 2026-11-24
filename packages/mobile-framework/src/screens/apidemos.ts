@@ -17,6 +17,9 @@ export const ACTIVITY = {
   popupMenu: '.view.PopupMenu1',
   expandableList: '.view.ExpandableList1',
   toast: '.app.NotifyWithText',
+  dateWidgets: '.view.DateWidgets1',
+  tabs: '.view.Tabs1',
+  cheeseList: '.view.List1',
 } as const;
 export type ApiDemosActivity = keyof typeof ACTIVITY;
 
@@ -237,6 +240,149 @@ export class ToastScreen extends ApiDemosScreen {
 }
 
 /**
+ * Views > Date Widgets > 1. Dialog: a line showing the chosen date and time (`M-D-YYYY HH:MM`) and
+ * buttons that open Android's own date and time picker dialogs. The dialogs are system views, so
+ * they are found by Android's resource IDs.
+ */
+export class DateWidgetsScreen extends ApiDemosScreen {
+  protected readonly marker = 'unused';
+
+  override async waitUntilShown(timeout = 20_000): Promise<this> {
+    await this.byAppId('pickDate').waitForDisplayed({ timeout, timeoutMsg: 'Date Widgets did not show' });
+    return this;
+  }
+
+  async shownDateTime(): Promise<string> {
+    return this.byAppId('dateDisplay').getText();
+  }
+
+  async openDatePicker(): Promise<void> {
+    await this.byAppId('pickDate').click();
+    await this.byResourceId('android:id/datePicker').waitForDisplayed();
+  }
+
+  async openTimePicker(): Promise<void> {
+    await this.byAppId('pickTime').click();
+    await this.byResourceId('android:id/timePicker').waitForDisplayed();
+  }
+
+  async nextMonth(): Promise<void> {
+    await this.byResourceId('android:id/next').click();
+  }
+
+  /** Taps a day of the month the picker shows (only that month's days are in the UI tree). */
+  async pickDay(day: number): Promise<void> {
+    await this.driver
+      .$(
+        `android=new UiSelector().resourceId("android:id/month_view").childSelector(new UiSelector().text("${day}"))`,
+      )
+      .click();
+  }
+
+  /** The clock face's numbers are labelled for screen readers ("7", "30"), so they are found by that. */
+  async pickTime(hour: number, minute: number, half: 'AM' | 'PM'): Promise<void> {
+    await this.byResourceId(`android:id/${half.toLowerCase()}_label`).click();
+    await this.byId(String(hour)).click();
+    await this.byResourceId('android:id/minutes').waitForDisplayed();
+    await this.byId(String(minute)).click();
+  }
+
+  async pickerHeaderDate(): Promise<string> {
+    return this.byResourceId('android:id/date_picker_header_date').getText();
+  }
+
+  /** The dialog buttons by role: Android labels them in the app's language ("Cancel", "Annuler"). */
+  async dialogButton(role: 'positive' | 'negative'): Promise<string> {
+    return this.byResourceId(role === 'positive' ? 'android:id/button1' : 'android:id/button2').getText();
+  }
+
+  async confirm(): Promise<void> {
+    await this.byResourceId('android:id/button1').click();
+  }
+
+  async cancel(): Promise<void> {
+    await this.byResourceId('android:id/button2').click();
+  }
+
+  /**
+   * The day of the first week that sits in the left-hand column: its weekday is the first day of
+   * the week in the app's locale (Sunday in the US, Monday in France).
+   */
+  async dayInFirstColumn(): Promise<number> {
+    let leftmost = { day: 1, x: Number.POSITIVE_INFINITY };
+    for (let day = 1; day <= 7; day++) {
+      const { x } = await this.driver
+        .$(
+          `android=new UiSelector().resourceId("android:id/month_view").childSelector(new UiSelector().text("${day}"))`,
+        )
+        .getLocation();
+      if (x < leftmost.x) leftmost = { day, x };
+    }
+    return leftmost.day;
+  }
+}
+
+/** Views > Tabs > 1. Content By Id: three tabs, each showing its own text ("tab1", "tab2", "tab3"). */
+export class TabsScreen extends ApiDemosScreen {
+  protected readonly marker = 'unused';
+
+  override async waitUntilShown(timeout = 20_000): Promise<this> {
+    await this.byResourceId('android:id/tabs').waitForDisplayed({ timeout, timeoutMsg: 'Tabs did not show' });
+    return this;
+  }
+
+  async open(tab: 1 | 2 | 3): Promise<void> {
+    await this.byText(`TAB${tab}`).click();
+  }
+
+  /** Which tab's content is showing: the content views are `view1` to `view3`. */
+  async showing(): Promise<string | undefined> {
+    for (const n of [1, 2, 3]) if (await this.byAppId(`view${n}`).isDisplayed()) return `tab${n}`;
+    return undefined;
+  }
+}
+
+/** Views > Lists > 01. Array: a long, sorted list of cheeses in an ordinary Android ListView. */
+export class CheeseListScreen extends ApiDemosScreen {
+  protected readonly marker = 'unused';
+  private readonly list = this.byResourceId('android:id/list');
+
+  override async waitUntilShown(timeout = 20_000): Promise<this> {
+    await this.list.waitForDisplayed({ timeout, timeoutMsg: 'The cheese list did not show' });
+    return this;
+  }
+
+  async firstVisible(): Promise<string> {
+    const rows = await this.driver.$$('android=new UiSelector().resourceId("android:id/text1")');
+    for (const row of rows) {
+      // A row half scrolled off the top is still in the tree; skip rows less than half shown.
+      if ((await row.getSize()).height >= 60) return row.getText();
+    }
+    return '';
+  }
+
+  /**
+   * A fling: a fast flick that keeps the list moving after the finger lifts (Android's own gesture,
+   * `mobile: flingGesture`). Returns whether the list can still move that way.
+   */
+  async fling(direction: 'up' | 'down'): Promise<boolean> {
+    return (await this.driver.execute('mobile: flingGesture', {
+      elementId: await this.list.elementId,
+      direction,
+      speed: 7_500,
+    })) as boolean;
+  }
+
+  async scroll(direction: 'up' | 'down', percent = 0.5): Promise<void> {
+    await this.driver.execute('mobile: scrollGesture', {
+      elementId: await this.list.elementId,
+      direction,
+      percent,
+    });
+  }
+}
+
+/**
  * The notification shade, which belongs to Android's System UI, not to the app. Opened with
  * Appium's openNotifications; closed with Back.
  */
@@ -350,6 +496,9 @@ export function apiDemos(driver: Browser) {
     popupMenu: new PopupMenuScreen(driver),
     expandableList: new ExpandableListScreen(driver),
     toast: new ToastScreen(driver),
+    dateWidgets: new DateWidgetsScreen(driver),
+    tabs: new TabsScreen(driver),
+    cheeseList: new CheeseListScreen(driver),
     shade: new NotificationShade(driver),
   };
 }

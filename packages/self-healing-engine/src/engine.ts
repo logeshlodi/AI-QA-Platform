@@ -11,6 +11,11 @@ export interface HealingEngineOptions {
   strategies?: HealingStrategy[];
   /** Optional tie-breaker, consulted only when the rule strategies are ambiguous. */
   tieBreaker?: HealingStrategy;
+  /**
+   * Writes the fix a person pastes in. Default: Playwright locators (`page.getByRole(...)`); the
+   * mobile framework passes its own, for screen-object code (`byId('button-LOGIN')`).
+   */
+  suggest?: (element: ElementDescriptor) => string;
 }
 
 /**
@@ -24,12 +29,14 @@ export class HealingEngine {
   private readonly margin: number;
   private readonly strategies: HealingStrategy[];
   private readonly tieBreaker?: HealingStrategy;
+  private readonly suggest: (element: ElementDescriptor) => string;
 
   constructor(options: HealingEngineOptions = {}) {
     this.threshold = options.threshold ?? 0.75;
     this.margin = options.margin ?? 0.05;
     this.strategies = options.strategies ?? defaultStrategies();
     this.tieBreaker = options.tieBreaker;
+    this.suggest = options.suggest ?? suggestLocator;
   }
 
   async heal(fingerprint: Fingerprint, elements: ElementDescriptor[]): Promise<HealDecision> {
@@ -44,7 +51,7 @@ export class HealingEngine {
       element,
       strategy,
       score: scoreElement(fingerprint, element),
-      suggestion: suggestLocator(element),
+      suggestion: this.suggest(element),
     });
     const ranked = [...proposedBy].map(([e, s]) => toCandidate(e, s)).sort((a, b) => b.score - a.score);
     const top = ranked.slice(0, 5);

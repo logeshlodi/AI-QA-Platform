@@ -40,6 +40,61 @@ The two skips are deliberate: the `test.fixme` demo, and the model tie-break spe
 | 2. Every matrix row has a passing spec | Passed for every row in `coverage-matrix.md`; what is deferred or impossible is listed there      |
 | 3. Seeded breakages healed or refused  | Passed with rules (local pages, live dynamic-id page) and with a local model (`qwen2.5-coder:7b`) |
 
+## Mobile Sprint M3: platform and CI (24 Nov)
+
+**Built.**
+
+- The M2 leftovers on ApiDemos: date and time pickers, tabs, fling, the app in French (Android
+  13's per-app language), airplane mode.
+- Mobile web: a local page in Chrome on the device through Appium and Chromedriver (a form, page
+  width, pinch-to-zoom), the same page through Playwright's experimental Android API for
+  comparison, and the demo app's in-app web page (switching to the WEBVIEW context and back).
+- Checks on the demo app: screens compared with saved pictures, an accessibility audit of every
+  screen's UI tree (a label for every control, 48 dp touch targets), cold start, memory and CPU
+  with budgets, recorded as run-history metrics.
+- The platform around it: self-healing screen objects on the shared healing engine
+  (`aiqa agents heal-review --package mobile` turns a heal into a patch), triage rules and three
+  labelled cases for device and Appium failures, review rules for mobile specs and screen objects,
+  test selection and flaky reruns for the mobile suite. The dashboard and `aiqa perf` show it
+  with no change.
+- CI: a `RUN_MOBILE` parameter in the Windows Jenkinsfile and `runMobile` in the Windows Azure
+  DevOps pipeline (off by default; it boots the emulator under the machine lock), and a GitHub
+  Actions workflow for an emulator on a Linux runner, nightly and on demand, given as YAML to
+  paste (this setup does not write workflows).
+- `pnpm mobile chromedriver` and `pnpm mobile emulator --wait`.
+
+**Run**
+
+| Check   | Where | Result |
+| ------- | ----- | ------ |
+| RESULTS |       |        |
+
+**Found on the emulator**
+
+- **Chrome and WebView are version 113** on the Google Play image, and stay there without a Google
+  sign-in. Chrome for Testing starts at 115, so `pnpm mobile chromedriver` falls back to Google's
+  older Chromedriver store for these versions. Both stores report an MD5 with each file; the
+  script checks it, then runs the binary to confirm its version.
+- **Appium's connectivity report reads settings, not radios.** In airplane mode it said Wi-Fi and
+  data were on (Android keeps `wifi_on` as 3, "on, but airplane mode") while nothing could be
+  reached. The test checks what a user gets: whether the internet answers, and whether the Wi-Fi
+  radio is on. The same was true after switching Wi-Fi back on: the setting returns at once, the
+  connection a few seconds later, which made the next test fail once.
+- **The demo app draws edge to edge**, so its content view covers the status bar, and cropping the
+  bars off a screenshot masks nothing: the first saved pictures had the clock in them. The visual
+  tests now freeze the status bar with Android's System UI demo mode (12:00, full battery, no
+  notification icons) and leave it afterwards.
+- **Accessibility findings in the demo app** (not ours to fix, so pinned as known issues: a new
+  one fails the test, and one going away does too). Every control has a label. Too small to tap
+  (under 48 x 48 dp): the Login and Sign up tabs (40 dp tall), the email, password and text
+  fields (40 to 46 dp), the dropdown (40 dp), the switch (46 x 27 dp) and the puzzle's reset
+  button (26 x 27 dp).
+- **Per-app language works on an unrooted image** (`cmd locale set-app-locales`): ApiDemos' own
+  texts are English only, but the date picker it opens shows "Annuler", "mar. 24 nov." and weeks
+  starting on Monday.
+- **Healing on a real screen**: a screen object asking for `button-LOG-IN` failed with "Suggested
+  fix: byId('button-LOGIN')", and in runtime mode carried on with the real button.
+
 ## Mobile Sprint M2: native depth (24 Nov)
 
 **Built:** screen objects for ApiDemos (`src/screens/apidemos.ts`) and 26 new tests. Against

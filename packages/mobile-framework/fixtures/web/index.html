@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Zooming is allowed on purpose: the pinch test zooms this page. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AIQA mobile web page</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 16px;
+      }
+      label,
+      input,
+      button {
+        display: block;
+        font-size: 18px;
+        margin: 8px 0;
+      }
+      input,
+      button {
+        min-height: 48px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      #zoom {
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Order lookup</h1>
+    <form id="lookup">
+      <label for="order">Order number</label>
+      <input id="order" name="order" inputmode="numeric" autocomplete="off" />
+      <button type="submit">Find order</button>
+    </form>
+    <p id="result" role="status" aria-live="polite"></p>
+    <p id="zoom">Zoom: 1.00</p>
+    <script>
+      document.getElementById('lookup').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const order = document.getElementById('order').value.trim();
+        document.getElementById('result').textContent = /^\d{4}$/.test(order)
+          ? `Order ${order} is on its way.`
+          : 'Enter a four-digit order number.';
+      });
+      const showZoom = () => {
+        document.getElementById('zoom').textContent =
+          `Zoom: ${(window.visualViewport?.scale ?? 1).toFixed(2)}`;
+      };
+      window.visualViewport?.addEventListener('resize', showZoom);
+      showZoom();
+    </script>
+  </body>
+</html>

@@ -751,9 +751,14 @@ agents
   .description('turn healed locators into reviewable patches with a pull-request description')
   .option('--apply', 'ask, patch by patch, whether to write it')
   .option('--branch', 'with --apply: commit the written patches on a new local heal/* branch (you push it)')
-  .action(async (opts: { apply?: boolean; branch?: boolean }) => {
-    const root = path.resolve(FRAMEWORK, '..', '..');
-    const packagePath = path.relative(root, FRAMEWORK);
+  .option('--package <name>', 'whose heals: ui (page objects) or mobile (screen objects)', 'ui')
+  .action(async (opts: { apply?: boolean; branch?: boolean; package: string }) => {
+    if (opts.package !== 'ui' && opts.package !== 'mobile')
+      throw new Error(`--package must be ui or mobile, not "${opts.package}"`);
+    const framework =
+      opts.package === 'mobile' ? path.resolve(FRAMEWORK, '..', 'mobile-framework') : FRAMEWORK;
+    const root = path.resolve(framework, '..', '..');
+    const packagePath = path.relative(root, framework);
     if (opts.branch) {
       if (!opts.apply) throw new Error('--branch needs --apply: only written patches can be committed.');
       // Checked before anything is written, so the branch holds the heal fixes and nothing else.
@@ -763,12 +768,12 @@ agents
           `Commit or stash these changes first, so the heal branch holds only heal fixes:\n  ${dirty.join('\n  ')}`,
         );
     }
-    const repo = createHealRepository(FRAMEWORK_STATE);
+    const repo = createHealRepository(path.join(framework, '.aiqa'));
     const events = repo.listEvents();
     repo.close();
     const reviews = await reviewHeals(events, {
-      root: FRAMEWORK,
-      sources: readPatchableSources(FRAMEWORK),
+      root: framework,
+      sources: readPatchableSources(framework),
       model: chooseModel(loadEnv()),
       apply: opts.apply,
       approve: async (call) => {

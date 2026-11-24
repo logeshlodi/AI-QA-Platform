@@ -10,6 +10,12 @@ const NETWORK =
   /net::ERR_|ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|socket hang up|getaddrinfo|\b50[234]\b|Service Unavailable|Bad Gateway/i;
 const LOCATOR =
   /strict mode violation|waiting for (locator|getBy)|locator\.\w+: Timeout|element is not (visible|enabled|attached)/i;
+/** A device or Appium that stopped answering: the run's machine, not the app or the test. */
+const DEVICE =
+  /device (offline|unauthorized|'[^']*' not found)|no (connected )?(android )?devices?|Could not find a connected Android device|instrumentation process is not running|UiAutomator2 server|A session is either terminated or not started|Could not proxy command|Appium did not answer|did not get ready within/i;
+/** Appium's way of saying a locator found nothing. */
+const MOBILE_LOCATOR =
+  /still not (displayed|existing) after|An element could not be located|no such element/i;
 const ASSERTION = /expect\(.*\)\.(not\.)?to\w+|Expected:[\s\S]*Received:/i;
 
 const greenRedFlips = (ctx: TriageContext): number => {
@@ -37,6 +43,13 @@ export function triageByRules(ctx: TriageContext): RuleVerdict | undefined {
       evidence: [`error: ${ctx.errorMessage.split('\n')[0]}`],
     };
   }
+  if (DEVICE.test(ctx.errorMessage)) {
+    return {
+      label: 'environment',
+      reason: 'The device or Appium stopped answering; the app was never asked.',
+      evidence: [`error: ${ctx.errorMessage.split('\n')[0]}`],
+    };
+  }
   // Many tests failing the same way at once points at the target or the stack, not at one test.
   if (ctx.run.sameError >= 3 && ctx.run.failing / Math.max(ctx.run.total, 1) >= 0.2) {
     return {
@@ -56,7 +69,7 @@ export function triageByRules(ctx: TriageContext): RuleVerdict | undefined {
       evidence: [`history: ${ctx.previous.map((p) => p.outcome).join(', ')}, failed`],
     };
   }
-  if (LOCATOR.test(ctx.errorMessage)) {
+  if (LOCATOR.test(ctx.errorMessage) || MOBILE_LOCATOR.test(ctx.errorMessage)) {
     return {
       label: 'test',
       reason: 'A locator did not resolve: the page changed under the test, or the locator is wrong.',

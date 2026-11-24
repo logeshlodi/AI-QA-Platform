@@ -1,0 +1,101 @@
+# The Android suite on an emulator in GitHub's Linux runners. Nightly and on demand ("Run workflow"):
+# a run takes 20 to 30 minutes of Actions time. The device-free suite runs on every push in ci.yml.
+#
+# The emulator matches the laptop's: API 34, Google Play image, x86_64 (KVM). Pictures for the
+# @visual specs were taken on the laptop's emulator and a runner draws slightly differently, so
+# @visual is left out here.
+name: Android
+on:
+  schedule: [{ cron: '0 2 * * *' }] # nightly, 07:30 IST
+  workflow_dispatch:
+
+concurrency: { group: android, cancel-in-progress: true }
+permissions: { contents: read }
+
+jobs:
+  android:
+    name: Android suite on an emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      # The emulator the action starts; Appium attaches to it instead of booting its own.
+      AIQA_ANDROID_UDID: emulator-5554
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Cache the apps under test
+        uses: actions/cache@v6
+        with:
+          path: .aiqa/mobile/apps
+          key: mobile-apps-${{ hashFiles('packages/mobile-framework/src/apps.ts') }}
+      - name: Download the apps (pinned versions, SHA-256 checked)
+        run: pnpm mobile apps
+
+      - name: Cache the emulator image
+        uses: actions/cache@v6
+        id: avd
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-playstore-x86_64
+      - name: Create the emulator once, for the cache
+        if: steps.avd.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis_playstore
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Emulator created and cached."
+
+      # History survives between runs in the Actions cache: restore the newest, save a new one.
+      - uses: actions/cache@v6
+        with:
+          path: .aiqa/history
+          key: aiqa-history-mobile-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            aiqa-history-mobile-${{ github.ref_name }}-
+            aiqa-history-mobile-main-
+
+      - name: Android suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis_playstore
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          # Each line runs on its own.
+          script: |
+            pnpm mobile doctor
+            pnpm mobile chromedriver
+            pnpm test:mobile --grep-invert @visual
+
+      - name: Summary
+        if: always()
+        continue-on-error: true # a reporting glitch must never fail the tests' job
+        run: |
+          { echo '### Android runs'; echo '```'; pnpm -s aiqa history --suite mobile --limit 5; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-report
+          path: |
+            packages/mobile-framework/playwright-report
+            packages/mobile-framework/test-results
+            .aiqa/dashboard
+          if-no-files-found: ignore

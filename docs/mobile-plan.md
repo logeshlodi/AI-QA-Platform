@@ -70,6 +70,17 @@ rows: date and time pickers, tabs, fling, locale, airplane mode, and upgrading o
 **M3. Platform and CI.** Visual, accessibility and performance checks, mobile web, the agents and
 dashboard, the three pipelines. Gate: one pipeline run on each CI system, recorded in the history.
 
+Decided on 24 Nov, when M3 started: Chromedriver comes from a script you run (`pnpm mobile
+chromedriver`), never from Appium during a run; the M2 leftovers are in, except upgrading over an
+older build, which stays a gap (it would need a second, older download of the demo app); the
+GitHub Actions emulator job runs nightly and on demand; Jenkins and Azure DevOps run the Android
+suite only when the `RUN_MOBILE` / `runMobile` parameter is ticked.
+
+Two changes from this plan, found on the emulator. Pinch and zoom is tested in Chrome on a local
+page, because ApiDemos has no screen that zooms. Mobile web needs Chromedriver 113, because the
+Google Play image ships Chrome and WebView 113 and does not update them without a Google sign-in;
+Chrome for Testing starts at 115, so the script falls back to Google's older Chromedriver store.
+
 ## The laptop
 
 Checked on 24 Nov (read-only): i7-1185G7, 32 GB, Windows 11, Node 24, JDK 26, Android Studio with

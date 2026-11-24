@@ -699,6 +699,9 @@ importers:
       '@aiqa/reporting-engine':
         specifier: workspace:*
         version: link:../reporting-engine
+      '@aiqa/self-healing-engine':
+        specifier: workspace:*
+        version: link:../self-healing-engine
       '@aiqa/shared':
         specifier: workspace:*
         version: link:../shared
@@ -711,6 +714,9 @@ importers:
       appium-uiautomator2-driver:
         specifier: 'catalog:'
         version: 10.0.0(appium@4.0.1)
+      fast-xml-parser:
+        specifier: 'catalog:'
+        version: 5.12.1
       webdriverio:
         specifier: 'catalog:'
         version: 10.2.0(puppeteer-core@25.17.0(yauzl@3.4.0))(yauzl@3.4.0)

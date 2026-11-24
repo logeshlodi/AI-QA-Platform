@@ -13,6 +13,7 @@ pipeline {
     booleanParam(name: 'RUN_DATA', defaultValue: true, description: 'Postgres, MongoDB and Kafka suites (needs Docker Desktop running)')
     booleanParam(name: 'RUN_PERF', defaultValue: true, description: 'Browser performance: Web Vitals, page weight, memory (Chromium)')
     choice(name: 'LOAD_PROFILE', choices: ['none', 'smoke', 'load', 'stress'], description: 'k6 load test against the order service, run with the data suites')
+    booleanParam(name: 'RUN_MOBILE', defaultValue: false, description: 'Android suite on this machine\'s emulator (about 15 minutes; needs the Android SDK and the aiqa_api34 emulator)')
   }
 
   options {
@@ -29,6 +30,10 @@ pipeline {
   environment {
     CI = 'true'
     DOCKER_BIN = "${env.LOCALAPPDATA ?: env.USERPROFILE + '\\AppData\\Local'}\\Programs\\DockerDesktop\\resources\\bin"
+    // The apps and Chromedrivers the Android suite needs, kept between builds (pnpm mobile apps and
+    // pnpm mobile chromedriver fill it once; later builds verify the hashes and reuse them).
+    AIQA_APPS_DIR = '~/.aiqa/mobile/apps'
+    AIQA_CHROMEDRIVER_DIR = '~/.aiqa/mobile/chromedriver'
   }
 
   stages {
@@ -72,6 +77,25 @@ pipeline {
       when { expression { params.RUN_PERF != false } }
       steps { bat 'node_modules\\.bin\\pnpm.cmd test:perf' }
       post { always { junit allowEmptyResults: true, testResults: 'packages/playwright-framework/test-results/junit.xml' } }
+    }
+
+    stage('Android suite') {
+      // Off unless asked for: it boots the emulator and takes about 15 minutes. The machine is
+      // already this build's (first stage), so nothing else uses the emulator meanwhile.
+      when { expression { params.RUN_MOBILE == true } }
+      steps {
+        bat 'node_modules\\.bin\\pnpm.cmd mobile doctor'
+        bat 'node_modules\\.bin\\pnpm.cmd mobile apps'
+        bat 'node_modules\\.bin\\pnpm.cmd mobile emulator --wait'
+        bat 'node_modules\\.bin\\pnpm.cmd mobile chromedriver'
+        bat 'node_modules\\.bin\\pnpm.cmd test:mobile'
+      }
+      post {
+        always {
+          bat(returnStatus: true, script: 'node_modules\\.bin\\pnpm.cmd mobile emulator stop')
+          junit allowEmptyResults: true, testResults: 'packages/mobile-framework/test-results/junit.xml'
+        }
+      }
     }
 
     stage('Data suites') {

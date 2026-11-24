@@ -35,7 +35,7 @@ export type FileKind = 'spec' | 'page-object' | 'other';
 
 export function fileKind(file: string): FileKind {
   if (/\.spec\.tsx?$/.test(file)) return 'spec';
-  if (/\/src\/(pages|components|flows)\//.test(file)) return 'page-object';
+  if (/\/src\/(pages|components|flows|screens)\//.test(file)) return 'page-object';
   return 'other';
 }
 
@@ -61,7 +61,9 @@ const RULES: Rule[] = [
     severity: 'must',
     applies: ['spec', 'page-object'],
     check: (l) =>
-      /\bwaitForTimeout\s*\(|(?<![.\w])setTimeout\s*\(|(?<![.\w])sleep\s*\(/.test(l)
+      /\bwaitForTimeout\s*\(|(?<![.\w])setTimeout\s*\(|(?<![.\w])sleep\s*\(|\b(driver|browser)\.pause\s*\(/.test(
+        l,
+      )
         ? 'A fixed wait: wait for a condition you can name (a response, a URL, a web-first assertion).'
         : undefined,
   },
@@ -83,6 +85,32 @@ const RULES: Rule[] = [
     check: (l) =>
       /locator\(\s*['"`](\/\/|\(\/\/|xpath=)/.test(l)
         ? 'XPath: use getByRole, getByLabel or getByTestId; CSS only when nothing user-facing identifies the element.'
+        : undefined,
+  },
+  {
+    id: 'mobile-xpath-needs-reason',
+    section: 'Locators',
+    severity: 'must',
+    applies: ['spec', 'page-object'],
+    // On Android, XPath walks the whole UI tree on every call and breaks when the layout changes.
+    // Sometimes it is the only way (a toast has no ID); then a comment nearby says so.
+    check: (l, { file, lines, index }) =>
+      /mobile-framework\//.test(file) &&
+      /\$\$?\(\s*[`'"]\(?\/\//.test(l) &&
+      !lines
+        .slice(Math.max(0, index - 10), index + 1)
+        .some((x) => /xpath/i.test(x) && (comment(x) || /\/\/.*xpath/i.test(x)))
+        ? 'XPath on a mobile screen: use an accessibility ID (~id), a resource ID or a UiSelector; XPath only with a comment saying why nothing else works.'
+        : undefined,
+  },
+  {
+    id: 'raw-locator-in-mobile-spec',
+    section: 'Locators',
+    severity: 'should',
+    applies: ['spec'],
+    check: (l, { file }) =>
+      /mobile-framework\/tests\/(android|apidemos)\//.test(file) && /\bdriver\.\$\$?\(/.test(l)
+        ? 'A raw locator in a mobile spec: give it a name in the screen object and use that.'
         : undefined,
   },
   {

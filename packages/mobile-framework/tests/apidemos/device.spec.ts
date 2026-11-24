@@ -1,4 +1,5 @@
 import { expect, test } from '../../src/fixtures';
+import { canReachInternet, wifiRadioOn } from '../../src/device';
 import { ACTIVITY } from '../../src/screens/apidemos';
 
 // The device around the app: rotation, clipboard, location, network and battery. Each test puts
@@ -60,6 +61,24 @@ test.describe('Device state', { tag: ['@mobile', '@android'] }, () => {
     await expect
       .poll(async () => ((await driver.execute('mobile: getConnectivity', {})) as Connectivity).wifi)
       .toBe(before.wifi);
+    // The setting is back at once; the connection takes a few seconds more.
+    await expect.poll(() => canReachInternet(driver), { timeout: 30_000 }).toBe(true);
+  });
+
+  test('in airplane mode the device cannot reach the internet, and switching it off brings it back', async ({
+    driver,
+  }) => {
+    // Online first: an earlier test may have just switched Wi-Fi back on.
+    await expect.poll(() => canReachInternet(driver), { timeout: 30_000 }).toBe(true);
+    try {
+      await driver.execute('mobile: setConnectivity', { airplaneMode: true });
+      await expect.poll(() => canReachInternet(driver)).toBe(false);
+      expect(await wifiRadioOn(driver)).toBe(false);
+    } finally {
+      await driver.execute('mobile: setConnectivity', { airplaneMode: false });
+    }
+    await expect.poll(() => canReachInternet(driver), { timeout: 30_000 }).toBe(true);
+    expect(await wifiRadioOn(driver)).toBe(true);
   });
 
   test('the device reports its Android version and battery', async ({ driver }) => {

@@ -88,6 +88,7 @@ export const SUITE_PACKAGES: Record<string, string> = {
   perf: 'packages/playwright-framework',
   api: 'packages/api-framework',
   data: 'packages/data-framework',
+  mobile: 'packages/mobile-framework',
 };
 
 /** Per spec file (repository-relative): failures, flakes and time over the recorded runs. */

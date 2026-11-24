@@ -1,4 +1,5 @@
 import type { Browser } from 'webdriverio';
+import type { ScreenHealer } from '../healing';
 import { Screen } from './screen';
 
 // Screen objects for WebdriverIO's native demo app 2.2.0 (React Native, Expo). The accessibility
@@ -146,14 +147,14 @@ export class LoginScreen extends Screen {
   }
 
   async fill(email: string, password: string, repeat?: string): Promise<void> {
-    await this.email.setValue(email);
-    await this.password.setValue(password);
+    await (await this.locate('LoginScreen.email', 'byId', 'input-email')).setValue(email);
+    await (await this.locate('LoginScreen.password', 'byId', 'input-password')).setValue(password);
     if (repeat !== undefined) await this.repeatPassword.setValue(repeat);
     await this.hideKeyboard();
   }
 
   async submitLogin(): Promise<void> {
-    await this.byId('button-LOGIN').click();
+    await (await this.locate('LoginScreen.loginButton', 'byId', 'button-LOGIN')).click();
   }
 
   async submitSignUp(): Promise<void> {
@@ -173,7 +174,7 @@ export class LoginScreen extends Screen {
 /** The app's validation messages, worded as the app words them. */
 export const LOGIN_ERRORS = {
   email: 'Please enter a valid email address',
-  password: 'Please enter at least 8 characters',
+  password: 'Please enter at least 8 characters', // review-ok: the app's error message, not a password
   repeat: 'Please enter the same password',
 } as const;
 
@@ -407,14 +408,14 @@ export class NativeAlert extends Screen {
 }
 
 /** All screens of the demo app, built on one session. */
-export function demoApp(driver: Browser) {
+export function demoApp(driver: Browser, healer?: ScreenHealer) {
   return {
     nav: new Navigation(driver),
     home: new HomeScreen(driver),
     permissions: new PermissionsScreen(driver),
     permissionDialog: new PermissionDialog(driver),
     data: new DataScreen(driver),
-    login: new LoginScreen(driver),
+    login: new LoginScreen(driver, healer),
     forms: new FormsScreen(driver),
     swipe: new SwipeScreen(driver),
     drag: new DragScreen(driver),

@@ -1,0 +1,11 @@
+# Paste under `jobs:` in .github/workflows/ci.yml (after `quality`). The mobile framework's own
+# plumbing against Appium's fake driver: no device, about a minute, on every push.
+mobile-fake:
+  name: Mobile framework (Appium fake driver, no device)
+  needs: quality
+  runs-on: ubuntu-latest
+  timeout-minutes: 10
+  steps:
+    - uses: actions/checkout@v7
+    - uses: ./.github/actions/setup
+    - run: pnpm test:mobile:fake

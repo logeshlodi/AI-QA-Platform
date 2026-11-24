@@ -1,4 +1,5 @@
 import type { Browser } from 'webdriverio';
+import { selectorFor, type LocatorMethod, type ScreenHealer } from '../healing';
 
 /**
  * The base of every screen object. Locator order, best first:
@@ -17,7 +18,20 @@ export abstract class Screen {
   /** The accessibility ID on the screen's root view, used to tell that the screen is showing. */
   protected abstract readonly marker: string;
 
-  constructor(protected readonly driver: Browser) {}
+  constructor(
+    protected readonly driver: Browser,
+    /** Given by the `screens` fixture; screens built without it locate without healing. */
+    protected readonly healer?: ScreenHealer,
+  ) {}
+
+  /**
+   * A locator that heals: named (`LoginScreen.loginButton`) so its fingerprint can be kept, and
+   * found again if the app renames it (see src/healing.ts). Without a healer, a plain lookup.
+   */
+  protected async locate(key: string, method: LocatorMethod, value: string) {
+    if (this.healer) return this.healer.locate(key, method, value);
+    return this.driver.$(selectorFor(method, value));
+  }
 
   protected byId(id: string) {
     return this.driver.$(`~${id}`);

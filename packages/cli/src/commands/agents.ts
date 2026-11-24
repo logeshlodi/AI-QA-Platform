@@ -122,7 +122,8 @@ export async function askOnTerminal(question: string): Promise<boolean> {
 }
 
 export function formatHealingReviews(reviews: HealingReview[]): string {
-  if (reviews.length === 0) return 'No heal events recorded yet. Healing runs in the UI suite record them.';
+  if (reviews.length === 0)
+    return 'No heal events recorded yet. Runs that heal a locator (UI or mobile) record them.';
   return reviews
     .map((r) =>
       r.status === 'refused'
@@ -144,6 +145,7 @@ const SUITE_PACKAGES: Record<string, string> = {
   ui: 'playwright-framework',
   api: 'api-framework',
   data: 'data-framework',
+  mobile: 'mobile-framework',
 };
 
 /**
@@ -160,7 +162,13 @@ export function rerunTest(
   const playwright = require.resolve('@playwright/test/cli', { paths: [pkg] });
   const leaf = title.split(' › ').at(-1) ?? title;
   const grep = leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const project = suite === 'ui' ? ['--project=chromium'] : [];
+  // Mobile reruns go to the emulator projects only (not the fake driver's), one at a time.
+  const project =
+    suite === 'ui'
+      ? ['--project=chromium']
+      : suite === 'mobile'
+        ? ['--project=android', '--project=android-apidemos']
+        : [];
   const run = spawnSync(
     process.execPath,
     [

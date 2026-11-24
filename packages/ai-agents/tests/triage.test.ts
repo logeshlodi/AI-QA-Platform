@@ -20,9 +20,9 @@ const mock = (turns: Parameters<typeof scriptedModel>[0]) => {
 const byId = (id: string) => TRIAGE_CASES.find((c) => c.id === id)!;
 
 describe('triage eval set', () => {
-  it('has 30 cases with unique ids, every label used', () => {
-    expect(TRIAGE_CASES).toHaveLength(30);
-    expect(new Set(TRIAGE_CASES.map((c) => c.id)).size).toBe(30);
+  it('has 33 cases with unique ids, every label used', () => {
+    expect(TRIAGE_CASES).toHaveLength(33);
+    expect(new Set(TRIAGE_CASES.map((c) => c.id)).size).toBe(33);
     for (const label of TRIAGE_LABELS) expect(TRIAGE_CASES.some((c) => c.expected === label)).toBe(true);
   });
 
@@ -32,7 +32,7 @@ describe('triage eval set', () => {
     // Whatever a rule decides must be right: a wrong rule is worse than no rule.
     expect(rules.correct).toBe(rules.total);
     expect(rules.total).toBeGreaterThanOrEqual(22);
-    expect(report.bySource.none?.total).toBe(30 - rules.total);
+    expect(report.bySource.none?.total).toBe(33 - rules.total);
   });
 });
 

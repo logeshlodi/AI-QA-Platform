@@ -86,6 +86,33 @@ describe('spec review: rules', () => {
     expect(rulesOn(text, 'packages/data-framework/tests/http/health.spec.ts')).toEqual([]);
   });
 
+  it('checks mobile specs and screen objects: no pause, no raw locator, XPath only with a reason', () => {
+    const spec = [
+      "test('a stopped app starts again', async ({ driver }) => {",
+      '  await driver.pause(2000);',
+      "  await driver.$('~Login').click();",
+      "  await driver.$('//android.widget.Button').click();",
+      '});',
+    ].join('\n');
+    expect(rulesOn(spec, 'packages/mobile-framework/tests/android/x.spec.ts')).toEqual([
+      '2:no-fixed-wait',
+      '3:raw-locator-in-mobile-spec',
+      '4:mobile-xpath-needs-reason',
+      '4:raw-locator-in-mobile-spec',
+    ]);
+    const screen = [
+      'export class Toasts {',
+      '  // A toast has no ID; only XPath can name it.',
+      '  toast = () => this.driver.$(`//android.widget.Toast`);',
+      '  other = () => this.driver.$(`//android.widget.Button`);',
+      '}',
+    ];
+    expect(rulesOn(screen.join('\n'), 'packages/mobile-framework/src/screens/toasts.ts')).toEqual([]);
+    expect(
+      rulesOn(screen.filter((_, i) => i !== 1).join('\n'), 'packages/mobile-framework/src/screens/toasts.ts'),
+    ).toEqual(['2:mobile-xpath-needs-reason', '3:mobile-xpath-needs-reason']);
+  });
+
   it('has an id for every rule, all distinct', () => {
     expect(new Set(REVIEW_RULE_IDS).size).toBe(REVIEW_RULE_IDS.length);
   });

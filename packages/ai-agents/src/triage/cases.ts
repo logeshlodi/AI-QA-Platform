@@ -2,8 +2,8 @@ import type { EvalCase } from '../eval';
 import type { PastOutcome, TriageContext, TriageLabel } from './context';
 
 /**
- * Thirty labelled failures for the Triage agent's eval. Each mirrors a failure this repository's
- * suites have produced or can produce (UI, API, data and messaging), with the label a QA engineer
+ * Thirty-three labelled failures for the Triage agent's eval. Each mirrors a failure this repository's
+ * suites have produced or can produce (UI, API, data and messaging, mobile), with the label a QA engineer
  * would give after reading the trace. Labels are a person's judgement: review them, and change a
  * label rather than the agent when you disagree.
  */
@@ -45,7 +45,13 @@ function failure(
       previous: s.previous ?? ok(6),
       run: {
         id: 'eval',
-        suite: s.file.includes('api') ? 'api' : s.file.includes('data') ? 'data' : 'ui',
+        suite: s.file.includes('mobile')
+          ? 'mobile'
+          : s.file.includes('api')
+            ? 'api'
+            : s.file.includes('data')
+              ? 'data'
+              : 'ui',
         failing: s.failing ?? 1,
         total: s.total ?? 40,
         sameError: s.sameError ?? 0,
@@ -261,5 +267,30 @@ export const TRIAGE_CASES: readonly EvalCase<TriageContext, TriageLabel>[] = [
     file: 'api-framework/tests/restful-booker/booking-crud.spec.ts',
     error: 'Error: expect(received).toBe(expected)\n\nExpected: 3\nReceived: 2',
     previous: seq('f', 'p', 'f', 'p'),
+  }),
+  failure('mobile-emulator-gone', 'environment', 'The emulator shut down mid-run (the laptop slept).', {
+    title: 'Device state › rotating to landscape swaps the screen dimensions',
+    file: 'mobile-framework/tests/apidemos/device.spec.ts',
+    project: 'android-apidemos',
+    error:
+      "WebDriverError: An unknown server-side error occurred while processing the command. Original error: Error executing adbExec. Original error: 'Command 'adb -P 5037 -s emulator-5554 shell getprop' exited with code 1'; Stderr: 'adb: device offline'",
+  }),
+  failure(
+    'mobile-locator-renamed',
+    'test',
+    'The screen object still uses an accessibility ID the app renamed.',
+    {
+      title: 'Signing in › a valid user is signed in',
+      file: 'mobile-framework/tests/android/login.spec.ts',
+      project: 'android',
+      error: 'Error: element ("~button-LOGIN") still not displayed after 20000ms',
+    },
+  ),
+  failure('mobile-date-wrong', 'product', 'The picker confirmed one day and the screen shows another.', {
+    title: 'Date and time pickers › a day picked in next month is the date shown after OK',
+    file: 'mobile-framework/tests/apidemos/pickers.spec.ts',
+    project: 'android-apidemos',
+    error:
+      'Error: expect(received).toBe(expected)\n\nExpected: "12-15-2026 01:02"\nReceived: "12-14-2026 01:02"',
   }),
 ];

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import type { AppSpec } from './apps';
 import { PACKAGE_DIR, type MobileConfig } from './config';
@@ -33,6 +34,12 @@ export function androidCapabilities(app: AppSpec, apk: string, config: MobileCon
     // A React Native app with running animations never does, so each step took seconds on the
     // emulator. Steps still wait for what they need (waitForDisplayed, expect.poll).
     'appium:settings[waitForIdleTimeout]': 0,
+    // Web content (Chrome, WebViews) is driven by a Chromedriver matching the browser's version.
+    // `pnpm mobile chromedriver` puts them in this folder; Appium picks the one that fits and never
+    // downloads one itself.
+    ...(fs.existsSync(config.chromedriverDir)
+      ? { 'appium:chromedriverExecutableDir': config.chromedriverDir }
+      : {}),
     // The soft keyboard stays real (UiAutomator2's `hideKeyboard` capability would remove it for
     // the whole session); screens hide it themselves when it covers a button.
   };

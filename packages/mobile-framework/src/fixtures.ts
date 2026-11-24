@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { test as base, expect } from '@playwright/test';
+import { loadEnv } from '@aiqa/shared';
 import { remote, type Browser } from 'webdriverio';
 import { AppiumServer } from './appium-server';
 import { APPS, appPath, type AppName, type AppSpec } from './apps';
 import { androidCapabilities, fakeCapabilities } from './capabilities';
 import { mobileConfig } from './config';
 import { attachEvidence } from './evidence';
+import { createScreenHealer } from './healing';
 import { apiDemos, type ApiDemos } from './screens/apidemos';
 import { demoApp, type DemoApp } from './screens/demo-app';
 
@@ -31,6 +33,11 @@ export interface AppControl {
   deepLink(url: string): Promise<void>;
   /** The activity in front, as Android names it (`.view.Controls1`). */
   activity(): Promise<string>;
+  /**
+   * Sets the app's own language (Android 13's per-app language, `fr-FR`), as Settings > Apps >
+   * Language would; `undefined` goes back to the system language. Android restarts the app.
+   */
+  setLanguage(locale: string | undefined): Promise<void>;
 }
 
 interface WorkerOptions {
@@ -136,6 +143,12 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
           await driver.execute('mobile: deepLink', { url, package: id });
         },
         activity: async () => driver.getCurrentActivity(),
+        setLanguage: async (locale) => {
+          await driver.execute('mobile: shell', {
+            command: 'cmd',
+            args: ['locale', 'set-app-locales', id, '--locales', locale ?? "''"],
+          });
+        },
       };
       if (platform === 'android') await control.relaunch();
       await use(control);
@@ -143,10 +156,14 @@ export const test = base.extend<TestFixtures, WorkerOptions & WorkerFixtures>({
     { auto: true },
   ],
 
-  screens: async ({ driver, app, platform }, use) => {
-    const screens = demoApp(driver);
+  screens: async ({ driver, app, platform }, use, testInfo) => {
+    // Named locators heal through the same engine as the web framework (HEAL_MODE, HEAL_THRESHOLD).
+    const env = loadEnv();
+    const { healer, close } = createScreenHealer(driver, testInfo, env.HEAL_MODE, env.HEAL_THRESHOLD);
+    const screens = demoApp(driver, platform === 'android' ? healer : undefined);
     if (platform === 'android' && app.spec.name === 'demo') await screens.home.waitUntilShown(30_000);
     await use(screens);
+    close();
   },
 
   api: async ({ driver, app, platform }, use) => {

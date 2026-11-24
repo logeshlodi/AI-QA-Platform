@@ -22,8 +22,11 @@ export interface SourceFile {
   text: string;
 }
 
-/** Locators live in page objects, components and flows. Specs and assertions are never patched. */
-export const PATCHABLE = /(^|\/)src\/(pages|components|flows)\/.+\.ts$/;
+/**
+ * Locators live in page objects, components and flows, and in the mobile framework's screen
+ * objects. Specs and assertions are never patched.
+ */
+export const PATCHABLE = /(^|\/)src\/(pages|components|flows|screens)\/.+\.ts$/;
 
 const swapQuotes = (s: string) => s.replace(/['"]/g, (q) => (q === "'" ? '"' : "'"));
 
